@@ -46,6 +46,16 @@ admin app, and the collector then caches the issued token (default: `.autodoc-pu
 the current directory, override with `--token-file`) so future runs skip registration and push
 directly. Denied or expired registrations exit non-zero without writing a token file.
 
+## Docker
+
+```bash
+# from the repo root - the build context has to include the sibling autodoc-core package
+docker build -f collector/Dockerfile -t autodoc-collector .
+docker run --rm autodoc-collector --push http://autodoc.example.com
+```
+
+Published as `ghcr.io/lukislp/homelab-autodoc-collector` (multi-arch: amd64/arm64) on release. Kubernetes CronJob manifests aren't in this repo yet - not yet built.
+
 ## RBAC
 
 `manifests/rbac.yaml` defines a ServiceAccount + ClusterRole with exactly `get`/`list`/`watch` on the resource kinds above - no write verbs anywhere, no access to Secrets or Pods.

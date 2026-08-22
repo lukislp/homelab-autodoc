@@ -63,6 +63,20 @@ autodoc-server --port 8000
 # open http://localhost:8000/admin to run the setup wizard
 ```
 
+## Docker
+
+The image bakes in the built React admin app - no separate frontend container.
+
+```bash
+# from the repo root - the build context has to include the sibling autodoc-core/
+# autodoc-generator packages and frontend/
+docker build -f server/Dockerfile -t autodoc-server .
+docker run -p 8000:8000 -e AUTODOC_SESSION_SECRET=change-me \
+  -v autodoc-data:/data -v autodoc-config:/config autodoc-server
+```
+
+Published as `ghcr.io/lukislp/homelab-autodoc-server` (multi-arch: amd64/arm64) on release. `/data` and `/config` are the two paths worth mounting a persistent volume onto - everything else (the generated docs, the built site) is regenerated from `/data` on every push. Kubernetes Deployment manifests aren't in this repo yet - not yet built.
+
 ## Development
 
 ```bash
