@@ -69,3 +69,28 @@ def test_build_static_site_produces_html(tmp_path, sample_inventory):
 
     assert (site_dir / "index.html").exists()
     assert (site_dir / "homelab" / "demo" / "web" / "index.html").exists()
+
+
+def test_rebuild_all_sites_regenerates_docs_and_builds_site(tmp_path, sample_inventory):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", sample_inventory)
+    site_dir = tmp_path / "site"
+    config_path = tmp_path / "mkdocs.yml"
+    config_path.write_text(
+        f"site_name: test\ndocs_dir: {storage.docs_dir}\nsite_dir: {site_dir}\n",
+        encoding="utf-8",
+    )
+
+    site_builder.rebuild_all_sites(storage, llm=None, mkdocs_config_path=config_path)
+
+    assert (storage.docs_dir / "homelab" / "demo" / "web.md").exists()
+    assert (site_dir / "homelab" / "demo" / "web" / "index.html").exists()
+
+
+def test_rebuild_all_sites_no_clusters_is_a_noop(tmp_path):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    config_path = tmp_path / "mkdocs.yml"
+
+    site_builder.rebuild_all_sites(storage, llm=None, mkdocs_config_path=config_path)
+
+    assert not config_path.exists()
