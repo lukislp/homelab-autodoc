@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/lukislp/homelab-autodoc/compare/v1.12.0...v1.13.0) (2026-08-22)
+
+
+### Features
+
+* **generator:** resources/env/dependencies/metadata fact tables ([8b19af0](https://github.com/lukislp/homelab-autodoc/commit/8b19af0b6b16ecdc33f92f4317b3079b3efbd333))
+
 # [1.12.0](https://github.com/lukislp/homelab-autodoc/compare/v1.11.0...v1.12.0) (2026-08-22)
 
 
