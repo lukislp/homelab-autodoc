@@ -47,3 +47,66 @@ def volumes_table(app: App) -> str:
     return "\n".join(
         ["| Claim | Storage Class | Capacity | Access Modes |", "|---|---|---|---|", *rows]
     )
+
+
+def resources_table(app: App) -> str:
+    if not any(c.resource_requests or c.resource_limits for c in app.containers):
+        return ""
+    rows = []
+    for c in sorted(app.containers, key=lambda c: c.name):
+        cpu_request = c.resource_requests.get("cpu", "-")
+        cpu_limit = c.resource_limits.get("cpu", "-")
+        memory_request = c.resource_requests.get("memory", "-")
+        memory_limit = c.resource_limits.get("memory", "-")
+        rows.append(
+            f"| {c.name} | {cpu_request} | {cpu_limit} | {memory_request} | {memory_limit} |"
+        )
+    header = "| Container | CPU Request | CPU Limit | Memory Request | Memory Limit |"
+    return "\n".join([header, "|---|---|---|---|---|", *rows])
+
+
+def env_table(app: App) -> str:
+    """Never shows a literal env var's actual value - only its name and, for a
+    valueFrom reference, which ConfigMap/Secret key it points at. The docs site
+    is public; a value entered directly in a homelab Deployment spec might not be.
+    """
+    if not any(c.env for c in app.containers):
+        return ""
+    rows = []
+    for c in sorted(app.containers, key=lambda c: c.name):
+        for e in sorted(c.env, key=lambda e: e.name):
+            source = e.value_from or "literal"
+            rows.append(f"| {c.name} | {e.name} | {source} |")
+    return "\n".join(["| Container | Env Var | Source |", "|---|---|---|", *rows])
+
+
+def dependencies_table(app: App) -> str:
+    if not app.config_refs:
+        return ""
+    rows = [
+        f"| {ref.kind} | {ref.name} | {ref.via} |"
+        for ref in sorted(app.config_refs, key=lambda r: (r.kind, r.name, r.via))
+    ]
+    return "\n".join(["| Kind | Name | Via |", "|---|---|---|", *rows])
+
+
+# kubectl stores the entire last-applied manifest under this key - always huge, never
+# useful on a docs page (every other fact table already shows what it contains).
+_NOISY_ANNOTATIONS = frozenset({"kubectl.kubernetes.io/last-applied-configuration"})
+_MAX_ANNOTATION_VALUE_LENGTH = 200
+
+
+def metadata_table(app: App) -> str:
+    annotations = {k: v for k, v in app.annotations.items() if k not in _NOISY_ANNOTATIONS}
+    if not (app.created_at or app.owners or annotations):
+        return ""
+    rows = ["| Field | Value |", "|---|---|"]
+    if app.created_at:
+        rows.append(f"| Created | {app.created_at} |")
+    if app.owners:
+        rows.append(f"| Owners | {', '.join(sorted(app.owners))} |")
+    for key, value in sorted(annotations.items()):
+        if len(value) > _MAX_ANNOTATION_VALUE_LENGTH:
+            value = value[:_MAX_ANNOTATION_VALUE_LENGTH] + "…"
+        rows.append(f"| `{key}` | {value} |")
+    return "\n".join(rows)
