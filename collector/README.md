@@ -16,7 +16,7 @@ Per namespace, every workload (Deployment or StatefulSet - see [Extending](#exte
 ## Usage
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ../core -e ".[dev]"
 
 # Local/dev: reads your current kubeconfig context
 autodoc-collector --format yaml --output inventory.yaml
@@ -59,7 +59,7 @@ Nothing else changes.
 ## Development
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ../core -e ".[dev]"
 ruff check .
 ruff format --check .
 pytest

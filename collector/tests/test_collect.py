@@ -5,10 +5,10 @@ itself is covered in test_workloads.py.
 
 from __future__ import annotations
 
+from autodoc_core.models import Container
 from kubernetes import client
 
 from autodoc_collector.collect import build_app, build_namespace_inventory
-from autodoc_collector.models import Container
 from autodoc_collector.workloads import NormalizedWorkload
 
 

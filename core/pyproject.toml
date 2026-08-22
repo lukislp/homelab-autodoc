@@ -3,22 +3,18 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "autodoc-collector"
-version = "1.0.0"
-description = "Read-only Kubernetes inventory collector for homelab-autodoc"
+name = "autodoc-core"
+version = "0.1.0"
+description = "Shared inventory model for homelab-autodoc"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [
-    "autodoc-core>=0.1.0",
-    "kubernetes>=30.1.0",
+    "PyYAML>=6.0.1",
 ]
 
-[project.scripts]
-autodoc-collector = "autodoc_collector.cli:main"
-
 [tool.hatch.build.targets.wheel]
-packages = ["src/autodoc_collector"]
+packages = ["src/autodoc_core"]
 
 [project.optional-dependencies]
 dev = [

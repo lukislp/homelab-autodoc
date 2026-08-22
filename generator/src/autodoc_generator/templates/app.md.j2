@@ -1,0 +1,41 @@
+# {{ app.name }}
+
+*{{ app.kind }} in `{{ namespace }}` — {{ app.ready_replicas }}/{{ app.replicas }} ready*
+
+{% if summary %}
+## Summary (AI-generated)
+
+{{ summary }}
+
+{% endif %}
+## Facts
+
+{% if containers_table %}
+### Containers
+
+{{ containers_table }}
+
+{% endif %}
+{% if services_table %}
+### Services
+
+{{ services_table }}
+
+{% endif %}
+{% if ingresses_table %}
+### Ingress
+
+{{ ingresses_table }}
+
+{% endif %}
+{% if volumes_table %}
+### Volumes
+
+{{ volumes_table }}
+
+{% endif %}
+## Diagram
+
+```mermaid
+{{ diagram }}
+```

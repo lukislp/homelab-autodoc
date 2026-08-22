@@ -4,9 +4,9 @@ I/O wrapper not worth testing without a live/mocked API.
 
 from __future__ import annotations
 
+from autodoc_core.models import Container
 from kubernetes import client
 
-from autodoc_collector.models import Container
 from autodoc_collector.workloads import DeploymentCollector, StatefulSetCollector
 
 

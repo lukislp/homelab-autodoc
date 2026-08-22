@@ -9,10 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from autodoc_core.models import Container
 from kubernetes import client
 
 from .k8s_apis import K8sApis
-from .models import Container
 
 
 @dataclass(frozen=True, slots=True)

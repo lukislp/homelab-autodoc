@@ -1,11 +1,13 @@
 # Python
 __pycache__/
 *.py[cod]
-.venv/
+.venv*/
 venv/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+coverage.json
+coverage-badge.json
 
 # Node
 node_modules/

@@ -9,10 +9,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from kubernetes import client
-
-from .k8s_apis import K8sApis
-from .models import (
+from autodoc_core.models import (
     App,
     ClusterInventory,
     IngressInfo,
@@ -22,6 +19,9 @@ from .models import (
     ServicePort,
     Volume,
 )
+from kubernetes import client
+
+from .k8s_apis import K8sApis
 from .workloads import DEFAULT_WORKLOAD_COLLECTORS, NormalizedWorkload, WorkloadCollector
 
 DEFAULT_SYSTEM_NAMESPACES = frozenset({"kube-system", "kube-public", "kube-node-lease"})

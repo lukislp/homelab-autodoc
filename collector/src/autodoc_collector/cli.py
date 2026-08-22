@@ -6,10 +6,11 @@ import argparse
 import sys
 from pathlib import Path
 
+from autodoc_core.serialize import to_text
+
 from . import __version__
 from .collect import collect_cluster_inventory
 from .config import load_kube_config, resolve_cluster_name
-from .serialize import to_text
 
 
 def build_parser() -> argparse.ArgumentParser:
