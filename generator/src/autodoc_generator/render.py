@@ -34,6 +34,10 @@ def render_app_page(app: App, namespace: str, summary: str | None = None) -> str
         services_table=facts.services_table(app),
         ingresses_table=facts.ingresses_table(app),
         volumes_table=facts.volumes_table(app),
+        resources_table=facts.resources_table(app),
+        env_table=facts.env_table(app),
+        dependencies_table=facts.dependencies_table(app),
+        metadata_table=facts.metadata_table(app),
     )
 
 

@@ -3,7 +3,9 @@ from __future__ import annotations
 import pytest
 from autodoc_core.models import (
     App,
+    ConfigReference,
     Container,
+    EnvVar,
     IngressInfo,
     IngressRule,
     ServiceInfo,
@@ -19,7 +21,19 @@ def sample_app() -> App:
         kind="Deployment",
         replicas=2,
         ready_replicas=2,
-        containers=[Container(name="web", image="nginx:1.25.3", ports=[8080])],
+        containers=[
+            Container(
+                name="web",
+                image="nginx:1.25.3",
+                ports=[8080],
+                resource_requests={"cpu": "100m", "memory": "128Mi"},
+                resource_limits={"cpu": "500m", "memory": "256Mi"},
+                env=[
+                    EnvVar(name="LOG_LEVEL", value="info"),
+                    EnvVar(name="API_KEY", value_from="Secret:web-secrets/API_KEY"),
+                ],
+            )
+        ],
         volumes=[
             Volume(
                 claim_name="web-data",
@@ -48,6 +62,13 @@ def sample_app() -> App:
             )
         ],
         labels={"tier": "frontend"},
+        annotations={"kustomize.toolkit.fluxcd.io/name": "web-deploy"},
+        created_at="2026-08-01T12:00:00+00:00",
+        owners=["ReplicaSet/web-abc123"],
+        config_refs=[
+            ConfigReference(kind="Secret", name="web-secrets", via="env"),
+            ConfigReference(kind="ConfigMap", name="web-config", via="volume"),
+        ],
     )
 
 

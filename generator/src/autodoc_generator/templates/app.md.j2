@@ -34,6 +34,30 @@
 {{ volumes_table }}
 
 {% endif %}
+{% if resources_table %}
+### Resources
+
+{{ resources_table }}
+
+{% endif %}
+{% if env_table %}
+### Environment
+
+{{ env_table }}
+
+{% endif %}
+{% if dependencies_table %}
+### Dependencies
+
+{{ dependencies_table }}
+
+{% endif %}
+{% if metadata_table %}
+### Metadata
+
+{{ metadata_table }}
+
+{% endif %}
 ## Diagram
 
 ```mermaid
