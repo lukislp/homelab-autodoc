@@ -31,6 +31,7 @@ def get_llm() -> LLMClient | None:
         model=model,
         api_key=os.environ.get("AUTODOC_LLM_API_KEY"),
         api_base=os.environ.get("AUTODOC_LLM_API_BASE"),
+        reasoning_effort=os.environ.get("AUTODOC_LLM_REASONING_EFFORT"),
     )
 
 
