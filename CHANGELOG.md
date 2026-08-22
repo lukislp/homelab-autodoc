@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/lukislp/homelab-autodoc/compare/v1.1.0...v1.2.0) (2026-08-22)
+
+
+### Features
+
+* add S3 server with push endpoint and MkDocs site hosting ([66a5943](https://github.com/lukislp/homelab-autodoc/commit/66a5943c647ad35c3ab2ac5697b4973e61e6d5d4))
+
 # [1.1.0](https://github.com/lukislp/homelab-autodoc/compare/v1.0.0...v1.1.0) (2026-08-22)
 
 
