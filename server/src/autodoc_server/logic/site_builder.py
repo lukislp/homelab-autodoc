@@ -35,9 +35,7 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
     _write_root_index(storage)
 
 
-def _write_cluster_index(
-    storage: Storage, cluster_name: str, inventory: ClusterInventory
-) -> None:
+def _write_cluster_index(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:
     lines = [
         f"# {cluster_name}",
         "",

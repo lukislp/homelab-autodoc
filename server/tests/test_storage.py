@@ -40,9 +40,7 @@ def test_append_and_load_changelog_entries(tmp_path):
 
     assert storage.load_changelog_entries("homelab") == []
 
-    storage.append_changelog_entry(
-        "homelab", "2026-08-22T00:00:00+00:00", [{"kind": "app_added"}]
-    )
+    storage.append_changelog_entry("homelab", "2026-08-22T00:00:00+00:00", [{"kind": "app_added"}])
     storage.append_changelog_entry(
         "homelab", "2026-08-22T01:00:00+00:00", [{"kind": "app_removed"}]
     )
