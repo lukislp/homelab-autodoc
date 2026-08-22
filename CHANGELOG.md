@@ -1,3 +1,11 @@
+## [1.7.1](https://github.com/lukislp/homelab-autodoc/compare/v1.7.0...v1.7.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* redirect GET /admin (no trailing slash) to /admin/ ([e1f605d](https://github.com/lukislp/homelab-autodoc/commit/e1f605dee32322cbf867a9b9448bc2a46cd9b847))
+* trust proxy headers so OAuth redirect_uri is https, not http ([4509627](https://github.com/lukislp/homelab-autodoc/commit/450962797363aeab12e1bc6af0c69c7e5b124565))
+
 # [1.7.0](https://github.com/lukislp/homelab-autodoc/compare/v1.6.0...v1.7.0) (2026-08-22)
 
 
