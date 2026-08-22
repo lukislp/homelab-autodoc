@@ -8,6 +8,7 @@ from pathlib import Path
 
 from autodoc_generator.llm import LiteLLMClient, LLMClient
 
+from ..logic.device_grant import DeviceGrantStore
 from ..logic.storage import Storage
 
 
@@ -34,3 +35,8 @@ def get_llm() -> LLMClient | None:
 @lru_cache
 def get_mkdocs_config_path() -> Path:
     return Path(os.environ.get("AUTODOC_MKDOCS_CONFIG", "mkdocs.yml"))
+
+
+@lru_cache
+def get_device_grant_store() -> DeviceGrantStore:
+    return DeviceGrantStore()
