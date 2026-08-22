@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/lukislp/homelab-autodoc/compare/v1.2.0...v1.3.0) (2026-08-22)
+
+
+### Features
+
+* add OAuth 2.0 Device Authorization Grant for cluster registration ([87a303a](https://github.com/lukislp/homelab-autodoc/commit/87a303ab7fc4aef3d14e76d9c00106756c96fac4))
+
 # [1.2.0](https://github.com/lukislp/homelab-autodoc/compare/v1.1.0...v1.2.0) (2026-08-22)
 
 
