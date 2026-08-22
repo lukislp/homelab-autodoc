@@ -1,3 +1,10 @@
+## [1.7.3](https://github.com/lukislp/homelab-autodoc/compare/v1.7.2...v1.7.3) (2026-08-22)
+
+
+### Bug Fixes
+
+* configure MkDocs Material to actually render Mermaid diagrams ([6a406d3](https://github.com/lukislp/homelab-autodoc/commit/6a406d38052dcc59d4431cc89dd5ab572e2c68e3))
+
 ## [1.7.2](https://github.com/lukislp/homelab-autodoc/compare/v1.7.1...v1.7.2) (2026-08-22)
 
 
