@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/lukislp/homelab-autodoc/compare/v1.11.0...v1.12.0) (2026-08-22)
+
+
+### Features
+
+* **core,collector:** collect resource specs, env vars, config refs, metadata ([b986421](https://github.com/lukislp/homelab-autodoc/commit/b98642113aa95618ca0f1fa4143d15bb425dcce3))
+
 # [1.11.0](https://github.com/lukislp/homelab-autodoc/compare/v1.10.1...v1.11.0) (2026-08-22)
 
 
