@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/lukislp/homelab-autodoc/compare/v1.9.1...v1.10.0) (2026-08-22)
+
+
+### Features
+
+* wire up OpenAI (gpt-5.6-luna) for the LLM prose summary ([5876c3b](https://github.com/lukislp/homelab-autodoc/commit/5876c3b8efc54cff43bae4ccfc5c1235fd0f450f))
+
 ## [1.9.1](https://github.com/lukislp/homelab-autodoc/compare/v1.9.0...v1.9.1) (2026-08-22)
 
 
