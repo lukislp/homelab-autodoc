@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/lukislp/homelab-autodoc/compare/v1.7.3...v1.8.0) (2026-08-22)
+
+
+### Features
+
+* **k8s:** onboard into homelab-infra's decentralized Flux GitOps pattern ([72572b8](https://github.com/lukislp/homelab-autodoc/commit/72572b8edd99adf2309573677b1f22e0733a4460))
+
 ## [1.7.3](https://github.com/lukislp/homelab-autodoc/compare/v1.7.2...v1.7.3) (2026-08-22)
 
 
