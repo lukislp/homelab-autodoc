@@ -54,18 +54,18 @@ docker build -f collector/Dockerfile -t autodoc-collector .
 docker run --rm autodoc-collector --push http://autodoc.example.com
 ```
 
-Published as `ghcr.io/lukislp/homelab-autodoc-collector` (multi-arch: amd64/arm64) on release. See [`../deploy/`](../deploy/) for the CronJob manifest.
+Published as `ghcr.io/lukislp/homelab-autodoc-collector` (multi-arch: amd64/arm64) on release. See [`../k8s/`](../k8s/) for the CronJob manifest.
 
 ## RBAC
 
-[`../deploy/collector-rbac.yaml`](../deploy/collector-rbac.yaml) defines a ServiceAccount + ClusterRole with exactly `get`/`list`/`watch` on the resource kinds above - no write verbs anywhere, no access to Secrets or Pods. It's part of the full deployment manifests in [`../deploy/`](../deploy/) (CronJob, PVC-backed token cache) - see that directory's README for the complete `kubectl`/FluxCD setup.
+[`../k8s/03-collector-rbac.yaml`](../k8s/03-collector-rbac.yaml) defines a ServiceAccount + ClusterRole with exactly `get`/`list`/`watch` on the resource kinds above - no write verbs anywhere, no access to Secrets or Pods. It's part of the full deployment manifests in [`../k8s/`](../k8s/) (CronJob, PVC-backed token cache) - see that directory's README for the complete `kubectl`/FluxCD setup.
 
 For local testing against a real cluster as that ServiceAccount:
 
 ```bash
-kubectl create namespace autodoc
-kubectl apply -f ../deploy/collector-rbac.yaml
-kubectl -n autodoc create token autodoc-collector --duration=1h
+kubectl create namespace homelab-autodoc
+kubectl apply -f ../k8s/03-collector-rbac.yaml
+kubectl -n homelab-autodoc create token autodoc-collector --duration=1h
 ```
 
 ## Extending to a new workload kind

@@ -1,0 +1,47 @@
+# Default-deny ingress baseline for the whole namespace; egress stays open (the server calls out
+# to whichever OAuth/OIDC provider and LLM API the admin configures at setup time - no fixed
+# egress allowlist makes sense here). Same strategy as the sibling apps' own network-policies
+# files.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: homelab-autodoc
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: homelab-autodoc
+spec:
+  podSelector: {}
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    - {} # egress otherwise unrestricted - this policy only adds an explicit DNS allowance
+---
+# Lets the Gateway (NGF data plane, k8s/02-httproute.yaml) reach the server pod.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-nginx-gateway-to-autodoc-server
+  namespace: homelab-autodoc
+spec:
+  podSelector: { matchLabels: { app: autodoc-server } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: nginx-gateway } }
+      ports:
+        - { protocol: TCP, port: 8000 }
+
+# The collector CronJob's pods never receive inbound traffic at all (nothing calls into it - it
+# only makes outbound calls to the k8s API server and to autodoc-server), so the namespace-wide
+# default-deny-ingress above already covers it correctly with no extra allow rule needed.

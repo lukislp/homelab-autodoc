@@ -1,11 +1,12 @@
-# Persists the device-grant push token across runs, so only the very first
-# run ever needs an admin to approve it - see collector/README.md and
-# deploy/README.md#token-persistence for why a PVC and not a Secret.
+# Persists the device-grant push token across runs, so only the very first run ever needs an
+# admin to approve it - see collector/README.md and k8s/README.md#token-persistence for why a
+# PVC and not a Secret. Bootstrap-only, NOT Flux-managed (batch/v1 CronJob isn't in the central
+# studylife repo's kustomize-controller RBAC either - see k8s/README.md).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: autodoc-collector-token
-  namespace: autodoc
+  namespace: homelab-autodoc
 spec:
   accessModes: ["ReadWriteOnce"]
   # Intentionally tiny - this holds one token, nothing else. Uses the
@@ -19,7 +20,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: autodoc-collector
-  namespace: autodoc
+  namespace: homelab-autodoc
 spec:
   schedule: "0 2 * * *" # nightly at 02:00
   concurrencyPolicy: Forbid
@@ -34,10 +35,10 @@ spec:
           restartPolicy: Never
           containers:
             - name: collector
-              image: ghcr.io/lukislp/homelab-autodoc-collector:latest
+              image: ghcr.io/lukislp/homelab-autodoc-collector:1.6.0
               args:
                 - --push
-                - http://autodoc-server.autodoc.svc.cluster.local:8000
+                - http://autodoc-server.homelab-autodoc.svc.cluster.local:8000
                 - --token-file
                 - /var/run/autodoc/token
               env:
@@ -45,6 +46,9 @@ spec:
                 # this placeholder is only correct for a single-cluster setup.
                 - name: CLUSTER_NAME
                   value: homelab
+              resources:
+                requests: { cpu: 100m, memory: 128Mi }
+                limits: { cpu: 500m, memory: 256Mi }
               volumeMounts:
                 - name: token
                   mountPath: /var/run/autodoc
