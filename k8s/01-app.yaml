@@ -69,11 +69,13 @@ spec:
                   name: autodoc-server-secrets
                   key: openai-api-key
             # Reasoning models bill hidden "thinking" tokens even for a trivial reply if this is
-            # left unset (found in studylife-ai). "minimal" - lower than studylife-ai's "medium" -
-            # because this prompt only restates already-given facts in plain sentences, it doesn't
-            # need actual reasoning.
+            # left unset (found in studylife-ai). Same value as studylife-ai's LLM_MODEL uses -
+            # "minimal" looked more fitting for this much simpler prompt but crashed server
+            # startup: litellm.UnsupportedParamsError, gpt-5.6-luna doesn't support it
+            # (litellm.get_model_info: supports_minimal_reasoning_effort=False). "medium" is
+            # proven working and the cost difference is negligible either way.
             - name: AUTODOC_LLM_REASONING_EFFORT
-              value: "minimal"
+              value: "medium"
           resources:
             requests: {cpu: 100m, memory: 256Mi}
             limits: {cpu: "1", memory: 768Mi}

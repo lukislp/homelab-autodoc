@@ -94,3 +94,18 @@ def test_rebuild_all_sites_no_clusters_is_a_noop(tmp_path):
     site_builder.rebuild_all_sites(storage, llm=None, mkdocs_config_path=config_path)
 
     assert not config_path.exists()
+
+
+def test_regenerate_cluster_docs_survives_a_broken_llm(tmp_path, sample_inventory):
+    class BrokenLLM:
+        def generate(self, prompt: str) -> str:
+            raise RuntimeError("boom")
+
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", sample_inventory)
+
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=BrokenLLM())
+
+    app_page = (storage.docs_dir / "homelab" / "demo" / "web.md").read_text(encoding="utf-8")
+    assert "# web" in app_page
+    assert "nginx:1.25.3" in app_page
