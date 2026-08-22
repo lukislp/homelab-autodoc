@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/lukislp/homelab-autodoc/compare/v1.9.0...v1.9.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* **server:** rebuild site from persisted inventory on startup ([837cc45](https://github.com/lukislp/homelab-autodoc/commit/837cc45ced8dd057b27fa1a490c5b14cf48627b7))
+
 # [1.9.0](https://github.com/lukislp/homelab-autodoc/compare/v1.8.0...v1.9.0) (2026-08-22)
 
 
