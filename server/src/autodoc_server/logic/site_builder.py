@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from autodoc_core.diff import Change
-from autodoc_core.models import ClusterInventory
+from autodoc_core.models import App, ClusterInventory
 from autodoc_generator import changelog as changelog_render
 from autodoc_generator import render
 from autodoc_generator.llm import LLMClient
 from autodoc_generator.prose import generate_summary
 
 from .storage import Storage
+
+logger = logging.getLogger(__name__)
 
 
 def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient | None) -> None:
@@ -25,7 +28,7 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
             render.render_namespace_index(namespace), encoding="utf-8"
         )
         for app in namespace.apps:
-            summary = generate_summary(app, llm) if llm else None
+            summary = _safe_generate_summary(app, llm) if llm else None
             namespace_dir.joinpath(f"{app.name}.md").write_text(
                 render.render_app_page(app, namespace.name, summary), encoding="utf-8"
             )
@@ -33,6 +36,19 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
     _write_cluster_index(storage, cluster_name, inventory)
     _write_changelog_page(storage, cluster_name)
     _write_root_index(storage)
+
+
+def _safe_generate_summary(app: App, llm: LLMClient) -> str | None:
+    """Facts and diagrams always render regardless - prose is the only optional
+    part of the hallucination boundary, so a broken LLM call (bad params, auth,
+    rate limit, network) must degrade to no summary, never block doc generation
+    or crash server startup (rebuild_all_sites calls this at import time).
+    """
+    try:
+        return generate_summary(app, llm)
+    except Exception:
+        logger.warning("LLM summary generation failed for app %r, continuing without it", app.name)
+        return None
 
 
 def _write_cluster_index(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:
