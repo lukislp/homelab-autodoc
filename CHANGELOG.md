@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/lukislp/homelab-autodoc/compare/v1.14.3...v1.15.0) (2026-08-22)
+
+
+### Features
+
+* **docs:** zoomable/pannable Mermaid diagrams ([22dce0e](https://github.com/lukislp/homelab-autodoc/commit/22dce0e3349ac3eb7d84997e865be69d6d0d81d5))
+
 ## [1.14.3](https://github.com/lukislp/homelab-autodoc/compare/v1.14.2...v1.14.3) (2026-08-22)
 
 
