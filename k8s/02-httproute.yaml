@@ -1,0 +1,50 @@
+# HTTPRoute for the shared NGF gateway (studylife repo's k8s/07c-gateway.yaml). Both hostnames
+# are internal-only, same trust level as every other service on this Gateway.
+#
+# Requires: (1) a new listener for autodoc.heim.lan added to the LIVE studylife-gateway object -
+# per that Gateway's own documented incident, this must be a surgical append-only
+# `kubectl patch --type=json` (JSON Patch "add" at /spec/listeners/-), never a wholesale
+# `kubectl apply` of the studylife repo's gateway file, which has previously reverted every
+# other service's listener hostnames; (2) a DNS entry for autodoc.heim.lan pointing at the
+# Gateway's MetalLB IP; (3) an NGINX Proxy Manager proxy host forwarding
+# autodoc.lukas2311-homelab.com to that same hostname. All three are manual, outside this
+# repo's k8s/, same as every other service on this Gateway - see k8s/README.md.
+#
+# Bootstrap-only, NOT Flux-managed - see k8s/README.md.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: autodoc-server
+  namespace: homelab-autodoc
+spec:
+  parentRefs:
+    - name: studylife-gateway
+      namespace: nginx-gateway
+  hostnames:
+    - autodoc.heim.lan
+    - autodoc.lukas2311-homelab.com
+  rules:
+    - backendRefs:
+        - name: autodoc-server
+          port: 8000
+---
+# Same modest rate limit as every other exposed heim.lan service on this Gateway.
+apiVersion: gateway.nginx.org/v1alpha1
+kind: RateLimitPolicy
+metadata:
+  name: autodoc-server-rate-limit
+  namespace: homelab-autodoc
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: autodoc-server
+  rateLimit:
+    local:
+      rules:
+        - zoneSize: 10m
+          key: "$binary_remote_addr"
+          rate: 20r/s
+          burst: 200
+          noDelay: true
+    rejectCode: 503

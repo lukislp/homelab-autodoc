@@ -3,11 +3,18 @@
 # Grants get/list/watch on exactly the resource kinds the collector reads -
 # nothing else, no write verbs anywhere. Cluster-scoped because the collector
 # inventories every application namespace in one run.
+#
+# Bootstrap-only, NOT Flux-managed: the central studylife repo's kustomize-controller RBAC
+# (06-reconciler-rbac.yaml) can create ClusterRole/ClusterRoleBinding objects, but Kubernetes'
+# privilege-escalation check blocks it from creating one granting permissions it doesn't itself
+# hold - and it currently has no read access to "namespaces" or "ingresses" at all. Onboarding
+# this would mean adding those to the central RBAC first, same as every prior addition there
+# (see that file's own history for the pattern). See k8s/README.md.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: autodoc-collector
-  namespace: autodoc
+  namespace: homelab-autodoc
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -35,4 +42,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: autodoc-collector
-    namespace: autodoc
+    namespace: homelab-autodoc
