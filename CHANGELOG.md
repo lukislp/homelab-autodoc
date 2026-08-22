@@ -1,3 +1,10 @@
+## [1.14.3](https://github.com/lukislp/homelab-autodoc/compare/v1.14.2...v1.14.3) (2026-08-22)
+
+
+### Bug Fixes
+
+* retrigger release after semantic-release race dropped [#23](https://github.com/lukislp/homelab-autodoc/issues/23)'s version ([18ea2db](https://github.com/lukislp/homelab-autodoc/commit/18ea2db7b047b1c37aac49c817cda6b383294dc6))
+
 ## [1.14.2](https://github.com/lukislp/homelab-autodoc/compare/v1.14.1...v1.14.2) (2026-08-22)
 
 
