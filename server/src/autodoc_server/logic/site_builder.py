@@ -78,9 +78,34 @@ def _write_changelog_page(storage: Storage, cluster_name: str) -> None:
 
 
 def _write_root_index(storage: Storage) -> None:
-    lines = ["# homelab-autodoc", "", "| Cluster |", "|---|"]
+    # Material's "grid cards" layout (attr_list + md_in_html, see mkdocs.yml) - plain
+    # Markdown inside a styled div, no icon shortcodes so no extra extension is needed.
+    lines = [
+        "# homelab-autodoc",
+        "",
+        '<div class="grid cards" markdown>',
+        "",
+        "-   __Admin__",
+        "",
+        "    ---",
+        "",
+        "    Manage cluster registrations and server setup.",
+        "",
+        "    [Open Admin →](/admin/)",
+        "",
+    ]
     for cluster_name in storage.list_clusters():
-        lines.append(f"| [{cluster_name}]({cluster_name}/index.md) |")
+        lines += [
+            f"-   __{cluster_name}__",
+            "",
+            "    ---",
+            "",
+            f"    Living documentation for the `{cluster_name}` cluster.",
+            "",
+            f"    [Browse →]({cluster_name}/index.md)",
+            "",
+        ]
+    lines.append("</div>")
     storage.docs_dir.mkdir(parents=True, exist_ok=True)
     (storage.docs_dir / "index.md").write_text("\n".join(lines), encoding="utf-8")
 

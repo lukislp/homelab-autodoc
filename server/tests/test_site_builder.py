@@ -22,7 +22,18 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     assert "[web](web.md)" in namespace_index
     assert "[demo](demo/index.md)" in cluster_index
     assert "[Changelog](changelog.md)" in cluster_index
-    assert "[homelab](homelab/index.md)" in root_index
+    assert "[Open Admin →](/admin/)" in root_index
+    assert "[Browse →](homelab/index.md)" in root_index
+    assert '<div class="grid cards" markdown>' in root_index
+
+
+def test_write_root_index_admin_tile_present_even_with_no_clusters(tmp_path):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+
+    site_builder._write_root_index(storage)
+
+    root_index = (storage.docs_dir / "index.md").read_text(encoding="utf-8")
+    assert "[Open Admin →](/admin/)" in root_index
 
 
 def test_regenerate_cluster_docs_writes_changelog_page(tmp_path, sample_inventory):
