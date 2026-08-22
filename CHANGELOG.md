@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/lukislp/homelab-autodoc/compare/v1.10.1...v1.11.0) (2026-08-22)
+
+
+### Features
+
+* **docs:** dark mode + hub landing page ([2be1caa](https://github.com/lukislp/homelab-autodoc/commit/2be1caa14d2e7dca1e6f4645e8a113ac3fd8463c))
+
 ## [1.10.1](https://github.com/lukislp/homelab-autodoc/compare/v1.10.0...v1.10.1) (2026-08-22)
 
 
