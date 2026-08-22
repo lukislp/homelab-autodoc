@@ -1,0 +1,30 @@
+/* A fixed-height viewport for the pan-zoomable diagram, instead of an
+   unbounded-height page. The dense cluster-wide topology diagram is the
+   reason this exists - it's the one page where Material's default
+   scale-to-fit-column behavior makes text illegible.
+
+   Deliberately scoped to .mermaid--panzoom-active, NOT bare .mermaid:
+   mermaid-pan-zoom.js only adds that class once svg-pan-zoom is confirmed
+   initialized. Mermaid's own rendering is asynchronous and occasionally
+   never completes (a pre-existing upstream Mermaid/Material timing issue,
+   not something this project's code causes - reproduces even on GitHub's
+   own Mermaid renderer). If this constraint applied unconditionally, a
+   diagram whose JS never got the chance to attach pan-zoom would be
+   clipped by max-height/overflow with no scrollbar and no zoom controls to
+   see the rest - strictly worse than the plain, always-fully-visible
+   diagram this project had before. */
+.mermaid--panzoom-active {
+  min-height: 480px;
+  max-height: 80vh;
+  overflow: hidden;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 4px;
+}
+
+.mermaid--panzoom-active svg {
+  cursor: grab;
+}
+
+.mermaid--panzoom-active svg:active {
+  cursor: grabbing;
+}
