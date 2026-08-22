@@ -75,7 +75,7 @@ docker run -p 8000:8000 -e AUTODOC_SESSION_SECRET=change-me \
   -v autodoc-data:/data -v autodoc-config:/config autodoc-server
 ```
 
-Published as `ghcr.io/lukislp/homelab-autodoc-server` (multi-arch: amd64/arm64) on release. `/data` and `/config` are the two paths worth mounting a persistent volume onto - everything else (the generated docs, the built site) is regenerated from `/data` on every push. Kubernetes Deployment manifests aren't in this repo yet - not yet built.
+Published as `ghcr.io/lukislp/homelab-autodoc-server` (multi-arch: amd64/arm64) on release. `/data` and `/config` are the two paths worth mounting a persistent volume onto - everything else (the generated docs, the built site) is regenerated from `/data` on every push. See [`../deploy/`](../deploy/) for the Deployment manifest.
 
 ## Development
 

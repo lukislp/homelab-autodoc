@@ -36,7 +36,7 @@ This keeps the hallucination surface small and auditable: if a fact is wrong, it
 
 ## Status
 
-S1 (collector), S2 (generator), S3 (server) and S3.5 (auth) done, and both `collector`/`server` now publish multi-arch (amd64/arm64) Docker images to GHCR on release. Kubernetes deployment manifests (a CronJob for the collector, a Deployment for the server, managed via FluxCD) and S4 (drift detection) are next. Packages: [core/](core/) (shared inventory model), [collector/](collector/), [generator/](generator/), [server/](server/), [frontend/](frontend/) (admin app) - see each package's README for usage.
+S1 (collector), S2 (generator), S3 (server) and S3.5 (auth) done. Both `collector`/`server` publish multi-arch (amd64/arm64) Docker images to GHCR on release, and [`deploy/`](deploy/) has the Kubernetes manifests (Kustomize, FluxCD-ready) to actually run them in a k3s cluster - a nightly CronJob for the collector, a Deployment for the server. S4 (drift detection) is next. Packages: [core/](core/) (shared inventory model), [collector/](collector/), [generator/](generator/), [server/](server/), [frontend/](frontend/) (admin app) - see each package's README for usage.
 
 ## Milestones
 
