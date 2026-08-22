@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/lukislp/homelab-autodoc/compare/v1.13.0...v1.14.0) (2026-08-22)
+
+
+### Features
+
+* **generator,server:** cluster-wide and per-namespace topology diagrams ([7ebfee1](https://github.com/lukislp/homelab-autodoc/commit/7ebfee140c1f3245981bfb5c77f4954e556b57fa))
+
 # [1.13.0](https://github.com/lukislp/homelab-autodoc/compare/v1.12.0...v1.13.0) (2026-08-22)
 
 
