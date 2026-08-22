@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "autodoc-generator"
-version = "1.3.0"
+version = "1.4.0"
 description = "Turns a homelab-autodoc inventory into a Markdown documentation site"
 readme = "README.md"
 requires-python = ">=3.11"

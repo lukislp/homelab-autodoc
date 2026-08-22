@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/lukislp/homelab-autodoc/compare/v1.3.0...v1.4.0) (2026-08-22)
+
+
+### Features
+
+* add GitHub/OIDC admin login, setup wizard, and a React admin app ([0707a3e](https://github.com/lukislp/homelab-autodoc/commit/0707a3e3d2faf954faffaa73bb3d0c368bbc5f42))
+
 # [1.3.0](https://github.com/lukislp/homelab-autodoc/compare/v1.2.0...v1.3.0) (2026-08-22)
 
 
