@@ -62,6 +62,39 @@ def test_push_inventory_stores_and_regenerates_docs(client, sample_inventory):
     )
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "cluster": "homelab", "namespaces": 1}
+    assert response.json() == {
+        "status": "ok",
+        "cluster": "homelab",
+        "namespaces": 1,
+        "drift_changes": 0,
+    }
     assert storage.load_inventory("homelab") == sample_inventory
     assert (storage.docs_dir / "homelab" / "demo" / "web.md").exists()
+    assert (storage.docs_dir / "homelab" / "changelog.md").exists()
+
+
+def test_push_inventory_second_push_records_drift(client, sample_inventory):
+    test_client, storage = client
+    test_client.post(
+        "/api/clusters/homelab/inventory",
+        json={"format": "json", "text": to_text(sample_inventory, fmt="json")},
+        headers={"X-Push-Token": "test-token"},
+    )
+    from dataclasses import replace
+
+    changed_app = replace(sample_inventory.namespaces[0].apps[0], replicas=3)
+    changed_inventory = replace(
+        sample_inventory,
+        collected_at="2026-08-22T01:00:00+00:00",
+        namespaces=[replace(sample_inventory.namespaces[0], apps=[changed_app])],
+    )
+
+    response = test_client.post(
+        "/api/clusters/homelab/inventory",
+        json={"format": "json", "text": to_text(changed_inventory, fmt="json")},
+        headers={"X-Push-Token": "test-token"},
+    )
+
+    assert response.json()["drift_changes"] == 1
+    changelog_page = (storage.docs_dir / "homelab" / "changelog.md").read_text(encoding="utf-8")
+    assert "replicas: 2 -> 3" in changelog_page

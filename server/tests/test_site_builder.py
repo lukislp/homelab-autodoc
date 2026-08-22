@@ -21,7 +21,36 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     assert "nginx:1.25.3" in app_page
     assert "[web](web.md)" in namespace_index
     assert "[demo](demo/index.md)" in cluster_index
+    assert "[Changelog](changelog.md)" in cluster_index
     assert "[homelab](homelab/index.md)" in root_index
+
+
+def test_regenerate_cluster_docs_writes_changelog_page(tmp_path, sample_inventory):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", sample_inventory)
+    change = {
+        "kind": "app_changed",
+        "namespace": "demo",
+        "app_name": "web",
+        "details": ["replicas: 2 -> 3"],
+    }
+    storage.append_changelog_entry("homelab", "2026-08-22T01:00:00+00:00", [change])
+
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=None)
+
+    changelog_page = (storage.docs_dir / "homelab" / "changelog.md").read_text(encoding="utf-8")
+    assert "# homelab - Changelog" in changelog_page
+    assert "replicas: 2 -> 3" in changelog_page
+
+
+def test_regenerate_cluster_docs_changelog_page_without_entries(tmp_path, sample_inventory):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", sample_inventory)
+
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=None)
+
+    changelog_page = (storage.docs_dir / "homelab" / "changelog.md").read_text(encoding="utf-8")
+    assert "No drift detected yet." in changelog_page
 
 
 def test_build_static_site_produces_html(tmp_path, sample_inventory):
