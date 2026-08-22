@@ -6,9 +6,9 @@ import logging
 from pathlib import Path
 
 from autodoc_core.diff import Change
-from autodoc_core.models import App, ClusterInventory
+from autodoc_core.models import App, ClusterInventory, NamespaceInventory
 from autodoc_generator import changelog as changelog_render
-from autodoc_generator import render
+from autodoc_generator import diagrams, render
 from autodoc_generator.llm import LLMClient
 from autodoc_generator.prose import generate_summary
 
@@ -32,8 +32,10 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
             namespace_dir.joinpath(f"{app.name}.md").write_text(
                 render.render_app_page(app, namespace.name, summary), encoding="utf-8"
             )
+        _write_namespace_diagram(storage, cluster_name, namespace)
 
     _write_cluster_index(storage, cluster_name, inventory)
+    _write_cluster_diagram(storage, cluster_name, inventory)
     _write_changelog_page(storage, cluster_name)
     _write_root_index(storage)
 
@@ -55,7 +57,7 @@ def _write_cluster_index(storage: Storage, cluster_name: str, inventory: Cluster
     lines = [
         f"# {cluster_name}",
         "",
-        "[Changelog](changelog.md)",
+        "[Topology](topology.md) · [Changelog](changelog.md)",
         "",
         "| Namespace | Apps |",
         "|---|---|",
@@ -63,6 +65,24 @@ def _write_cluster_index(storage: Storage, cluster_name: str, inventory: Cluster
     for namespace in sorted(inventory.namespaces, key=lambda n: n.name):
         lines.append(f"| [{namespace.name}]({namespace.name}/index.md) | {len(namespace.apps)} |")
     (storage.docs_dir / cluster_name / "index.md").write_text("\n".join(lines), encoding="utf-8")
+
+
+def _write_namespace_diagram(
+    storage: Storage, cluster_name: str, namespace: NamespaceInventory
+) -> None:
+    diagram = diagrams.build_namespace_diagram(namespace)
+    page = f"# {namespace.name} - Topology\n\n```mermaid\n{diagram}\n```"
+    (storage.docs_dir / cluster_name / namespace.name / "topology.md").write_text(
+        page, encoding="utf-8"
+    )
+
+
+def _write_cluster_diagram(
+    storage: Storage, cluster_name: str, inventory: ClusterInventory
+) -> None:
+    diagram = diagrams.build_cluster_diagram(inventory)
+    page = f"# {cluster_name} - Topology\n\n```mermaid\n{diagram}\n```"
+    (storage.docs_dir / cluster_name / "topology.md").write_text(page, encoding="utf-8")
 
 
 def _write_changelog_page(storage: Storage, cluster_name: str) -> None:
