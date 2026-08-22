@@ -1,3 +1,10 @@
+## [1.14.1](https://github.com/lukislp/homelab-autodoc/compare/v1.14.0...v1.14.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* **collector:** raise push timeout from 30s to 300s ([d75cbea](https://github.com/lukislp/homelab-autodoc/commit/d75cbea164943241990fbc687b24b98dd59c4b83))
+
 # [1.14.0](https://github.com/lukislp/homelab-autodoc/compare/v1.13.0...v1.14.0) (2026-08-22)
 
 
