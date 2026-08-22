@@ -41,7 +41,23 @@ spec:
         - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: nginx-gateway } }
       ports:
         - { protocol: TCP, port: 8000 }
-
-# The collector CronJob's pods never receive inbound traffic at all (nothing calls into it - it
-# only makes outbound calls to the k8s API server and to autodoc-server), so the namespace-wide
-# default-deny-ingress above already covers it correctly with no extra allow rule needed.
+---
+# The collector CronJob's own pods never receive inbound traffic (nothing calls into them - they
+# only make outbound calls to the k8s API server and to autodoc-server), but default-deny-ingress
+# above blocks ALL ingress including same-namespace traffic, so the collector's outbound push to
+# autodoc-server needs its own explicit allow too - a podSelector with no namespaceSelector means
+# "any pod in this namespace", which is what actually reached this the hard way: found live, the
+# first real collector run got a plain connection-refused pushing to the server.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-collector-to-autodoc-server
+  namespace: homelab-autodoc
+spec:
+  podSelector: { matchLabels: { app: autodoc-server } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - { protocol: TCP, port: 8000 }
