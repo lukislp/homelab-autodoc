@@ -11,7 +11,9 @@ import yaml
 from .models import (
     App,
     ClusterInventory,
+    ConfigReference,
     Container,
+    EnvVar,
     IngressInfo,
     IngressRule,
     NamespaceInventory,
@@ -36,8 +38,23 @@ def to_text(inventory: ClusterInventory, fmt: Format, pretty: bool = True) -> st
     raise ValueError(f"unsupported format: {fmt}")
 
 
+def _env_var_from_dict(d: dict) -> EnvVar:
+    return EnvVar(name=d["name"], value=d.get("value"), value_from=d.get("value_from"))
+
+
+def _config_reference_from_dict(d: dict) -> ConfigReference:
+    return ConfigReference(kind=d["kind"], name=d["name"], via=d["via"])
+
+
 def _container_from_dict(d: dict) -> Container:
-    return Container(name=d["name"], image=d["image"], ports=list(d.get("ports", [])))
+    return Container(
+        name=d["name"],
+        image=d["image"],
+        ports=list(d.get("ports", [])),
+        resource_requests=dict(d.get("resource_requests", {})),
+        resource_limits=dict(d.get("resource_limits", {})),
+        env=[_env_var_from_dict(e) for e in d.get("env", [])],
+    )
 
 
 def _volume_from_dict(d: dict) -> Volume:
@@ -92,6 +109,10 @@ def _app_from_dict(d: dict) -> App:
         services=[_service_from_dict(s) for s in d.get("services", [])],
         ingresses=[_ingress_from_dict(i) for i in d.get("ingresses", [])],
         labels=dict(d.get("labels", {})),
+        annotations=dict(d.get("annotations", {})),
+        created_at=d.get("created_at"),
+        owners=list(d.get("owners", [])),
+        config_refs=[_config_reference_from_dict(c) for c in d.get("config_refs", [])],
     )
 
 

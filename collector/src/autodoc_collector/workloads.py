@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from autodoc_core.models import Container
+from autodoc_core.models import ConfigReference, Container, EnvVar
 from kubernetes import client
 
 from .k8s_apis import K8sApis
@@ -25,6 +25,10 @@ class NormalizedWorkload:
     containers: list[Container] = field(default_factory=list)
     claim_names: frozenset[str] = frozenset()
     labels: dict[str, str] = field(default_factory=dict)
+    annotations: dict[str, str] = field(default_factory=dict)
+    created_at: str | None = None
+    owners: list[str] = field(default_factory=list)
+    config_refs: frozenset[ConfigReference] = frozenset()
 
 
 class WorkloadCollector(Protocol):
@@ -33,9 +37,35 @@ class WorkloadCollector(Protocol):
     def list(self, apis: K8sApis, namespace: str) -> list[NormalizedWorkload]: ...
 
 
+def _env_vars_from_container(c: client.V1Container) -> list[EnvVar]:
+    result: list[EnvVar] = []
+    for e in c.env or []:
+        value_from = e.value_from
+        if value_from is None:
+            result.append(EnvVar(name=e.name, value=e.value))
+        elif value_from.config_map_key_ref:
+            ref = value_from.config_map_key_ref
+            result.append(EnvVar(name=e.name, value_from=f"ConfigMap:{ref.name}/{ref.key}"))
+        elif value_from.secret_key_ref:
+            ref = value_from.secret_key_ref
+            result.append(EnvVar(name=e.name, value_from=f"Secret:{ref.name}/{ref.key}"))
+        else:
+            # field_ref/resource_field_ref (e.g. pod IP, resource limits) - not a
+            # ConfigMap/Secret dependency, no value worth surfacing either.
+            result.append(EnvVar(name=e.name))
+    return result
+
+
 def _containers_from_pod_spec(pod_spec: client.V1PodSpec) -> list[Container]:
     return [
-        Container(name=c.name, image=c.image, ports=[p.container_port for p in (c.ports or [])])
+        Container(
+            name=c.name,
+            image=c.image,
+            ports=[p.container_port for p in (c.ports or [])],
+            resource_requests=dict((c.resources.requests or {}) if c.resources else {}),
+            resource_limits=dict((c.resources.limits or {}) if c.resources else {}),
+            env=_env_vars_from_container(c),
+        )
         for c in pod_spec.containers
     ]
 
@@ -48,6 +78,44 @@ def _claim_names_from_pod_spec(pod_spec: client.V1PodSpec) -> frozenset[str]:
     )
 
 
+def _config_refs_from_pod_spec(pod_spec: client.V1PodSpec) -> frozenset[ConfigReference]:
+    refs: set[ConfigReference] = set()
+    for c in pod_spec.containers:
+        for e in c.env or []:
+            value_from = e.value_from
+            if value_from and value_from.config_map_key_ref:
+                refs.add(
+                    ConfigReference(
+                        kind="ConfigMap", name=value_from.config_map_key_ref.name, via="env"
+                    )
+                )
+            elif value_from and value_from.secret_key_ref:
+                refs.add(
+                    ConfigReference(kind="Secret", name=value_from.secret_key_ref.name, via="env")
+                )
+        for env_from in c.env_from or []:
+            if env_from.config_map_ref:
+                refs.add(
+                    ConfigReference(
+                        kind="ConfigMap", name=env_from.config_map_ref.name, via="envFrom"
+                    )
+                )
+            elif env_from.secret_ref:
+                refs.add(
+                    ConfigReference(kind="Secret", name=env_from.secret_ref.name, via="envFrom")
+                )
+    for volume in pod_spec.volumes or []:
+        if volume.config_map:
+            refs.add(ConfigReference(kind="ConfigMap", name=volume.config_map.name, via="volume"))
+        elif volume.secret:
+            refs.add(ConfigReference(kind="Secret", name=volume.secret.secret_name, via="volume"))
+    return frozenset(refs)
+
+
+def _owners_from_metadata(meta: client.V1ObjectMeta) -> list[str]:
+    return [f"{o.kind}/{o.name}" for o in (meta.owner_references or [])]
+
+
 class DeploymentCollector:
     kind = "Deployment"
 
@@ -57,15 +125,20 @@ class DeploymentCollector:
 
     def normalize(self, deployment: client.V1Deployment) -> NormalizedWorkload:
         pod_spec = deployment.spec.template.spec
+        meta = deployment.metadata
         return NormalizedWorkload(
             kind=self.kind,
-            name=deployment.metadata.name,
+            name=meta.name,
             replicas=deployment.spec.replicas or 0,
             ready_replicas=((deployment.status.ready_replicas or 0) if deployment.status else 0),
             pod_labels=deployment.spec.template.metadata.labels or {},
             containers=_containers_from_pod_spec(pod_spec),
             claim_names=_claim_names_from_pod_spec(pod_spec),
-            labels=dict(deployment.metadata.labels or {}),
+            labels=dict(meta.labels or {}),
+            annotations=dict(meta.annotations or {}),
+            created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
+            owners=_owners_from_metadata(meta),
+            config_refs=_config_refs_from_pod_spec(pod_spec),
         )
 
 
@@ -78,9 +151,10 @@ class StatefulSetCollector:
 
     def normalize(self, stateful_set: client.V1StatefulSet) -> NormalizedWorkload:
         pod_spec = stateful_set.spec.template.spec
+        meta = stateful_set.metadata
         return NormalizedWorkload(
             kind=self.kind,
-            name=stateful_set.metadata.name,
+            name=meta.name,
             replicas=stateful_set.spec.replicas or 0,
             ready_replicas=(
                 (stateful_set.status.ready_replicas or 0) if stateful_set.status else 0
@@ -88,7 +162,11 @@ class StatefulSetCollector:
             pod_labels=stateful_set.spec.template.metadata.labels or {},
             containers=_containers_from_pod_spec(pod_spec),
             claim_names=_claim_names_from_pod_spec(pod_spec),
-            labels=dict(stateful_set.metadata.labels or {}),
+            labels=dict(meta.labels or {}),
+            annotations=dict(meta.annotations or {}),
+            created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
+            owners=_owners_from_metadata(meta),
+            config_refs=_config_refs_from_pod_spec(pod_spec),
         )
 
 

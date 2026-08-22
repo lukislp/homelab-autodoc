@@ -5,7 +5,9 @@ import json
 from autodoc_core.models import (
     App,
     ClusterInventory,
+    ConfigReference,
     Container,
+    EnvVar,
     IngressInfo,
     IngressRule,
     NamespaceInventory,
@@ -29,7 +31,22 @@ def _sample_inventory() -> ClusterInventory:
                         kind="Deployment",
                         replicas=2,
                         ready_replicas=2,
-                        containers=[Container(name="web", image="nginx:1.25.3", ports=[8080])],
+                        containers=[
+                            Container(
+                                name="web",
+                                image="nginx:1.25.3",
+                                ports=[8080],
+                                resource_requests={"cpu": "100m", "memory": "128Mi"},
+                                resource_limits={"cpu": "500m", "memory": "256Mi"},
+                                env=[
+                                    EnvVar(name="LOG_LEVEL", value="info"),
+                                    EnvVar(
+                                        name="API_KEY",
+                                        value_from="Secret:web-secrets/API_KEY",
+                                    ),
+                                ],
+                            )
+                        ],
                         volumes=[
                             Volume(
                                 claim_name="web-data",
@@ -56,6 +73,13 @@ def _sample_inventory() -> ClusterInventory:
                             )
                         ],
                         labels={"tier": "frontend"},
+                        annotations={"kustomize.toolkit.fluxcd.io/name": "homelab-autodoc-deploy"},
+                        created_at="2026-08-01T12:00:00+00:00",
+                        owners=["ReplicaSet/web-abc123"],
+                        config_refs=[
+                            ConfigReference(kind="Secret", name="web-secrets", via="env"),
+                            ConfigReference(kind="ConfigMap", name="web-config", via="volume"),
+                        ],
                     )
                 ],
             )

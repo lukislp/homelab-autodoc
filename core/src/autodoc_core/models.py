@@ -9,10 +9,23 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True, slots=True)
+class EnvVar:
+    name: str
+    # Exactly one of these is set. `value` is a literal from the pod spec (never a
+    # ConfigMap/Secret value - those are never read). `value_from` describes a
+    # valueFrom reference, e.g. "ConfigMap:app-config/KEY" or "Secret:app-secrets/KEY".
+    value: str | None = None
+    value_from: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Container:
     name: str
     image: str
     ports: list[int] = field(default_factory=list)
+    resource_requests: dict[str, str] = field(default_factory=dict)
+    resource_limits: dict[str, str] = field(default_factory=dict)
+    env: list[EnvVar] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +68,13 @@ class IngressInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class ConfigReference:
+    kind: str  # "ConfigMap" | "Secret"
+    name: str
+    via: str  # "env" | "envFrom" | "volume"
+
+
+@dataclass(frozen=True, slots=True)
 class App:
     name: str
     kind: str
@@ -65,6 +85,10 @@ class App:
     services: list[ServiceInfo] = field(default_factory=list)
     ingresses: list[IngressInfo] = field(default_factory=list)
     labels: dict[str, str] = field(default_factory=dict)
+    annotations: dict[str, str] = field(default_factory=dict)
+    created_at: str | None = None
+    owners: list[str] = field(default_factory=list)  # ["Kind/Name", ...]
+    config_refs: list[ConfigReference] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
