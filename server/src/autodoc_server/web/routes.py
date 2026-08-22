@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 
 from ..logic import site_builder
 from ..logic.storage import Storage
-from .auth import require_push_token
+from .auth import require_cluster_push_token
 from .deps import get_llm, get_mkdocs_config_path, get_storage
 from .schemas import InventoryPushRequest
 
@@ -20,7 +20,7 @@ def healthz() -> dict:
 
 @router.post(
     "/api/clusters/{cluster_name}/inventory",
-    dependencies=[Depends(require_push_token)],
+    dependencies=[Depends(require_cluster_push_token)],
 )
 def push_inventory(
     cluster_name: str,

@@ -13,10 +13,10 @@ from autodoc_server.web.deps import get_llm, get_storage
 @pytest.fixture
 def client(tmp_path, monkeypatch, sample_inventory):
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_push_token("homelab", "test-token")
     app.dependency_overrides[get_storage] = lambda: storage
     app.dependency_overrides[get_llm] = lambda: None
     monkeypatch.setattr(site_builder, "build_static_site", lambda _path: None)
-    monkeypatch.setenv("AUTODOC_PUSH_TOKEN", "test-token")
 
     yield TestClient(app), storage
 
