@@ -32,6 +32,20 @@ autodoc-collector
 
 Run `autodoc-collector --help` for all options.
 
+## Pushing to a server
+
+Instead of writing the inventory locally, push it straight to an [autodoc-server](../server):
+
+```bash
+autodoc-collector --push http://autodoc.example.com
+```
+
+On first run this registers the cluster via the OAuth 2.0 Device Authorization Grant (no
+pre-shared secret): it prints a URL and a short code, an admin approves it in the server's
+admin app, and the collector then caches the issued token (default: `.autodoc-push-token` in
+the current directory, override with `--token-file`) so future runs skip registration and push
+directly. Denied or expired registrations exit non-zero without writing a token file.
+
 ## RBAC
 
 `manifests/rbac.yaml` defines a ServiceAccount + ClusterRole with exactly `get`/`list`/`watch` on the resource kinds above - no write verbs anywhere, no access to Secrets or Pods.
