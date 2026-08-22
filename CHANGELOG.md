@@ -1,3 +1,11 @@
+# [1.7.0](https://github.com/lukislp/homelab-autodoc/compare/v1.6.0...v1.7.0) (2026-08-22)
+
+
+### Features
+
+* add Kubernetes deployment manifests (Kustomize, FluxCD-ready) ([7f6349b](https://github.com/lukislp/homelab-autodoc/commit/7f6349bc21fe792f45080184488365066796772c))
+* rebuild k8s manifests to match the real cluster's established conventions ([9cde394](https://github.com/lukislp/homelab-autodoc/commit/9cde3946805a3f460691f61a9c823a9c45f65556))
+
 # [1.6.0](https://github.com/lukislp/homelab-autodoc/compare/v1.5.0...v1.6.0) (2026-08-22)
 
 
