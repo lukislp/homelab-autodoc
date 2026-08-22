@@ -1,3 +1,11 @@
+## [1.7.2](https://github.com/lukislp/homelab-autodoc/compare/v1.7.1...v1.7.2) (2026-08-22)
+
+
+### Bug Fixes
+
+* allow the collector to reach autodoc-server within the namespace ([8aabbe4](https://github.com/lukislp/homelab-autodoc/commit/8aabbe4b7e4f93f5eef4ecefbf2cb0ec76338715))
+* grant the collector RBAC read access to statefulsets ([412411e](https://github.com/lukislp/homelab-autodoc/commit/412411e89bb41dcfe0ad0fbe6b9a842682f93e46))
+
 ## [1.7.1](https://github.com/lukislp/homelab-autodoc/compare/v1.7.0...v1.7.1) (2026-08-22)
 
 
