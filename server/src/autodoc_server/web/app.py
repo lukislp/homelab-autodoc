@@ -10,7 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
 
-from .deps import get_session_secret, get_storage
+from ..logic import site_builder
+from .deps import get_llm, get_mkdocs_config_path, get_session_secret, get_storage
 from .routes import router as inventory_router
 from .routes_auth import router as auth_router
 from .routes_device import router as device_router
@@ -38,7 +39,12 @@ def create_app() -> FastAPI:
     app.mount("/admin", StaticFiles(directory=admin_dir, html=True), name="admin-ui")
 
     # The generated MkDocs site - the public documentation, mounted last (catch-all).
-    site_dir = get_storage().docs_dir.parent / "site"
+    # Rebuilt from the persisted inventory before mounting: docs_dir/site_dir are
+    # NOT on a persistent volume, so a pod restart otherwise 404s until the next push.
+    storage = get_storage()
+    site_builder.rebuild_all_sites(storage, get_llm(), get_mkdocs_config_path())
+
+    site_dir = storage.docs_dir.parent / "site"
     site_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/", StaticFiles(directory=site_dir, html=True), name="site")
 

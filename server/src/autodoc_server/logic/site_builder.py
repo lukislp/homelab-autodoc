@@ -69,6 +69,20 @@ def _write_root_index(storage: Storage) -> None:
     (storage.docs_dir / "index.md").write_text("\n".join(lines), encoding="utf-8")
 
 
+def rebuild_all_sites(storage: Storage, llm: LLMClient | None, mkdocs_config_path: Path) -> None:
+    """Regenerates every cluster's docs from the persisted inventory and rebuilds
+    the static site. Meant to run on server startup: docs_dir/site_dir live on
+    the container's ephemeral filesystem, not a persistent volume, so a pod
+    restart wipes them - this makes recovery instant instead of waiting for the
+    next inventory push.
+    """
+    clusters = storage.list_clusters()
+    for cluster_name in clusters:
+        regenerate_cluster_docs(storage, cluster_name, llm)
+    if clusters:
+        build_static_site(mkdocs_config_path)
+
+
 def build_static_site(mkdocs_config_path: Path) -> None:
     from mkdocs.commands.build import build
     from mkdocs.config import load_config
