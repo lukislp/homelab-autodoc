@@ -1,0 +1,41 @@
+from __future__ import annotations
+
+from autodoc_core.models import NamespaceInventory
+
+from autodoc_generator.render import render_app_page, render_namespace_index
+
+
+def test_render_app_page_without_summary_omits_the_summary_section(sample_app):
+    page = render_app_page(sample_app, namespace="demo", summary=None)
+
+    assert "# web" in page
+    assert "Deployment in `demo`" in page
+    assert "## Summary (AI-generated)" not in page
+    assert "### Containers" in page
+    assert "```mermaid" in page
+
+
+def test_render_app_page_with_summary_includes_it(sample_app):
+    page = render_app_page(sample_app, namespace="demo", summary="A short summary.")
+
+    assert "## Summary (AI-generated)" in page
+    assert "A short summary." in page
+
+
+def test_render_app_page_for_bare_app_omits_empty_fact_sections(bare_app):
+    page = render_app_page(bare_app, namespace="demo", summary=None)
+
+    assert "### Containers" not in page
+    assert "### Services" not in page
+    assert "### Ingress" not in page
+    assert "### Volumes" not in page
+
+
+def test_render_namespace_index_links_each_app(sample_app):
+    namespace = NamespaceInventory(name="demo", apps=[sample_app])
+
+    index = render_namespace_index(namespace)
+
+    assert "# demo" in index
+    assert "[web](web.md)" in index
+    assert "Deployment" in index

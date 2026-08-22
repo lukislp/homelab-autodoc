@@ -1,7 +1,9 @@
 # homelab-autodoc
 
 [![CI/CD](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
+[![Coverage: core](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-core.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
+[![Coverage: collector](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-collector.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
+[![Coverage: generator](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-generator.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
 [![License](https://img.shields.io/github/license/lukislp/homelab-autodoc)](LICENSE)
 
 Living documentation for Kubernetes homelabs. A lightweight, read-only collector inspects the real state of one or more k3s clusters and streams a structured inventory to a central server, which turns it into a searchable, wiki-style documentation site — complete with dependency diagrams and a nightly changelog of what actually changed.
@@ -23,7 +25,7 @@ This keeps the hallucination surface small and auditable: if a fact is wrong, it
 | Component | Stack | Responsibility |
 |---|---|---|
 | Collector (client) | Python CLI, `kubernetes` client, read-only ServiceAccount | Reads Deployments, Services, Ingress, Volumes per cluster → structured inventory (JSON/YAML). No LLM involved. |
-| Server | Generator (LLM) + templates, MkDocs Material | Turns inventory into per-namespace/app Markdown + Mermaid diagrams; aggregates multiple clusters/sources into one site. |
+| Server | Generator: Jinja2 templates + [LiteLLM](https://docs.litellm.ai/) (Ollama, OpenAI, Anthropic, ...), MkDocs Material | Turns inventory into per-namespace/app Markdown; facts and Mermaid diagrams are templated deterministically from the inventory, the LLM only writes the prose summary. Aggregates multiple clusters/sources into one site. |
 | Registration | OAuth 2.0 Device Authorization Grant (RFC 8628) | A new cluster self-registers with the server without a pre-shared secret; an admin approves or denies it from a web page. |
 | Admin auth | Pluggable OIDC (GitHub OAuth2 or a self-hosted OIDC provider) | Protects the approval page and admin views; chosen during a first-run setup wizard. |
 | Automation | Nightly job per cluster | Regenerates and commits documentation changes — the doc history becomes the cluster history. |
@@ -31,7 +33,7 @@ This keeps the hallucination surface small and auditable: if a fact is wrong, it
 
 ## Status
 
-S1 (collector) in progress — see [collector/](collector/) for the current state and [collector/README.md](collector/README.md) for usage.
+S1 (collector) done, S2 (generator) in progress. Packages: [core/](core/) (shared inventory model), [collector/](collector/), [generator/](generator/) - see each package's README for usage.
 
 ## Milestones
 

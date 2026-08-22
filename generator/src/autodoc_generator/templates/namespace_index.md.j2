@@ -1,0 +1,7 @@
+# {{ namespace.name }}
+
+| App | Kind | Ready |
+|---|---|---|
+{% for app in namespace.apps %}
+| [{{ app.name }}]({{ app.name }}.md) | {{ app.kind }} | {{ app.ready_replicas }}/{{ app.replicas }} |
+{% endfor %}

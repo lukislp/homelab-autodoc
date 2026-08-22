@@ -19,6 +19,7 @@ def color_for(percent: float) -> str:
 
 def main() -> int:
     coverage_path, out_path = sys.argv[1], sys.argv[2]
+    label = sys.argv[3] if len(sys.argv) > 3 else "coverage"
 
     with open(coverage_path, encoding="utf-8") as f:
         report = json.load(f)
@@ -26,7 +27,7 @@ def main() -> int:
     percent = report["totals"]["percent_covered"]
     badge = {
         "schemaVersion": 1,
-        "label": "coverage",
+        "label": label,
         "message": f"{percent:.1f}%",
         "color": color_for(percent),
     }

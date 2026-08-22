@@ -18,6 +18,9 @@ permissions:
 
 jobs:
   test-lint:
+    strategy:
+      matrix:
+        package: [core, collector, generator]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -26,11 +29,14 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install ruff
       - run: ruff check .
-        working-directory: collector
+        working-directory: ${{ matrix.package }}
       - run: ruff format --check .
-        working-directory: collector
+        working-directory: ${{ matrix.package }}
 
   test-unit:
+    strategy:
+      matrix:
+        package: [core, collector, generator]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -38,16 +44,23 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-      - run: pip install -e ".[dev]"
-        working-directory: collector
-      - run: python -m pytest --cov=autodoc_collector --cov-report=json:coverage.json
-        working-directory: collector
-      - run: python3 ../scripts/generate_coverage_badge.py coverage.json coverage-badge.json
-        working-directory: collector
+      # collector and generator both depend on core - install it first so pip's
+      # resolver treats it as already satisfied instead of reaching for PyPI.
+      - if: matrix.package != 'core'
+        run: pip install -e core
+      - run: pip install -e "${{ matrix.package }}[dev]"
+      - run: >
+          python -m pytest --cov=autodoc_${{ matrix.package }}
+          --cov-report=json:coverage.json
+        working-directory: ${{ matrix.package }}
+      - run: >
+          python3 ../scripts/generate_coverage_badge.py coverage.json coverage-badge.json
+          ${{ matrix.package }}
+        working-directory: ${{ matrix.package }}
       - uses: actions/upload-artifact@v7
         with:
-          name: coverage-badge
-          path: collector/coverage-badge.json
+          name: coverage-badge-${{ matrix.package }}
+          path: ${{ matrix.package }}/coverage-badge.json
           retention-days: 7
 
   # ---------------------------------------------------------------------
@@ -100,9 +113,13 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - uses: actions/download-artifact@v8
         with:
-          name: coverage-badge
-          path: coverage-artifact
-      - run: mkdir -p .github/badges && mv coverage-artifact/coverage-badge.json .github/badges/coverage.json
+          pattern: coverage-badge-*
+          path: coverage-artifacts
+      - run: |
+          mkdir -p .github/badges
+          for pkg in core collector generator; do
+            mv "coverage-artifacts/coverage-badge-$pkg/coverage-badge.json" ".github/badges/coverage-$pkg.json"
+          done
       - id: semrel
         uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
         with:
