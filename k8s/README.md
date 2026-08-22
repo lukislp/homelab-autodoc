@@ -9,10 +9,13 @@ Onboarded into the cluster-wide [homelab-infra](https://github.com/lukislp/homel
 ```bash
 export KUBECONFIG=$env:USERPROFILE\.kube\studylife-config   # PowerShell
 
-# 1. session secret for the admin app - required before the server will boot
+# 1. secrets for the admin app - required before the server will boot. The OpenAI key is the
+#    same one studylife-ai uses (see that repo's k8s/02-secret.yaml) - copy its value, don't
+#    provision a separate one.
 kubectl create namespace homelab-autodoc
 kubectl -n homelab-autodoc create secret generic autodoc-server-secrets \
-  --from-literal=session-secret="$(openssl rand -base64 32)"
+  --from-literal=session-secret="$(openssl rand -base64 32)" \
+  --from-literal=openai-api-key="<same key studylife-ai uses>"
 
 # 2. the bootstrap-only resources (namespace, RBAC, HTTPRoute, NetworkPolicies, CronJob)
 kubectl apply -k k8s/

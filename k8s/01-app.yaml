@@ -46,20 +46,34 @@ spec:
       serviceAccountName: default
       containers:
         - name: server
-          # Once onboarded into the central studylife repo's Flux pattern, an
-          # ImageUpdateAutomation there would auto-bump this tag - the marker is left in place
-          # ready for that, even though nothing acts on it yet.
           image: ghcr.io/lukislp/homelab-autodoc-server:1.9.1 # {"$imagepolicy": "flux-system:homelab-autodoc-server"}
           ports:
             - containerPort: 8000
           env:
-            # Create first: kubectl -n homelab-autodoc create secret generic
-            # autodoc-server-secrets --from-literal=session-secret=$(openssl rand -base64 32)
+            # Create first (see k8s/README.md for the full bootstrap secret command):
+            # kubectl -n homelab-autodoc create secret generic autodoc-server-secrets
+            #   --from-literal=session-secret=$(openssl rand -base64 32)
+            #   --from-literal=openai-api-key=<same key studylife-ai uses>
             - name: AUTODOC_SESSION_SECRET
               valueFrom:
                 secretKeyRef:
                   name: autodoc-server-secrets
                   key: session-secret
+            # Same model studylife-ai settled on (see its docs/decisions.md): cheaper and faster
+            # than gpt-4o/gpt-5-mini, plenty for a short factual summary - no reasoning needed here.
+            - name: AUTODOC_LLM_MODEL
+              value: "openai/gpt-5.6-luna"
+            - name: AUTODOC_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: autodoc-server-secrets
+                  key: openai-api-key
+            # Reasoning models bill hidden "thinking" tokens even for a trivial reply if this is
+            # left unset (found in studylife-ai). "minimal" - lower than studylife-ai's "medium" -
+            # because this prompt only restates already-given facts in plain sentences, it doesn't
+            # need actual reasoning.
+            - name: AUTODOC_LLM_REASONING_EFFORT
+              value: "minimal"
           resources:
             requests: {cpu: 100m, memory: 256Mi}
             limits: {cpu: "1", memory: 768Mi}
