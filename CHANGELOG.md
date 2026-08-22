@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/lukislp/homelab-autodoc/compare/v1.8.0...v1.9.0) (2026-08-22)
+
+
+### Features
+
+* **s4:** drift detection - diff inventories, persist changelog, render page ([3fafa8b](https://github.com/lukislp/homelab-autodoc/commit/3fafa8b37c0f99b27db4c6d56d753d3723b46d44))
+
 # [1.8.0](https://github.com/lukislp/homelab-autodoc/compare/v1.7.3...v1.8.0) (2026-08-22)
 
 
