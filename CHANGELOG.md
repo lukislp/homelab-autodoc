@@ -1,3 +1,10 @@
+## [1.10.1](https://github.com/lukislp/homelab-autodoc/compare/v1.10.0...v1.10.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* **llm:** reasoning_effort=minimal crashed server startup, use medium ([2947bdd](https://github.com/lukislp/homelab-autodoc/commit/2947bdd5a1ad14470a33ce126138b9755daf12d3))
+
 # [1.10.0](https://github.com/lukislp/homelab-autodoc/compare/v1.9.1...v1.10.0) (2026-08-22)
 
 
