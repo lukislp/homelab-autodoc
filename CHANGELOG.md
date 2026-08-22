@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/lukislp/homelab-autodoc/compare/v1.5.0...v1.6.0) (2026-08-22)
+
+
+### Features
+
+* add multi-arch Docker images for collector and server ([98ef5f7](https://github.com/lukislp/homelab-autodoc/commit/98ef5f7b5d9fd57d10be72a1970e13ca92a9a4c8))
+
 # [1.5.0](https://github.com/lukislp/homelab-autodoc/compare/v1.4.0...v1.5.0) (2026-08-22)
 
 
