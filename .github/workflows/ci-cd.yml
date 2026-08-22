@@ -1,0 +1,115 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PYTHON_VERSION: "3.12"
+
+permissions:
+  contents: read
+
+jobs:
+  test-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install ruff
+      - run: ruff check .
+        working-directory: collector
+      - run: ruff format --check .
+        working-directory: collector
+
+  test-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+        working-directory: collector
+      - run: python -m pytest --cov=autodoc_collector --cov-report=json:coverage.json
+        working-directory: collector
+      - run: python3 ../scripts/generate_coverage_badge.py coverage.json coverage-badge.json
+        working-directory: collector
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage-badge
+          path: collector/coverage-badge.json
+          retention-days: 7
+
+  # ---------------------------------------------------------------------
+  # Version / release — push to master only
+  # ---------------------------------------------------------------------
+  get-version:
+    needs: [test-lint, test-unit]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # @semantic-release/github's verifyConditions checks repo push access even during a dry
+    # run, so contents: write is required here too.
+    permissions:
+      contents: write
+    outputs:
+      published: ${{ steps.semrel.outputs.new_release_published }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - id: semrel
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        with:
+          dry_run: true
+          extra_plugins: |
+            @semantic-release/changelog@7.0.0
+            @semantic-release/exec@6.0.3
+            @semantic-release/github@12.0.9
+            @semantic-release/git@11.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: No release needed for this push
+        if: steps.semrel.outputs.new_release_published != 'true'
+        run: |
+          echo "No releasable commits since the last tag (e.g. docs/ci/chore-only) - expected, not a failure." | tee -a "$GITHUB_STEP_SUMMARY"
+
+  semantic-release:
+    needs: [get-version]
+    if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-badge
+          path: coverage-artifact
+      - run: mkdir -p .github/badges && mv coverage-artifact/coverage-badge.json .github/badges/coverage.json
+      - id: semrel
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        with:
+          extra_plugins: |
+            @semantic-release/changelog@7.0.0
+            @semantic-release/exec@6.0.3
+            @semantic-release/github@12.0.9
+            @semantic-release/git@11.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

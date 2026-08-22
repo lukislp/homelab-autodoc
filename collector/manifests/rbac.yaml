@@ -1,0 +1,38 @@
+# Read-only access for the autodoc-collector.
+#
+# Grants get/list/watch on exactly the resource kinds the collector reads -
+# nothing else, no write verbs anywhere. Cluster-scoped because the collector
+# inventories every application namespace in one run.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: autodoc-collector
+  namespace: autodoc
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: autodoc-collector
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "services", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: autodoc-collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: autodoc-collector
+subjects:
+  - kind: ServiceAccount
+    name: autodoc-collector
+    namespace: autodoc
