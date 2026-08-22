@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from autodoc_core.models import App
 
+from .formatting import format_timestamp
+
 
 def containers_table(app: App) -> str:
     if not app.containers:
@@ -102,7 +104,7 @@ def metadata_table(app: App) -> str:
         return ""
     rows = ["| Field | Value |", "|---|---|"]
     if app.created_at:
-        rows.append(f"| Created | {app.created_at} |")
+        rows.append(f"| Created | {format_timestamp(app.created_at)} |")
     if app.owners:
         rows.append(f"| Owners | {', '.join(sorted(app.owners))} |")
     for key, value in sorted(annotations.items()):
