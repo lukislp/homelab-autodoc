@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from autodoc_core.diff import Change
 
+from .formatting import format_timestamp
+
 _KIND_LABELS = {
     "app_added": "added",
     "app_removed": "removed",
@@ -14,7 +16,7 @@ _KIND_LABELS = {
 
 
 def render_changelog_entry(collected_at: str, changes: list[Change]) -> str:
-    lines = [f"## {collected_at}", ""]
+    lines = [f"## {format_timestamp(collected_at)}", ""]
     for change in changes:
         label = _KIND_LABELS.get(change.kind, change.kind)
         lines.append(f"- **{change.namespace}/{change.app_name}** {label}")

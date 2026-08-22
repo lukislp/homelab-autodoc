@@ -62,7 +62,7 @@ def test_dependencies_table_lists_config_refs(sample_app):
 def test_metadata_table_lists_created_owners_and_annotations(sample_app):
     table = metadata_table(sample_app)
 
-    assert "| Created | 2026-08-01T12:00:00+00:00 |" in table
+    assert "| Created | 2026-08-01 12:00 UTC |" in table
     assert "| Owners | ReplicaSet/web-abc123 |" in table
     assert "`kustomize.toolkit.fluxcd.io/name`" in table
 

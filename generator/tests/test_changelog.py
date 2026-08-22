@@ -13,7 +13,7 @@ def test_render_changelog_entry_lists_changes_and_details():
 
     text = changelog.render_changelog_entry("2026-08-22T00:00:00+00:00", changes)
 
-    assert "## 2026-08-22T00:00:00+00:00" in text
+    assert "## 2026-08-22 00:00 UTC" in text
     assert "**demo/web** changed" in text
     assert "replicas: 2 -> 3" in text
     assert "**demo/api** added" in text
