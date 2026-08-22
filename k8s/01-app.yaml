@@ -30,7 +30,7 @@ kind: Deployment
 metadata:
   name: autodoc-server
   namespace: homelab-autodoc
-  labels: { app: autodoc-server }
+  labels: {app: autodoc-server}
 spec:
   # /data and /config are ReadWriteOnce - stay single-replica. Recreate (not RollingUpdate) so a
   # rollout never has two pods fighting over the same RWO volumes.
@@ -38,10 +38,10 @@ spec:
   strategy:
     type: Recreate
   selector:
-    matchLabels: { app: autodoc-server }
+    matchLabels: {app: autodoc-server}
   template:
     metadata:
-      labels: { app: autodoc-server }
+      labels: {app: autodoc-server}
     spec:
       serviceAccountName: default
       containers:
@@ -49,7 +49,7 @@ spec:
           # Once onboarded into the central studylife repo's Flux pattern, an
           # ImageUpdateAutomation there would auto-bump this tag - the marker is left in place
           # ready for that, even though nothing acts on it yet.
-          image: ghcr.io/lukislp/homelab-autodoc-server:1.7.3 # {"$imagepolicy": "flux-system:homelab-autodoc-server"}
+          image: ghcr.io/lukislp/homelab-autodoc-server:1.8.0 # {"$imagepolicy": "flux-system:homelab-autodoc-server"}
           ports:
             - containerPort: 8000
           env:
@@ -61,26 +61,26 @@ spec:
                   name: autodoc-server-secrets
                   key: session-secret
           resources:
-            requests: { cpu: 100m, memory: 256Mi }
-            limits: { cpu: "1", memory: 768Mi }
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "1", memory: 768Mi}
           volumeMounts:
             - name: data
               mountPath: /data
             - name: config
               mountPath: /config
           readinessProbe:
-            httpGet: { path: /healthz, port: 8000 }
+            httpGet: {path: /healthz, port: 8000}
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
-            httpGet: { path: /healthz, port: 8000 }
+            httpGet: {path: /healthz, port: 8000}
             initialDelaySeconds: 10
             periodSeconds: 30
       volumes:
         - name: data
-          persistentVolumeClaim: { claimName: autodoc-server-data }
+          persistentVolumeClaim: {claimName: autodoc-server-data}
         - name: config
-          persistentVolumeClaim: { claimName: autodoc-server-config }
+          persistentVolumeClaim: {claimName: autodoc-server-config}
 ---
 apiVersion: v1
 kind: Service
@@ -89,7 +89,7 @@ metadata:
   namespace: homelab-autodoc
 spec:
   type: ClusterIP
-  selector: { app: autodoc-server }
+  selector: {app: autodoc-server}
   ports:
     - port: 8000
       targetPort: 8000
