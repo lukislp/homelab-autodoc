@@ -5,7 +5,7 @@ itself is covered in test_workloads.py.
 
 from __future__ import annotations
 
-from autodoc_core.models import Container
+from autodoc_core.models import ConfigReference, Container
 from kubernetes import client
 
 from autodoc_collector.collect import build_app, build_namespace_inventory
@@ -17,6 +17,10 @@ def _workload(
     kind: str = "Deployment",
     pod_labels: dict[str, str] | None = None,
     claim_names: frozenset[str] = frozenset(),
+    annotations: dict[str, str] | None = None,
+    created_at: str | None = None,
+    owners: list[str] | None = None,
+    config_refs: frozenset[ConfigReference] = frozenset(),
 ) -> NormalizedWorkload:
     return NormalizedWorkload(
         kind=kind,
@@ -27,6 +31,10 @@ def _workload(
         containers=[Container(name=name, image=f"{name}:1.0", ports=[8080])],
         claim_names=claim_names,
         labels={},
+        annotations=annotations or {},
+        created_at=created_at,
+        owners=owners or [],
+        config_refs=config_refs,
     )
 
 
@@ -118,6 +126,22 @@ def test_ingress_not_targeting_app_service_is_excluded():
     app = build_app(workload, [service], [unrelated_ingress], [])
 
     assert app.ingresses == []
+
+
+def test_builds_app_with_metadata_and_config_refs():
+    workload = _workload(
+        annotations={"kustomize.toolkit.fluxcd.io/name": "web-deploy"},
+        created_at="2026-08-01T12:00:00+00:00",
+        owners=["ReplicaSet/web-abc"],
+        config_refs=frozenset({ConfigReference(kind="Secret", name="web-secrets", via="env")}),
+    )
+
+    app = build_app(workload, [], [], [])
+
+    assert app.annotations == {"kustomize.toolkit.fluxcd.io/name": "web-deploy"}
+    assert app.created_at == "2026-08-01T12:00:00+00:00"
+    assert app.owners == ["ReplicaSet/web-abc"]
+    assert app.config_refs == [ConfigReference(kind="Secret", name="web-secrets", via="env")]
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

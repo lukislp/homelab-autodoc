@@ -115,6 +115,10 @@ def build_app(
         services=[_build_service(svc) for svc in matched_services],
         ingresses=[_build_ingress(ing) for ing in matched_ingresses],
         labels=workload.labels,
+        annotations=workload.annotations,
+        created_at=workload.created_at,
+        owners=workload.owners,
+        config_refs=sorted(workload.config_refs, key=lambda c: (c.kind, c.name, c.via)),
     )
 
 
