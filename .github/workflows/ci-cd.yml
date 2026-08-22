@@ -12,6 +12,7 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
 
 permissions:
   contents: read
@@ -44,9 +45,6 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-      # collector/generator/server all depend on core (and server also on generator) -
-      # install those first so pip's resolver treats them as already satisfied
-      # instead of reaching for PyPI.
       - if: matrix.package != 'core'
         run: pip install -e core
       - if: matrix.package == 'server'
@@ -66,11 +64,61 @@ jobs:
           path: ${{ matrix.package }}/coverage-badge.json
           retention-days: 7
 
+  test-frontend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run lint
+        working-directory: frontend
+      # tsc -b runs as part of the build - no separate typecheck step needed.
+      - run: npm run build
+        working-directory: frontend
+
+  test-frontend-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run test:coverage
+        working-directory: frontend
+      # vitest's coverage-summary.json has a different shape than coverage.py's -
+      # reshape just the number the badge script needs, same script for every package.
+      - run: |
+          python3 -c "
+          import json
+          pct = json.load(open('coverage/coverage-summary.json'))['total']['lines']['pct']
+          json.dump({'totals': {'percent_covered': pct}}, open('coverage-for-badge.json', 'w'))
+          "
+        working-directory: frontend
+      - run: python3 ../scripts/generate_coverage_badge.py coverage-for-badge.json coverage-badge.json frontend
+        working-directory: frontend
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage-badge-frontend
+          path: frontend/coverage-badge.json
+          retention-days: 7
+
   # ---------------------------------------------------------------------
   # Version / release — push to master only
   # ---------------------------------------------------------------------
   get-version:
-    needs: [test-lint, test-unit]
+    needs: [test-lint, test-unit, test-frontend-lint, test-frontend-unit]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     # @semantic-release/github's verifyConditions checks repo push access even during a dry
@@ -120,7 +168,7 @@ jobs:
           path: coverage-artifacts
       - run: |
           mkdir -p .github/badges
-          for pkg in core collector generator server; do
+          for pkg in core collector generator server frontend; do
             mv "coverage-artifacts/coverage-badge-$pkg/coverage-badge.json" ".github/badges/coverage-$pkg.json"
           done
       - id: semrel

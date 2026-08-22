@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import os
+import secrets
 from functools import lru_cache
 from pathlib import Path
 
 from autodoc_generator.llm import LiteLLMClient, LLMClient
 
+from ..logic.auth_config import AuthConfigStore
 from ..logic.device_grant import DeviceGrantStore
 from ..logic.storage import Storage
 
@@ -40,3 +42,16 @@ def get_mkdocs_config_path() -> Path:
 @lru_cache
 def get_device_grant_store() -> DeviceGrantStore:
     return DeviceGrantStore()
+
+
+@lru_cache
+def get_auth_config_store() -> AuthConfigStore:
+    return AuthConfigStore(config_dir=Path(os.environ.get("AUTODOC_CONFIG_DIR", "config")))
+
+
+@lru_cache
+def get_session_secret() -> str:
+    """AUTODOC_SESSION_SECRET if set; otherwise a random per-process secret -
+    sessions just won't survive a restart. Never a hardcoded fallback value.
+    """
+    return os.environ.get("AUTODOC_SESSION_SECRET") or secrets.token_urlsafe(32)

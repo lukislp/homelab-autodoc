@@ -20,6 +20,7 @@
           ".github/badges/coverage-collector.json",
           ".github/badges/coverage-generator.json",
           ".github/badges/coverage-server.json",
+          ".github/badges/coverage-frontend.json",
           "core/pyproject.toml",
           "collector/pyproject.toml",
           "generator/pyproject.toml",

@@ -2,9 +2,12 @@
 
 A new cluster calls POST /device/code without any pre-shared secret, shows
 the returned user_code, and polls POST /device/token until an admin approves
-or denies it at GET/POST /admin/devices/*. Error `detail` values follow the
-RFC's vocabulary (authorization_pending, access_denied, expired_token) so a
-standard device-flow client library recognizes them.
+or denies it via the React admin app (frontend/) at /admin. Error `detail`
+values on the device endpoints follow the RFC's vocabulary
+(authorization_pending, access_denied, expired_token) so a standard
+device-flow client library recognizes them.
+
+/api/admin/devices* is a JSON API gated by a real admin session (session.py).
 """
 
 from __future__ import annotations
@@ -14,8 +17,8 @@ from pydantic import BaseModel
 
 from ..logic.device_grant import DeviceGrantStore, approve_registration
 from ..logic.storage import Storage
-from .admin_auth import require_admin_token
 from .deps import get_device_grant_store, get_storage
+from .session import require_admin_session
 
 router = APIRouter()
 
@@ -40,7 +43,7 @@ def request_device_code(
     store: DeviceGrantStore = Depends(get_device_grant_store),
 ) -> DeviceCodeResponse:
     registration = store.create(payload.cluster_name)
-    verification_uri = str(request.base_url) + "admin/devices"
+    verification_uri = str(request.base_url) + "admin"
     return DeviceCodeResponse(
         device_code=registration.device_code,
         user_code=registration.user_code,
@@ -73,7 +76,7 @@ def poll_device_token(
     }
 
 
-@router.get("/admin/devices", dependencies=[Depends(require_admin_token)])
+@router.get("/api/admin/devices", dependencies=[Depends(require_admin_session)])
 def list_pending_devices(store: DeviceGrantStore = Depends(get_device_grant_store)) -> list[dict]:
     return [
         {"user_code": r.user_code, "cluster_name": r.cluster_name}
@@ -81,7 +84,9 @@ def list_pending_devices(store: DeviceGrantStore = Depends(get_device_grant_stor
     ]
 
 
-@router.post("/admin/devices/{user_code}/approve", dependencies=[Depends(require_admin_token)])
+@router.post(
+    "/api/admin/devices/{user_code}/approve", dependencies=[Depends(require_admin_session)]
+)
 def approve_device(
     user_code: str,
     store: DeviceGrantStore = Depends(get_device_grant_store),
@@ -94,7 +99,7 @@ def approve_device(
     return {"status": "approved", "cluster_name": updated.cluster_name}
 
 
-@router.post("/admin/devices/{user_code}/deny", dependencies=[Depends(require_admin_token)])
+@router.post("/api/admin/devices/{user_code}/deny", dependencies=[Depends(require_admin_session)])
 def deny_device(user_code: str, store: DeviceGrantStore = Depends(get_device_grant_store)) -> dict:
     updated = store.deny(user_code)
     if updated is None:

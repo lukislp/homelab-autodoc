@@ -1,26 +1,44 @@
 # autodoc-server
 
-Receives pushed cluster inventories from the [collector](../collector), turns them into a Markdown site via the [generator](../generator), and serves the built [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) site over HTTP.
+Receives pushed cluster inventories from the [collector](../collector), turns them into a Markdown site via the [generator](../generator), serves the built [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) site, and hosts the admin app ([frontend/](../frontend)) that a human uses to approve new clusters.
 
 ## Layers
 
-- [`logic/`](src/autodoc_server/logic) - framework-free: filesystem storage for inventories (`storage.py`) and turning them into the MkDocs source tree + built static site (`site_builder.py`). No `fastapi`/`starlette`/`uvicorn` import anywhere in here, by convention - it's fully testable and reusable without the web layer.
+- [`logic/`](src/autodoc_server/logic) - framework-free: filesystem storage for inventories and push tokens (`storage.py`), the Device Authorization Grant state machine (`device_grant.py`), the persisted admin-auth config (`auth_config.py`), the OAuth 2.0 Authorization Code client (`oauth_client.py`), and turning inventories into the MkDocs source tree + built static site (`site_builder.py`). No `fastapi`/`starlette`/`uvicorn` import anywhere in here, by convention - it's fully testable and reusable without the web layer.
 - [`web/`](src/autodoc_server/web) - the FastAPI app. Routes only validate input and call into `logic/`; no business logic lives here.
+- [`../frontend/`](../frontend) - the React admin app (setup wizard + pending-registrations screen), built separately and served as static files at `/admin`.
 
 ## Endpoints
 
-- `POST /device/code` - a cluster requests registration with no pre-shared secret (`{"cluster_name": "..."}`), gets back a `device_code`, a short human-readable `user_code`, and a `verification_uri`.
+**Cluster-facing (no admin session needed):**
+
+- `POST /device/code` - a cluster requests registration with no pre-shared secret (`{"cluster_name": "..."}`), gets back a `device_code`, a short human-readable `user_code`, and a `verification_uri` pointing at `/admin`.
 - `POST /device/token` - the cluster polls this with its `device_code`. Returns `authorization_pending` / `access_denied` / `expired_token` (matching RFC 8628's error vocabulary) until an admin approves it, at which point it returns the cluster's `push_token`.
-- `GET /admin/devices` / `POST /admin/devices/{user_code}/approve` / `.../deny` - admin-facing: list and decide on pending registrations. Requires an `X-Admin-Token` header.
-- `POST /api/clusters/{cluster_name}/inventory` - push an inventory (`{"format": "json"|"yaml", "text": "..."}`) using the token issued on approval, regenerates that cluster's docs and rebuilds the site. Requires an `X-Push-Token` header matching that cluster's issued token.
+- `POST /api/clusters/{cluster_name}/inventory` - push an inventory (`{"format": "json"|"yaml", "text": "..."}`) using the token issued on approval. Requires an `X-Push-Token` header matching that cluster's issued token.
+
+**Admin-facing (JSON API behind the React app):**
+
+- `GET /api/auth/status` - `{configured, identity}`.
+- `POST /api/setup` - save the admin-login provider config (GitHub or a generic OIDC issuer). Allowed once for free; after that, only with an active admin session.
+- `GET /auth/login` / `GET /auth/callback` / `GET /auth/logout` - the actual OAuth redirect dance (real browser navigations, not JSON).
+- `GET /api/admin/devices` / `POST /api/admin/devices/{user_code}/approve` / `.../deny` - list and decide on pending cluster registrations. Requires an admin session (cookie, set by `/auth/callback`).
+
+**Everything else:**
+
 - `GET /healthz`
-- `GET /` - the built site (static files).
+- `GET /admin` - the React admin app (static files).
+- `GET /` - the built MkDocs site (static files, public - no auth).
 
-## Auth: still partly temporary
+## Admin login
 
-Cluster registration is now the real thing: the [OAuth 2.0 Device Authorization Grant](https://www.rfc-editor.org/rfc/rfc8628) (`logic/device_grant.py`) - no pre-shared secret, each cluster gets its own token only after an admin approves it, and that token is scoped to exactly that cluster (`Storage.verify_push_token`), not shared across clusters like the old single `AUTODOC_PUSH_TOKEN` was.
+Two provider types, chosen at setup time (see `logic/auth_config.py`):
 
-What's still a stopgap: the `/admin/devices/*` endpoints themselves are gated by a single shared `AUTODOC_ADMIN_TOKEN` (checked in [`web/admin_auth.py`](src/autodoc_server/web/admin_auth.py)), not a real login. That gets replaced by pluggable GitHub/OIDC admin login + a setup wizard in a follow-up - at which point `/admin/devices` also becomes an actual web page instead of a JSON API.
+- **GitHub** - plain OAuth 2.0 (no OIDC discovery), identity is the GitHub username.
+- **Generic OIDC** - any standards-compliant issuer, endpoints discovered via `{issuer_url}/.well-known/openid-configuration`, identity is the `email` claim.
+
+The Authorization Code flow itself (`logic/oauth_client.py`) is hand-rolled with `httpx` rather than pulled in from a client library like Authlib - it's small and well-specified (RFC 6749 + OIDC Discovery), and owning every HTTP call keeps it fully testable by monkeypatching `httpx`, without mocking a third-party client's internals.
+
+Only one identity is ever allowed to log in - the `allowed_identity` set during setup. If you lock yourself out (lost access to that identity, or the OAuth app was deleted), delete `AUTODOC_CONFIG_DIR/auth.json` and restart; setup runs again on the next request.
 
 ## Configuration
 
@@ -29,7 +47,9 @@ What's still a stopgap: the `/admin/devices/*` endpoints themselves are gated by
 | `AUTODOC_DATA_DIR` | `data` | Where raw pushed inventories and per-cluster push tokens are stored |
 | `AUTODOC_DOCS_DIR` | `docs_src` | Generated Markdown (MkDocs `docs_dir`) |
 | `AUTODOC_MKDOCS_CONFIG` | `mkdocs.yml` | Path to the MkDocs config |
-| `AUTODOC_ADMIN_TOKEN` | *(required)* | Temporary shared token for `/admin/devices/*`, sent as `X-Admin-Token` |
+| `AUTODOC_CONFIG_DIR` | `config` | Where the admin-auth provider config is stored |
+| `AUTODOC_ADMIN_UI_DIR` | `../frontend/dist` | Built React app, served at `/admin` |
+| `AUTODOC_SESSION_SECRET` | *(random per process)* | Signs the admin session cookie. Unset means sessions don't survive a restart - fine for local use, set it explicitly for a real deployment |
 | `AUTODOC_LLM_MODEL` | *(unset = no LLM)* | LiteLLM model string for the prose summary |
 | `AUTODOC_LLM_API_KEY` / `AUTODOC_LLM_API_BASE` | *(unset)* | Passed straight to LiteLLM |
 
@@ -37,27 +57,11 @@ What's still a stopgap: the `/admin/devices/*` endpoints themselves are gated by
 
 ```bash
 pip install -e ../core -e ../generator -e ".[dev]"
+(cd ../frontend && npm install && npm run build)
 
-AUTODOC_ADMIN_TOKEN=change-me autodoc-server --port 8000
-
-# 1. cluster registers:
-curl -X POST http://localhost:8000/device/code -H "Content-Type: application/json" \
-  -d '{"cluster_name": "homelab"}'
-# -> shows a user_code and verification_uri
-
-# 2. admin approves it:
-curl -X POST http://localhost:8000/admin/devices/<user_code>/approve \
-  -H "X-Admin-Token: change-me"
-
-# 3. cluster polls for its token, then pushes with it:
-curl -X POST http://localhost:8000/device/token -H "Content-Type: application/json" \
-  -d '{"device_code": "<device_code>"}'
-curl -X POST http://localhost:8000/api/clusters/homelab/inventory \
-  -H "X-Push-Token: <push_token>" -H "Content-Type: application/json" \
-  -d "{\"format\": \"json\", \"text\": $(cat inventory.json | python3 -c 'import json,sys;print(json.dumps(sys.stdin.read()))')}"
+autodoc-server --port 8000
+# open http://localhost:8000/admin to run the setup wizard
 ```
-
-Note: the collector CLI doesn't perform this registration/push flow itself yet - that's a separate, not-yet-built piece (the client-side half of the device grant).
 
 ## Development
 

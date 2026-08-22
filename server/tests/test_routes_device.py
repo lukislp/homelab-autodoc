@@ -7,21 +7,25 @@ from autodoc_server.logic.device_grant import DeviceGrantStore
 from autodoc_server.logic.storage import Storage
 from autodoc_server.web.app import app
 from autodoc_server.web.deps import get_device_grant_store, get_storage
-
-ADMIN_HEADERS = {"X-Admin-Token": "admin-secret"}
+from autodoc_server.web.session import require_admin_session
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
+def client(tmp_path):
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
     store = DeviceGrantStore()
     app.dependency_overrides[get_storage] = lambda: storage
     app.dependency_overrides[get_device_grant_store] = lambda: store
-    monkeypatch.setenv("AUTODOC_ADMIN_TOKEN", "admin-secret")
 
     yield TestClient(app), storage, store
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def admin_client(client):
+    app.dependency_overrides[require_admin_session] = lambda: "admin@example.com"
+    return client
 
 
 def test_request_device_code_returns_codes_and_verification_uri(client):
@@ -33,7 +37,7 @@ def test_request_device_code_returns_codes_and_verification_uri(client):
     body = response.json()
     assert len(body["device_code"]) > 20
     assert "-" in body["user_code"]
-    assert body["verification_uri"].endswith("/admin/devices")
+    assert body["verification_uri"].endswith("/admin")
     assert body["user_code"] in body["verification_uri_complete"]
     assert body["expires_in"] > 0
 
@@ -57,30 +61,24 @@ def test_poll_token_while_pending_returns_authorization_pending(client):
     assert response.json()["detail"] == "authorization_pending"
 
 
-def test_admin_endpoints_require_admin_token(client):
+def test_admin_endpoints_require_a_session(client):
     test_client, _, store = client
     registration = store.create("homelab")
 
-    # a missing required header is a 422 from FastAPI's own validation, before
-    # require_admin_token's body ever runs - a wrong header is a real 401.
-    assert test_client.get("/admin/devices").status_code in (401, 422)
-    assert test_client.post(f"/admin/devices/{registration.user_code}/approve").status_code in (
-        401,
-        422,
+    assert test_client.get("/api/admin/devices").status_code == 401
+    assert (
+        test_client.post(f"/api/admin/devices/{registration.user_code}/approve").status_code == 401
     )
-    assert test_client.get("/admin/devices", headers={"X-Admin-Token": "wrong"}).status_code == 401
 
 
-def test_admin_can_list_and_approve_a_pending_registration(client):
-    test_client, storage, store = client
+def test_admin_can_list_and_approve_a_pending_registration(admin_client):
+    test_client, storage, store = admin_client
     registration = store.create("homelab")
 
-    pending = test_client.get("/admin/devices", headers=ADMIN_HEADERS).json()
+    pending = test_client.get("/api/admin/devices").json()
     assert pending == [{"user_code": registration.user_code, "cluster_name": "homelab"}]
 
-    approve_response = test_client.post(
-        f"/admin/devices/{registration.user_code}/approve", headers=ADMIN_HEADERS
-    )
+    approve_response = test_client.post(f"/api/admin/devices/{registration.user_code}/approve")
     assert approve_response.status_code == 200
     assert approve_response.json() == {"status": "approved", "cluster_name": "homelab"}
 
@@ -94,16 +92,14 @@ def test_admin_can_list_and_approve_a_pending_registration(client):
     assert storage.verify_push_token("homelab", body["push_token"])
 
     # approved registrations no longer show up as pending
-    assert test_client.get("/admin/devices", headers=ADMIN_HEADERS).json() == []
+    assert test_client.get("/api/admin/devices").json() == []
 
 
-def test_admin_can_deny_a_pending_registration(client):
-    test_client, _, store = client
+def test_admin_can_deny_a_pending_registration(admin_client):
+    test_client, _, store = admin_client
     registration = store.create("homelab")
 
-    deny_response = test_client.post(
-        f"/admin/devices/{registration.user_code}/deny", headers=ADMIN_HEADERS
-    )
+    deny_response = test_client.post(f"/api/admin/devices/{registration.user_code}/deny")
     assert deny_response.status_code == 200
 
     poll_response = test_client.post(
@@ -113,9 +109,9 @@ def test_admin_can_deny_a_pending_registration(client):
     assert poll_response.json()["detail"] == "access_denied"
 
 
-def test_approve_unknown_user_code_is_404(client):
-    test_client, _, _ = client
+def test_approve_unknown_user_code_is_404(admin_client):
+    test_client, _, _ = admin_client
 
-    response = test_client.post("/admin/devices/NOPE-NOPE/approve", headers=ADMIN_HEADERS)
+    response = test_client.post("/api/admin/devices/NOPE-NOPE/approve")
 
     assert response.status_code == 404
