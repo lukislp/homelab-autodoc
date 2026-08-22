@@ -5,6 +5,7 @@
 [![Coverage: collector](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-collector.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
 [![Coverage: generator](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-generator.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
 [![Coverage: server](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-server.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
+[![Coverage: frontend](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-frontend.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
 [![License](https://img.shields.io/github/license/lukislp/homelab-autodoc)](LICENSE)
 
 Living documentation for Kubernetes homelabs. A lightweight, read-only collector inspects the real state of one or more k3s clusters and streams a structured inventory to a central server, which turns it into a searchable, wiki-style documentation site — complete with dependency diagrams and a nightly changelog of what actually changed.
@@ -27,14 +28,15 @@ This keeps the hallucination surface small and auditable: if a fact is wrong, it
 |---|---|---|
 | Collector (client) | Python CLI, `kubernetes` client, read-only ServiceAccount | Reads Deployments, Services, Ingress, Volumes per cluster → structured inventory (JSON/YAML). No LLM involved. |
 | Server | Generator: Jinja2 templates + [LiteLLM](https://docs.litellm.ai/) (Ollama, OpenAI, Anthropic, ...), MkDocs Material | Turns inventory into per-namespace/app Markdown; facts and Mermaid diagrams are templated deterministically from the inventory, the LLM only writes the prose summary. Aggregates multiple clusters/sources into one site. |
-| Registration | OAuth 2.0 Device Authorization Grant (RFC 8628) | A new cluster self-registers with the server without a pre-shared secret; an admin approves or denies it from a web page. |
-| Admin auth | Pluggable OIDC (GitHub OAuth2 or a self-hosted OIDC provider) | Protects the approval page and admin views; chosen during a first-run setup wizard. |
+| Registration | OAuth 2.0 Device Authorization Grant (RFC 8628) | A new cluster self-registers with the server without a pre-shared secret; an admin approves or denies it from the admin app. |
+| Admin auth | GitHub OAuth2 or a self-hosted OIDC provider, chosen at setup | Protects the admin app; only one configured identity may log in. |
+| Admin UI | React + TypeScript + Vite ([frontend/](frontend/)) | The setup wizard and the pending-cluster-approval screen, served by the server at `/admin`. |
 | Automation | Nightly job per cluster | Regenerates and commits documentation changes — the doc history becomes the cluster history. |
 | Drift | Diff of inventory snapshots | Produces a changelog entry and a notification whenever something changes unexpectedly. |
 
 ## Status
 
-S1 (collector) and S2 (generator) done, S3 (server) in progress - a push endpoint, framework-free site-building logic, and static site hosting are up; the nightly-automation and multi-cluster-in-one-site polish are still to come. Packages: [core/](core/) (shared inventory model), [collector/](collector/), [generator/](generator/), [server/](server/) - see each package's README for usage.
+S1 (collector), S2 (generator) and S3 (server) done. S3.5 (auth) mostly done: cluster registration via the Device Authorization Grant and the GitHub/OIDC admin login + setup wizard are live behind a real React admin app at `/admin`; the nightly-automation and multi-cluster-in-one-site polish from S3 are still to come, as is S4 (drift detection). Packages: [core/](core/) (shared inventory model), [collector/](collector/), [generator/](generator/), [server/](server/), [frontend/](frontend/) (admin app) - see each package's README for usage.
 
 ## Milestones
 

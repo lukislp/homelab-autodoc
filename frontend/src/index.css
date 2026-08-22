@@ -1,0 +1,218 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0d11;
+  --card: #171a21;
+  --border: #2a2e37;
+  --text: #e6e8eb;
+  --muted: #9aa1ac;
+  --accent: #5b8def;
+  --accent-hover: #4a7bd8;
+  --danger: #e5534b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(91, 141, 239, 0.16), transparent),
+    var(--bg);
+  color: var(--text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+  gap: 1.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.brand .dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(91, 141, 239, 0.2);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
+}
+
+.card--wide {
+  max-width: 640px;
+}
+
+h1 {
+  font-size: 1.15rem;
+  margin: 0 0 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 1rem 0 0.35rem;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text);
+  /* 16px minimum - anything smaller triggers an unwanted zoom on iOS Safari */
+  font-size: 1rem;
+}
+
+input:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button,
+.button-link {
+  display: block;
+  margin-top: 1.5rem;
+  width: 100%;
+  padding: 0.8rem;
+  min-height: 44px; /* comfortable touch target */
+  border: none;
+  border-radius: 9px;
+  background: var(--accent);
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+button:hover,
+.button-link:hover {
+  background: var(--accent-hover);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+button.danger {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.topbar a {
+  color: var(--muted);
+}
+
+.device-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.device-row:last-child {
+  border-bottom: none;
+}
+
+.device-row .actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.device-row button {
+  width: auto;
+  margin: 0;
+  padding: 0.55rem 1rem;
+  min-height: 40px;
+  font-size: 0.85rem;
+}
+
+.user-code {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 480px) {
+  #root {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .card {
+    padding: 1.5rem;
+    border-radius: 14px;
+  }
+
+  .device-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .device-row .actions {
+    justify-content: stretch;
+  }
+
+  .device-row .actions button {
+    flex: 1;
+  }
+}
