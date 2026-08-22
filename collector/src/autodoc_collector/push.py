@@ -83,7 +83,12 @@ def push_inventory(
     push_token: str,
     text: str,
     fmt: str,
-    timeout: float = 30.0,
+    # The server regenerates every page (facts, diagrams, a full mkdocs build) and,
+    # if an LLM is configured, calls it once per app - synchronously, in this same
+    # request - before responding. On a many-app cluster and modest hardware
+    # (Raspberry Pi) that's minutes, not seconds; this runs from an unattended
+    # nightly CronJob, so there's no UX reason to time out aggressively.
+    timeout: float = 300.0,
 ) -> dict:
     response = httpx.post(
         f"{server_url.rstrip('/')}/api/clusters/{cluster_name}/inventory",
