@@ -36,7 +36,7 @@ This keeps the hallucination surface small and auditable: if a fact is wrong, it
 
 ## Status
 
-S1 (collector), S2 (generator) and S3 (server) done. S3.5 (auth) mostly done: cluster registration via the Device Authorization Grant and the GitHub/OIDC admin login + setup wizard are live behind a real React admin app at `/admin`; the nightly-automation and multi-cluster-in-one-site polish from S3 are still to come, as is S4 (drift detection). Packages: [core/](core/) (shared inventory model), [collector/](collector/), [generator/](generator/), [server/](server/), [frontend/](frontend/) (admin app) - see each package's README for usage.
+S1 (collector), S2 (generator), S3 (server) and S3.5 (auth) done - the collector can now register itself via the Device Authorization Grant, get approved from the React admin app, and push its inventory end-to-end (`autodoc-collector --push <server-url>`). Containerizing collector/server for real cluster deployment (Docker images, CI multi-arch build) and S4 (drift detection) are next. Packages: [core/](core/) (shared inventory model), [collector/](collector/), [generator/](generator/), [server/](server/), [frontend/](frontend/) (admin app) - see each package's README for usage.
 
 ## Milestones
 
