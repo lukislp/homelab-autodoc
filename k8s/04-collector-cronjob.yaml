@@ -35,7 +35,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: collector
-              image: ghcr.io/lukislp/homelab-autodoc-collector:1.6.0
+              image: ghcr.io/lukislp/homelab-autodoc-collector:1.7.1
               args:
                 - --push
                 - http://autodoc-server.homelab-autodoc.svc.cluster.local:8000

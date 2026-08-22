@@ -50,7 +50,7 @@ spec:
           # Once onboarded into the central studylife repo's Flux pattern, an
           # ImageUpdateAutomation there would auto-bump this tag - the marker is left in place
           # ready for that, even though nothing acts on it yet.
-          image: ghcr.io/lukislp/homelab-autodoc-server:1.6.0 # {"$imagepolicy": "flux-system:homelab-autodoc-server"}
+          image: ghcr.io/lukislp/homelab-autodoc-server:1.7.1 # {"$imagepolicy": "flux-system:homelab-autodoc-server"}
           ports:
             - containerPort: 8000
           env:
