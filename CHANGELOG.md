@@ -1,3 +1,10 @@
+## [1.14.2](https://github.com/lukislp/homelab-autodoc/compare/v1.14.1...v1.14.2) (2026-08-22)
+
+
+### Bug Fixes
+
+* **docs:** sidebar nav overflow + human-readable timestamps ([0b11a6e](https://github.com/lukislp/homelab-autodoc/commit/0b11a6e26ea569fcbf475923f007c2f5d22e69b0))
+
 ## [1.14.1](https://github.com/lukislp/homelab-autodoc/compare/v1.14.0...v1.14.1) (2026-08-22)
 
 
