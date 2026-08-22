@@ -4,6 +4,7 @@
 [![Coverage: core](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-core.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
 [![Coverage: collector](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-collector.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
 [![Coverage: generator](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-generator.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
+[![Coverage: server](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-server.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
 [![License](https://img.shields.io/github/license/lukislp/homelab-autodoc)](LICENSE)
 
 Living documentation for Kubernetes homelabs. A lightweight, read-only collector inspects the real state of one or more k3s clusters and streams a structured inventory to a central server, which turns it into a searchable, wiki-style documentation site — complete with dependency diagrams and a nightly changelog of what actually changed.
@@ -33,7 +34,7 @@ This keeps the hallucination surface small and auditable: if a fact is wrong, it
 
 ## Status
 
-S1 (collector) done, S2 (generator) in progress. Packages: [core/](core/) (shared inventory model), [collector/](collector/), [generator/](generator/) - see each package's README for usage.
+S1 (collector) and S2 (generator) done, S3 (server) in progress - a push endpoint, framework-free site-building logic, and static site hosting are up; the nightly-automation and multi-cluster-in-one-site polish are still to come. Packages: [core/](core/) (shared inventory model), [collector/](collector/), [generator/](generator/), [server/](server/) - see each package's README for usage.
 
 ## Milestones
 
