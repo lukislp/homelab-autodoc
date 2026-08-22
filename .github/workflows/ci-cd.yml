@@ -20,7 +20,7 @@ jobs:
   test-lint:
     strategy:
       matrix:
-        package: [core, collector, generator]
+        package: [core, collector, generator, server]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -36,7 +36,7 @@ jobs:
   test-unit:
     strategy:
       matrix:
-        package: [core, collector, generator]
+        package: [core, collector, generator, server]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -44,10 +44,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-      # collector and generator both depend on core - install it first so pip's
-      # resolver treats it as already satisfied instead of reaching for PyPI.
+      # collector/generator/server all depend on core (and server also on generator) -
+      # install those first so pip's resolver treats them as already satisfied
+      # instead of reaching for PyPI.
       - if: matrix.package != 'core'
         run: pip install -e core
+      - if: matrix.package == 'server'
+        run: pip install -e generator
       - run: pip install -e "${{ matrix.package }}[dev]"
       - run: >
           python -m pytest --cov=autodoc_${{ matrix.package }}
@@ -117,7 +120,7 @@ jobs:
           path: coverage-artifacts
       - run: |
           mkdir -p .github/badges
-          for pkg in core collector generator; do
+          for pkg in core collector generator server; do
             mv "coverage-artifacts/coverage-badge-$pkg/coverage-badge.json" ".github/badges/coverage-$pkg.json"
           done
       - id: semrel

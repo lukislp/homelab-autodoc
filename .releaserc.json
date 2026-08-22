@@ -7,7 +7,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "python3 scripts/sync_pyproject_version.py ${nextRelease.version} core/pyproject.toml collector/pyproject.toml generator/pyproject.toml"
+        "prepareCmd": "python3 scripts/sync_pyproject_version.py ${nextRelease.version} core/pyproject.toml collector/pyproject.toml generator/pyproject.toml server/pyproject.toml"
       }
     ],
     "@semantic-release/github",
@@ -19,9 +19,11 @@
           ".github/badges/coverage-core.json",
           ".github/badges/coverage-collector.json",
           ".github/badges/coverage-generator.json",
+          ".github/badges/coverage-server.json",
           "core/pyproject.toml",
           "collector/pyproject.toml",
-          "generator/pyproject.toml"
+          "generator/pyproject.toml",
+          "server/pyproject.toml"
         ],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
