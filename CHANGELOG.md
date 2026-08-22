@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/lukislp/homelab-autodoc/compare/v1.4.0...v1.5.0) (2026-08-22)
+
+
+### Features
+
+* add collector --push mode, closing the device-grant client loop ([b81a7c3](https://github.com/lukislp/homelab-autodoc/commit/b81a7c38ed4beb77aa63d52a812bd7743576d3be))
+
 # [1.4.0](https://github.com/lukislp/homelab-autodoc/compare/v1.3.0...v1.4.0) (2026-08-22)
 
 
