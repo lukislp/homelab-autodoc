@@ -1,5 +1,9 @@
 # homelab-autodoc
 
+[![CI/CD](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
+[![License](https://img.shields.io/github/license/lukislp/homelab-autodoc)](LICENSE)
+
 Living documentation for Kubernetes homelabs. A lightweight, read-only collector inspects the real state of one or more k3s clusters and streams a structured inventory to a central server, which turns it into a searchable, wiki-style documentation site — complete with dependency diagrams and a nightly changelog of what actually changed.
 
 Docs that can't go stale, because they're regenerated from the cluster itself, not written by hand.
@@ -27,7 +31,7 @@ This keeps the hallucination surface small and auditable: if a fact is wrong, it
 
 ## Status
 
-Early planning / pre-implementation. See the milestones below for the current build order.
+S1 (collector) in progress — see [collector/](collector/) for the current state and [collector/README.md](collector/README.md) for usage.
 
 ## Milestones
 
