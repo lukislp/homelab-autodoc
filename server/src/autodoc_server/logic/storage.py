@@ -5,6 +5,7 @@ No web framework import here.
 from __future__ import annotations
 
 import hmac
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -27,6 +28,25 @@ class Storage:
     def load_inventory(self, cluster_name: str) -> ClusterInventory:
         path = self.data_dir / cluster_name / "inventory.json"
         return from_text(path.read_text(encoding="utf-8"), fmt="json")
+
+    def has_inventory(self, cluster_name: str) -> bool:
+        return (self.data_dir / cluster_name / "inventory.json").exists()
+
+    def append_changelog_entry(
+        self, cluster_name: str, collected_at: str, changes: list[dict]
+    ) -> None:
+        cluster_dir = self.data_dir / cluster_name
+        cluster_dir.mkdir(parents=True, exist_ok=True)
+        entry = json.dumps({"collected_at": collected_at, "changes": changes})
+        with cluster_dir.joinpath("changelog.jsonl").open("a", encoding="utf-8") as f:
+            f.write(entry + "\n")
+
+    def load_changelog_entries(self, cluster_name: str) -> list[dict]:
+        path = self.data_dir / cluster_name / "changelog.jsonl"
+        if not path.exists():
+            return []
+        lines = path.read_text(encoding="utf-8").splitlines()
+        return [json.loads(line) for line in lines if line.strip()]
 
     def list_clusters(self) -> list[str]:
         if not self.data_dir.exists():

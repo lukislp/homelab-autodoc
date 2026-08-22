@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from autodoc_core.diff import Change
 from autodoc_core.models import ClusterInventory
+from autodoc_generator import changelog as changelog_render
 from autodoc_generator import render
 from autodoc_generator.llm import LLMClient
 from autodoc_generator.prose import generate_summary
@@ -29,14 +31,34 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
             )
 
     _write_cluster_index(storage, cluster_name, inventory)
+    _write_changelog_page(storage, cluster_name)
     _write_root_index(storage)
 
 
 def _write_cluster_index(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:
-    lines = [f"# {cluster_name}", "", "| Namespace | Apps |", "|---|---|"]
+    lines = [
+        f"# {cluster_name}",
+        "",
+        "[Changelog](changelog.md)",
+        "",
+        "| Namespace | Apps |",
+        "|---|---|",
+    ]
     for namespace in sorted(inventory.namespaces, key=lambda n: n.name):
         lines.append(f"| [{namespace.name}]({namespace.name}/index.md) | {len(namespace.apps)} |")
     (storage.docs_dir / cluster_name / "index.md").write_text("\n".join(lines), encoding="utf-8")
+
+
+def _write_changelog_page(storage: Storage, cluster_name: str) -> None:
+    entries = storage.load_changelog_entries(cluster_name)
+    rendered = [
+        changelog_render.render_changelog_entry(
+            entry["collected_at"], [Change(**c) for c in entry["changes"]]
+        )
+        for entry in reversed(entries)
+    ]
+    page = changelog_render.render_changelog_page(cluster_name, rendered)
+    (storage.docs_dir / cluster_name / "changelog.md").write_text(page, encoding="utf-8")
 
 
 def _write_root_index(storage: Storage) -> None:
