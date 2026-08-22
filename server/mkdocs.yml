@@ -3,6 +3,7 @@ docs_dir: docs_src
 site_dir: site
 theme:
   name: material
+  custom_dir: overrides
   features:
     # With 14+ namespaces (each its own top-level nav entry, several with many
     # apps) the full nav tree overflowed the viewport - prune renders only the
@@ -27,3 +28,12 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+extra_javascript:
+  # Vendored, not CDN-loaded: autodoc.heim.lan is an internal-only hostname -
+  # a homelab network's egress to external CDNs isn't guaranteed, and this
+  # script failing to load must never be a silent, hard-to-diagnose reason
+  # pan-zoom just doesn't work.
+  - javascripts/svg-pan-zoom.min.js
+  - javascripts/mermaid-pan-zoom.js
+extra_css:
+  - stylesheets/mermaid-pan-zoom.css
