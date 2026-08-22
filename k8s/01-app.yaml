@@ -1,9 +1,8 @@
-# This file is meant to eventually be Flux-managed via k8s/flux-deploy/kustomization.yaml
-# (which applies exactly this file - the same PVC+Deployment+Service subset the central
-# studylife repo's kustomize-controller RBAC already permits for every sibling app). Not
-# actually wired into that repo's Flux pattern yet - applied by hand for now, same as
-# 00-namespace.yaml/02-httproute.yaml/03-network-policies.yaml/03-collector-rbac.yaml/
-# 04-collector-cronjob.yaml. See k8s/README.md.
+# Flux-managed via k8s/flux-deploy/kustomization.yaml (which applies exactly this file - the
+# same PVC+Deployment+Service subset the shared homelab-infra kustomize-controller RBAC already
+# permits for every sibling app). k8s/flux/ wires this repo into Flux itself. Everything else in
+# k8s/ (00-namespace.yaml/02-httproute.yaml/03-network-policies.yaml/03-collector-rbac.yaml/
+# 04-collector-cronjob.yaml) stays bootstrap-only, applied by hand - see k8s/README.md.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

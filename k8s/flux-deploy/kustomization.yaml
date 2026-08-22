@@ -1,13 +1,13 @@
-# Deliberately ONLY this file - NOT the rest of k8s/. Mirrors UnifiProtectDashboard's own
-# k8s/flux-deploy/kustomization.yaml scoping: kustomize-controller's least-privilege ClusterRole
-# (studylife repo's k8s/flux/06-reconciler-rbac.yaml) only grants permissions on
-# Deployments/Services/PersistentVolumeClaims - NOT Namespaces, NetworkPolicies, RBAC, CronJobs,
-# or the Gateway API resource kinds, all of which this repo's k8s/ also has (00-namespace.yaml,
-# 02-httproute.yaml, 03-network-policies.yaml, 03-collector-rbac.yaml, 04-collector-cronjob.yaml).
-# Those stay bootstrap-only, applied once by hand; Flux would continuously reconcile exactly
-# this subset (PVC + Deployment + Service for the server, all defined together in ../01-app.yaml)
-# once this repo is actually onboarded into the central studylife repo's Flux pattern - not done
-# yet, see k8s/README.md.
+# Deliberately ONLY this file - NOT the rest of k8s/. Mirrors every sibling app's own
+# k8s/flux-deploy/kustomization.yaml scoping (e.g. studylife-ai, UnifiProtectDashboard):
+# kustomize-controller's least-privilege ClusterRole (homelab-infra repo's
+# flux/01-reconciler-rbac.yaml) only grants permissions on Deployments/Services/
+# PersistentVolumeClaims - NOT Namespaces, NetworkPolicies, RBAC, CronJobs, or the Gateway API
+# resource kinds, all of which this repo's k8s/ also has (00-namespace.yaml, 02-httproute.yaml,
+# 03-network-policies.yaml, 03-collector-rbac.yaml, 04-collector-cronjob.yaml). Those stay
+# bootstrap-only, applied once by hand; Flux continuously reconciles exactly this subset (PVC +
+# Deployment + Service for the server, all defined together in ../01-app.yaml) via k8s/flux/
+# (this repo owns its own Flux wiring, applied once - see k8s/README.md).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

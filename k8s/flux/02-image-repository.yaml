@@ -1,0 +1,12 @@
+# Scans GHCR for new tags of the server image (.github/workflows/ci-cd.yml "docker-build-push"
+# job, matrix image=server). Public package - no secretRef needed. Only the server is wired for
+# image automation - the collector stays bootstrap-only (see k8s/flux-deploy/kustomization.yaml
+# and k8s/README.md for why), so there's no equivalent ImageRepository for it.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: homelab-autodoc-server
+  namespace: flux-system
+spec:
+  image: ghcr.io/lukislp/homelab-autodoc-server
+  interval: 5m

@@ -1,0 +1,36 @@
+# Automatically commits new server image tags to master (directly, no PR). Patches ONLY the
+# marker comment in k8s/01-app.yaml (# {"$imagepolicy": "flux-system:homelab-autodoc-server"}),
+# not the rest of k8s/ - the collector's image line in k8s/04-collector-cronjob.yaml has no
+# marker, so it's never touched by this. "[skip ci]" in the commit template is MANDATORY -
+# without it, a plain image-tag commit (no app code changed) would still trigger the entire CI
+# pipeline again for no reason. Affects ONLY the CI trigger, not Flux's own reconciliation
+# (which watches the Git ref directly).
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: homelab-autodoc-server
+  namespace: flux-system
+spec:
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: homelab-autodoc
+  git:
+    checkout:
+      ref:
+        branch: master
+    commit:
+      author:
+        email: flux@studylife.local
+        name: fluxcdbot
+      messageTemplate: |
+        chore(image): auto-update [skip ci]
+        {{ range $resource, $changes := .Changed.Objects -}}
+        - {{ $resource.Kind }} {{ $resource.Name }}
+        {{- range $_, $change := $changes }}
+            {{ $change.OldValue }} -> {{ $change.NewValue }}
+        {{- end }}
+        {{ end -}}
+  update:
+    path: ./k8s
+    strategy: Setters

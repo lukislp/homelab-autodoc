@@ -1,14 +1,12 @@
-# Convenience for right now, while this repo isn't onboarded into the central studylife repo's
-# Flux pattern yet (see k8s/README.md) - lets everything below be applied in one shot:
-#   kubectl apply -k k8s/
-# Once onboarded, k8s/flux-deploy/kustomization.yaml (a narrower subset - see that file) is what
-# Flux itself would reconcile; this top-level file would then only cover the bootstrap-only
-# resources it still needs applied by hand.
+# The bootstrap-only resources - everything Flux's shared reconciler RBAC doesn't cover, so it
+# has to be applied by hand once (see k8s/README.md). Deliberately does NOT include 01-app.yaml
+# anymore: that file is Flux-managed now (k8s/flux/ wires this repo in, k8s/flux-deploy/
+# applies exactly that file) - re-applying it here too would just be a second, redundant owner
+# of the same objects. `kubectl apply -k k8s/` covers everything in this list in one shot.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - 00-namespace.yaml
-  - 01-app.yaml
   - 02-httproute.yaml
   - 03-network-policies.yaml
   - 03-collector-rbac.yaml
