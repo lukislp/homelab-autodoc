@@ -1,3 +1,10 @@
+# [1.41.0](https://github.com/lukislp/homelab-autodoc/compare/v1.40.0...v1.41.0) (2026-08-23)
+
+
+### Features
+
+* **generator:** GitOps provenance badge on app pages ([850c69d](https://github.com/lukislp/homelab-autodoc/commit/850c69dafae7b03b10d490f63c86d40f2df987a8))
+
 # [1.40.0](https://github.com/lukislp/homelab-autodoc/compare/v1.39.0...v1.40.0) (2026-08-23)
 
 
