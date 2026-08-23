@@ -10,7 +10,14 @@ from autodoc_core.models import ConfigReference, Container
 from kubernetes import client
 from kubernetes.client.exceptions import ApiException
 
-from autodoc_collector.collect import _list_httproutes, build_app, build_namespace_inventory
+from autodoc_collector.collect import (
+    _autoscaler_for_workload,
+    _build_autoscaler,
+    _list_hpas,
+    _list_httproutes,
+    build_app,
+    build_namespace_inventory,
+)
 from autodoc_collector.k8s_apis import K8sApis
 from autodoc_collector.workloads import NormalizedWorkload
 
@@ -198,6 +205,7 @@ def test_list_httproutes_returns_empty_when_gateway_api_crd_is_missing():
         networking_v1=None,
         batch_v1=None,
         custom_objects=FakeCustomObjects(),
+        autoscaling_v2=None,
     )
 
     assert _list_httproutes(apis, "demo") == []
@@ -214,6 +222,7 @@ def test_list_httproutes_reraises_non_404_errors():
         networking_v1=None,
         batch_v1=None,
         custom_objects=FakeCustomObjects(),
+        autoscaling_v2=None,
     )
 
     with pytest.raises(ApiException):
@@ -234,6 +243,148 @@ def test_builds_app_with_metadata_and_config_refs():
     assert app.created_at == "2026-08-01T12:00:00+00:00"
     assert app.owners == ["ReplicaSet/web-abc"]
     assert app.config_refs == [ConfigReference(kind="Secret", name="web-secrets", via="env")]
+
+
+def _hpa(
+    target_kind: str,
+    target_name: str,
+    min_replicas: int = 2,
+    max_replicas: int = 5,
+    cpu_percent: int | None = 70,
+    memory_percent: int | None = None,
+) -> client.V2HorizontalPodAutoscaler:
+    metrics = []
+    if cpu_percent is not None:
+        metrics.append(
+            client.V2MetricSpec(
+                type="Resource",
+                resource=client.V2ResourceMetricSource(
+                    name="cpu",
+                    target=client.V2MetricTarget(
+                        type="Utilization", average_utilization=cpu_percent
+                    ),
+                ),
+            )
+        )
+    if memory_percent is not None:
+        metrics.append(
+            client.V2MetricSpec(
+                type="Resource",
+                resource=client.V2ResourceMetricSource(
+                    name="memory",
+                    target=client.V2MetricTarget(
+                        type="Utilization", average_utilization=memory_percent
+                    ),
+                ),
+            )
+        )
+    return client.V2HorizontalPodAutoscaler(
+        metadata=client.V1ObjectMeta(name=f"{target_name}-hpa"),
+        spec=client.V2HorizontalPodAutoscalerSpec(
+            scale_target_ref=client.V2CrossVersionObjectReference(
+                kind=target_kind, name=target_name
+            ),
+            min_replicas=min_replicas,
+            max_replicas=max_replicas,
+            metrics=metrics,
+        ),
+    )
+
+
+def test_build_autoscaler_reads_cpu_and_memory_targets():
+    hpa = _hpa(
+        "Deployment", "web", min_replicas=2, max_replicas=5, cpu_percent=70, memory_percent=80
+    )
+
+    autoscaler = _build_autoscaler(hpa)
+
+    assert autoscaler.min_replicas == 2
+    assert autoscaler.max_replicas == 5
+    assert autoscaler.target_cpu_percent == 70
+    assert autoscaler.target_memory_percent == 80
+
+
+def test_build_autoscaler_defaults_min_replicas_to_one_when_unset():
+    hpa = _hpa("Deployment", "web", min_replicas=None, cpu_percent=None)
+
+    autoscaler = _build_autoscaler(hpa)
+
+    assert autoscaler.min_replicas == 1
+    assert autoscaler.target_cpu_percent is None
+    assert autoscaler.target_memory_percent is None
+
+
+def test_autoscaler_for_workload_matches_by_kind_and_name():
+    workload = _workload(name="web", kind="Deployment")
+    matching_hpa = _hpa("Deployment", "web")
+    other_hpa = _hpa("Deployment", "other")
+
+    autoscaler = _autoscaler_for_workload([other_hpa, matching_hpa], workload)
+
+    assert autoscaler is not None
+    assert autoscaler.max_replicas == 5
+
+
+def test_autoscaler_for_workload_returns_none_when_no_hpa_targets_it():
+    workload = _workload(name="web", kind="Deployment")
+
+    autoscaler = _autoscaler_for_workload([_hpa("Deployment", "other")], workload)
+
+    assert autoscaler is None
+
+
+def test_build_app_wires_matching_autoscaler():
+    workload = _workload(name="web", kind="Deployment")
+
+    app = build_app(workload, [], [], [], hpas=[_hpa("Deployment", "web")])
+
+    assert app.autoscaler is not None
+    assert app.autoscaler.min_replicas == 2
+    assert app.autoscaler.max_replicas == 5
+
+
+def test_build_app_without_hpas_leaves_autoscaler_none():
+    workload = _workload()
+
+    app = build_app(workload, [], [], [])
+
+    assert app.autoscaler is None
+
+
+class _FakeAutoscalingV2Api:
+    def __init__(self, exception: ApiException | None = None):
+        self._exception = exception
+
+    def list_namespaced_horizontal_pod_autoscaler(self, namespace: str):
+        if self._exception:
+            raise self._exception
+        return client.V2HorizontalPodAutoscalerList(items=[_hpa("Deployment", "web")])
+
+
+class _FakeApis:
+    def __init__(self, autoscaling_v2):
+        self.autoscaling_v2 = autoscaling_v2
+
+
+def test_list_hpas_returns_empty_when_autoscaling_v2_is_missing():
+    apis = _FakeApis(_FakeAutoscalingV2Api(ApiException(status=404)))
+
+    assert _list_hpas(apis, "demo") == []
+
+
+def test_list_hpas_reraises_non_404_errors():
+    apis = _FakeApis(_FakeAutoscalingV2Api(ApiException(status=500)))
+
+    with pytest.raises(ApiException):
+        _list_hpas(apis, "demo")
+
+
+def test_list_hpas_returns_items_on_success():
+    apis = _FakeApis(_FakeAutoscalingV2Api())
+
+    hpas = _list_hpas(apis, "demo")
+
+    assert [h.spec.scale_target_ref.name for h in hpas] == ["web"]
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

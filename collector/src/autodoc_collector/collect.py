@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 
 from autodoc_core.models import (
     App,
+    Autoscaler,
     ClusterInventory,
     IngressInfo,
     IngressRule,
@@ -137,12 +138,42 @@ def _httproute_targets_services(raw: dict, service_names: set[str]) -> bool:
     return False
 
 
+def _build_autoscaler(raw: client.V2HorizontalPodAutoscaler) -> Autoscaler:
+    cpu_percent = None
+    memory_percent = None
+    for metric in raw.spec.metrics or []:
+        if metric.type != "Resource" or not metric.resource:
+            continue
+        utilization = metric.resource.target.average_utilization if metric.resource.target else None
+        if metric.resource.name == "cpu":
+            cpu_percent = utilization
+        elif metric.resource.name == "memory":
+            memory_percent = utilization
+    return Autoscaler(
+        min_replicas=raw.spec.min_replicas or 1,
+        max_replicas=raw.spec.max_replicas,
+        target_cpu_percent=cpu_percent,
+        target_memory_percent=memory_percent,
+    )
+
+
+def _autoscaler_for_workload(
+    hpas: list[client.V2HorizontalPodAutoscaler], workload: NormalizedWorkload
+) -> Autoscaler | None:
+    for hpa in hpas:
+        ref = hpa.spec.scale_target_ref
+        if ref.kind == workload.kind and ref.name == workload.name:
+            return _build_autoscaler(hpa)
+    return None
+
+
 def build_app(
     workload: NormalizedWorkload,
     services: list[client.V1Service],
     ingresses: list[client.V1Ingress],
     pvcs: list[client.V1PersistentVolumeClaim],
     httproutes: list[dict] | None = None,
+    hpas: list[client.V2HorizontalPodAutoscaler] | None = None,
 ) -> App:
     matched_services = [
         svc for svc in services if _selector_matches(svc.spec.selector, workload.pod_labels)
@@ -173,6 +204,7 @@ def build_app(
         created_at=workload.created_at,
         owners=workload.owners,
         config_refs=sorted(workload.config_refs, key=lambda c: (c.kind, c.name, c.via)),
+        autoscaler=_autoscaler_for_workload(hpas or [], workload),
     )
 
 
@@ -183,8 +215,11 @@ def build_namespace_inventory(
     ingresses: list[client.V1Ingress],
     pvcs: list[client.V1PersistentVolumeClaim],
     httproutes: list[dict] | None = None,
+    hpas: list[client.V2HorizontalPodAutoscaler] | None = None,
 ) -> NamespaceInventory:
-    apps = [build_app(workload, services, ingresses, pvcs, httproutes) for workload in workloads]
+    apps = [
+        build_app(workload, services, ingresses, pvcs, httproutes, hpas) for workload in workloads
+    ]
     return NamespaceInventory(name=namespace, apps=apps)
 
 
@@ -206,6 +241,21 @@ def _list_httproutes(apis: K8sApis, namespace: str) -> list[dict]:
             return []
         raise
     return result.get("items", [])
+
+
+def _list_hpas(apis: K8sApis, namespace: str) -> list[client.V2HorizontalPodAutoscaler]:
+    """Cluster-invariant like _list_httproutes: autoscaling/v2 has been a
+    stable built-in API since Kubernetes 1.23 (Dec 2021), not a CRD, so this
+    is expected to always work - but an old or unusually minimal API server
+    could still 404 it, and that must degrade to "no autoscalers", not crash
+    the whole run.
+    """
+    try:
+        return apis.autoscaling_v2.list_namespaced_horizontal_pod_autoscaler(namespace).items
+    except ApiException as e:
+        if e.status == 404:
+            return []
+        raise
 
 
 def collect_cluster_inventory(
@@ -237,8 +287,11 @@ def collect_cluster_inventory(
         ingresses = apis.networking_v1.list_namespaced_ingress(namespace).items
         pvcs = apis.core_v1.list_namespaced_persistent_volume_claim(namespace).items
         httproutes = _list_httproutes(apis, namespace)
+        hpas = _list_hpas(apis, namespace)
         namespace_inventories.append(
-            build_namespace_inventory(namespace, workloads, services, ingresses, pvcs, httproutes)
+            build_namespace_inventory(
+                namespace, workloads, services, ingresses, pvcs, httproutes, hpas
+            )
         )
 
     return ClusterInventory(

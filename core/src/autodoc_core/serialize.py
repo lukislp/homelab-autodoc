@@ -10,6 +10,7 @@ import yaml
 
 from .models import (
     App,
+    Autoscaler,
     ClusterInventory,
     ConfigReference,
     Container,
@@ -98,7 +99,17 @@ def _ingress_from_dict(d: dict) -> IngressInfo:
     )
 
 
+def _autoscaler_from_dict(d: dict) -> Autoscaler:
+    return Autoscaler(
+        min_replicas=d["min_replicas"],
+        max_replicas=d["max_replicas"],
+        target_cpu_percent=d.get("target_cpu_percent"),
+        target_memory_percent=d.get("target_memory_percent"),
+    )
+
+
 def _app_from_dict(d: dict) -> App:
+    autoscaler = d.get("autoscaler")
     return App(
         name=d["name"],
         kind=d["kind"],
@@ -113,6 +124,7 @@ def _app_from_dict(d: dict) -> App:
         created_at=d.get("created_at"),
         owners=list(d.get("owners", [])),
         config_refs=[_config_reference_from_dict(c) for c in d.get("config_refs", [])],
+        autoscaler=_autoscaler_from_dict(autoscaler) if autoscaler else None,
     )
 
 

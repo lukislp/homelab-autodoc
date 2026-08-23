@@ -17,6 +17,7 @@ class K8sApis:
     # API groups the typed client ships bindings for - CustomObjectsApi is
     # the generic (untyped, dict-based) way to read any CRD.
     custom_objects: client.CustomObjectsApi
+    autoscaling_v2: client.AutoscalingV2Api
 
     @classmethod
     def build(cls) -> K8sApis:
@@ -26,4 +27,5 @@ class K8sApis:
             networking_v1=client.NetworkingV1Api(),
             batch_v1=client.BatchV1Api(),
             custom_objects=client.CustomObjectsApi(),
+            autoscaling_v2=client.AutoscalingV2Api(),
         )

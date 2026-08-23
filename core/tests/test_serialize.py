@@ -4,6 +4,7 @@ import json
 
 from autodoc_core.models import (
     App,
+    Autoscaler,
     ClusterInventory,
     ConfigReference,
     Container,
@@ -80,6 +81,9 @@ def _sample_inventory() -> ClusterInventory:
                             ConfigReference(kind="Secret", name="web-secrets", via="env"),
                             ConfigReference(kind="ConfigMap", name="web-config", via="volume"),
                         ],
+                        autoscaler=Autoscaler(
+                            min_replicas=2, max_replicas=5, target_cpu_percent=70
+                        ),
                     )
                 ],
             )
@@ -115,3 +119,16 @@ def test_from_text_json_reconstructs_full_dataclass_tree():
     reconstructed = from_text(to_text(original, fmt="json"), fmt="json")
 
     assert reconstructed == original
+
+
+def test_app_without_autoscaler_round_trips_as_none():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].autoscaler is None

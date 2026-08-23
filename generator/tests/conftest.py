@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from autodoc_core.models import (
     App,
+    Autoscaler,
     ConfigReference,
     Container,
     EnvVar,
@@ -69,6 +70,7 @@ def sample_app() -> App:
             ConfigReference(kind="Secret", name="web-secrets", via="env"),
             ConfigReference(kind="ConfigMap", name="web-config", via="volume"),
         ],
+        autoscaler=Autoscaler(min_replicas=2, max_replicas=5, target_cpu_percent=70),
     )
 
 
