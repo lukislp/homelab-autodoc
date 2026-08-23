@@ -34,6 +34,7 @@ def _workload(
     created_at: str | None = None,
     owners: list[str] | None = None,
     config_refs: frozenset[ConfigReference] = frozenset(),
+    image_pull_secrets: frozenset[str] = frozenset(),
 ) -> NormalizedWorkload:
     return NormalizedWorkload(
         kind=kind,
@@ -48,6 +49,7 @@ def _workload(
         created_at=created_at,
         owners=owners or [],
         config_refs=config_refs,
+        image_pull_secrets=image_pull_secrets,
     )
 
 
@@ -552,6 +554,22 @@ def test_build_app_without_network_policies_leaves_list_empty():
     app = build_app(workload, [], [], [])
 
     assert app.network_policies == []
+
+
+def test_build_app_copies_image_pull_secrets_from_workload():
+    workload = _workload(image_pull_secrets=frozenset({"ghcr-pull-secret"}))
+
+    app = build_app(workload, [], [], [])
+
+    assert app.image_pull_secrets == ["ghcr-pull-secret"]
+
+
+def test_build_app_without_image_pull_secrets_leaves_list_empty():
+    workload = _workload()
+
+    app = build_app(workload, [], [], [])
+
+    assert app.image_pull_secrets == []
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

@@ -120,6 +120,8 @@ class App:
     autoscaler: Autoscaler | None = None
     nodes: list[str] = field(default_factory=list)  # names of nodes running this app's pods
     network_policies: list[NetworkPolicyInfo] = field(default_factory=list)
+    # Names only, e.g. ["ghcr-pull-secret"] - never the referenced Secret's contents.
+    image_pull_secrets: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)

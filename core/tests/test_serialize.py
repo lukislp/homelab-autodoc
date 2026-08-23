@@ -99,6 +99,7 @@ def _sample_inventory() -> ClusterInventory:
                                 ],
                             )
                         ],
+                        image_pull_secrets=["ghcr-pull-secret"],
                     )
                 ],
             )
@@ -173,3 +174,16 @@ def test_app_without_network_policies_round_trips_as_empty_list():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.namespaces[0].apps[0].network_policies == []
+
+
+def test_app_without_image_pull_secrets_round_trips_as_empty_list():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].image_pull_secrets == []

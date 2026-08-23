@@ -169,6 +169,52 @@ def test_deployment_collector_normalizes_resources_env_and_config_refs():
     )
 
 
+def test_deployment_collector_normalizes_image_pull_secrets():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="web", image="ghcr.io/lukislp/web:1.0")],
+                    image_pull_secrets=[
+                        client.V1LocalObjectReference(name="ghcr-pull-secret"),
+                        client.V1LocalObjectReference(name="ghcr-pull-secret"),
+                    ],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.image_pull_secrets == frozenset({"ghcr-pull-secret"})
+
+
+def test_deployment_collector_without_image_pull_secrets_is_empty():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")]
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.image_pull_secrets == frozenset()
+
+
 def test_normalize_without_status_defaults_ready_replicas_to_zero():
     deployment = client.V1Deployment(
         metadata=client.V1ObjectMeta(name="web", labels={}),

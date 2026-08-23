@@ -83,6 +83,7 @@ def sample_app() -> App:
                 ],
             )
         ],
+        image_pull_secrets=["ghcr-pull-secret"],
     )
 
 

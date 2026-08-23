@@ -142,6 +142,7 @@ def _app_from_dict(d: dict) -> App:
         autoscaler=_autoscaler_from_dict(autoscaler) if autoscaler else None,
         nodes=list(d.get("nodes", [])),
         network_policies=[_network_policy_from_dict(np) for np in d.get("network_policies", [])],
+        image_pull_secrets=list(d.get("image_pull_secrets", [])),
     )
 
 

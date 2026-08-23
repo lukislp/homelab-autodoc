@@ -29,6 +29,7 @@ class NormalizedWorkload:
     created_at: str | None = None
     owners: list[str] = field(default_factory=list)
     config_refs: frozenset[ConfigReference] = frozenset()
+    image_pull_secrets: frozenset[str] = frozenset()
 
 
 class WorkloadCollector(Protocol):
@@ -116,6 +117,12 @@ def _owners_from_metadata(meta: client.V1ObjectMeta) -> list[str]:
     return [f"{o.kind}/{o.name}" for o in (meta.owner_references or [])]
 
 
+def _image_pull_secrets_from_pod_spec(pod_spec: client.V1PodSpec) -> frozenset[str]:
+    return frozenset(
+        ref.name for ref in (pod_spec.image_pull_secrets or []) if ref.name is not None
+    )
+
+
 class DeploymentCollector:
     kind = "Deployment"
 
@@ -139,6 +146,7 @@ class DeploymentCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            image_pull_secrets=_image_pull_secrets_from_pod_spec(pod_spec),
         )
 
 
@@ -167,6 +175,7 @@ class StatefulSetCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            image_pull_secrets=_image_pull_secrets_from_pod_spec(pod_spec),
         )
 
 
@@ -195,6 +204,7 @@ class DaemonSetCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            image_pull_secrets=_image_pull_secrets_from_pod_spec(pod_spec),
         )
 
 
@@ -226,6 +236,7 @@ class CronJobCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            image_pull_secrets=_image_pull_secrets_from_pod_spec(pod_spec),
         )
 
 

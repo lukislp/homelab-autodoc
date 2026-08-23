@@ -16,6 +16,18 @@
 {{ containers_table }}
 
 {% endif %}
+{% if registries_table %}
+### Image Registry
+
+{{ registries_table }}
+
+{% endif %}
+{% if image_pull_secrets_table %}
+### Image Pull Secrets
+
+{{ image_pull_secrets_table }}
+
+{% endif %}
 {% if services_table %}
 ### Services
 
