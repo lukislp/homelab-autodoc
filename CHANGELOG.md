@@ -1,3 +1,15 @@
+# [1.21.0](https://github.com/lukislp/homelab-autodoc/compare/v1.20.1...v1.21.0) (2026-08-23)
+
+
+### Bug Fixes
+
+* **k8s:** bump pinned collector image from 1.14.1 to 1.20.0 ([93d000c](https://github.com/lukislp/homelab-autodoc/commit/93d000c53b111b6b6bbcfb649c8c7c8b1e80e49f))
+
+
+### Features
+
+* add a per-cluster Nodes page with node capacity/spec ([f1143e5](https://github.com/lukislp/homelab-autodoc/commit/f1143e5a989b1df3272d51e8c9b6e5cc1a4caa93))
+
 ## [1.20.1](https://github.com/lukislp/homelab-autodoc/compare/v1.20.0...v1.20.1) (2026-08-23)
 
 

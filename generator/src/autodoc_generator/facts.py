@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from autodoc_core.models import App
+from autodoc_core.models import App, NodeInfo
 
 from .formatting import format_timestamp
 
@@ -180,3 +180,24 @@ def metadata_table(app: App) -> str:
             value = value[:_MAX_ANNOTATION_VALUE_LENGTH] + "…"
         rows.append(f"| `{key}` | {value} |")
     return "\n".join(rows)
+
+
+def node_specs_table(nodes: list[NodeInfo]) -> str:
+    """Cluster-wide, unlike every other table in this module - nodes aren't
+    scoped to an app.
+    """
+    if not nodes:
+        return ""
+    rows = []
+    for node in sorted(nodes, key=lambda n: n.name):
+        status = "Ready" if node.ready else "NotReady"
+        rows.append(
+            f"| {node.name} | {status} | {node.architecture} | {node.os_image} | "
+            f"{node.kubelet_version} | {node.capacity_cpu} | {node.allocatable_cpu} | "
+            f"{node.capacity_memory} | {node.allocatable_memory} |"
+        )
+    header = (
+        "| Node | Status | Arch | OS | Kubelet | CPU (Capacity) | CPU (Allocatable) | "
+        "Memory (Capacity) | Memory (Allocatable) |"
+    )
+    return "\n".join([header, "|---|---|---|---|---|---|---|---|---|", *rows])
