@@ -36,7 +36,7 @@ extra_javascript:
   # a manual stand-in for that: bump it whenever one of these files changes,
   # so a stale cached copy under a proxy or browser cache can never look like
   # this feature is broken when it's actually just serving old JS.
-  - javascripts/mermaid-pan-zoom.js?v=3
+  - javascripts/mermaid-pan-zoom.js?v=4
 extra_css:
-  - stylesheets/mermaid-pan-zoom.css?v=4
+  - stylesheets/mermaid-pan-zoom.css?v=5
   - stylesheets/sidebar-scroll.css?v=2
