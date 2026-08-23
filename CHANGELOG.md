@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/lukislp/homelab-autodoc/compare/v1.16.1...v1.17.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** collect HTTPRoute (Gateway API), not just classic Ingress ([945d737](https://github.com/lukislp/homelab-autodoc/commit/945d7371a644cdd027e2d94e8ffdd2f400fc86b0))
+
 ## [1.16.1](https://github.com/lukislp/homelab-autodoc/compare/v1.16.0...v1.16.1) (2026-08-23)
 
 
