@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from autodoc_core.models import (
     App,
+    ConfigReference,
+    NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
     NodeInfo,
@@ -13,6 +15,7 @@ from autodoc_generator.facts import (
     autoscaler_table,
     containers_table,
     dependencies_table,
+    dependency_usage_table,
     env_table,
     ingresses_table,
     metadata_table,
@@ -92,6 +95,37 @@ def test_dependencies_table_lists_config_refs(sample_app):
 
     assert "| Secret | web-secrets | env |" in table
     assert "| ConfigMap | web-config | volume |" in table
+
+
+def test_dependency_usage_table_lists_apps_referencing_each_config_ref():
+    app_a = App(
+        name="web",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        config_refs=[ConfigReference(kind="Secret", name="shared-secret", via="env")],
+    )
+    app_b = App(
+        name="worker",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        config_refs=[ConfigReference(kind="Secret", name="shared-secret", via="envFrom")],
+    )
+    namespace = NamespaceInventory(name="demo", apps=[app_a, app_b])
+
+    table = dependency_usage_table(namespace)
+
+    assert "| Secret | shared-secret | web (env), worker (envFrom) |" in table
+
+
+def test_dependency_usage_table_empty_for_namespace_with_no_config_refs():
+    namespace = NamespaceInventory(
+        name="demo",
+        apps=[App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)],
+    )
+
+    assert dependency_usage_table(namespace) == ""
 
 
 def test_autoscaler_table_lists_replica_bounds_and_cpu_target(sample_app):
