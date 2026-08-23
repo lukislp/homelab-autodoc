@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/lukislp/homelab-autodoc/compare/v1.28.0...v1.29.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document each container's effective security context ([2629c8a](https://github.com/lukislp/homelab-autodoc/commit/2629c8a49905967ecb0354847542f7a2aa6b831d))
+
 # [1.28.0](https://github.com/lukislp/homelab-autodoc/compare/v1.27.0...v1.28.0) (2026-08-23)
 
 
