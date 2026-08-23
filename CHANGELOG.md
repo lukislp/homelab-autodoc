@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/lukislp/homelab-autodoc/compare/v1.29.0...v1.30.0) (2026-08-23)
+
+
+### Features
+
+* **namespace:** document ResourceQuota and LimitRange objects per namespace ([8f463e9](https://github.com/lukislp/homelab-autodoc/commit/8f463e9cfe38e4414781cc5141c5374864d5b5d1))
+
 # [1.29.0](https://github.com/lukislp/homelab-autodoc/compare/v1.28.0...v1.29.0) (2026-08-23)
 
 
