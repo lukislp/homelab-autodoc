@@ -7,6 +7,7 @@ from autodoc_core.models import (
     ConfigReference,
     Container,
     NamespaceInventory,
+    NodeInfo,
 )
 
 
@@ -28,6 +29,19 @@ def sample_inventory() -> ClusterInventory:
                         config_refs=[ConfigReference(kind="Secret", name="web-secrets", via="env")],
                     )
                 ],
+            )
+        ],
+        nodes=[
+            NodeInfo(
+                name="pi-node-1",
+                architecture="arm64",
+                kubelet_version="v1.31.2+k3s1",
+                os_image="Debian GNU/Linux 12 (bookworm)",
+                capacity_cpu="4",
+                capacity_memory="8065700Ki",
+                allocatable_cpu="3900m",
+                allocatable_memory="7500000Ki",
+                ready=True,
             )
         ],
     )
