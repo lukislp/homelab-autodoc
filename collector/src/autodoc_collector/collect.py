@@ -19,6 +19,7 @@ from autodoc_core.models import (
     NetworkPolicyInfo,
     NetworkPolicyRule,
     NodeInfo,
+    PodDisruptionBudgetInfo,
     RoleBindingInfo,
     ServiceAccountInfo,
     ServiceInfo,
@@ -280,6 +281,37 @@ def _service_account_role_bindings(
     return result
 
 
+def _build_pdb(raw: client.V1PodDisruptionBudget) -> PodDisruptionBudgetInfo:
+    return PodDisruptionBudgetInfo(
+        name=raw.metadata.name,
+        min_available=str(raw.spec.min_available) if raw.spec.min_available is not None else None,
+        max_unavailable=str(raw.spec.max_unavailable)
+        if raw.spec.max_unavailable is not None
+        else None,
+    )
+
+
+def _pdb_matches_workload(raw: client.V1PodDisruptionBudget, workload: NormalizedWorkload) -> bool:
+    """Only matchLabels is evaluated, same simplification as NetworkPolicy's
+    podSelector - and for the same reason: a podSelector using
+    matchExpressions is skipped rather than guessed at, since a wrong match
+    here would misleadingly claim a PDB protects an app it might not.
+
+    PDB documents its own selector semantics as the inverse of what you'd
+    expect from a generic LabelSelector: a null selector matches NO pods,
+    while an empty ({}) selector matches EVERY pod in the namespace - the
+    two are deliberately distinguished below, not collapsed into one case.
+    """
+    selector = raw.spec.selector
+    if selector is None:
+        return False
+    if selector.match_expressions:
+        return False
+    if not selector.match_labels:
+        return True
+    return _selector_matches(selector.match_labels, workload.pod_labels)
+
+
 def build_app(
     workload: NormalizedWorkload,
     services: list[client.V1Service],
@@ -290,6 +322,7 @@ def build_app(
     pods: list[client.V1Pod] | None = None,
     network_policies: list[client.V1NetworkPolicy] | None = None,
     service_account_role_bindings: dict[str, list[RoleBindingInfo]] | None = None,
+    pdbs: list[client.V1PodDisruptionBudget] | None = None,
 ) -> App:
     matched_services = [
         svc for svc in services if _selector_matches(svc.spec.selector, workload.pod_labels)
@@ -337,6 +370,9 @@ def build_app(
             if _network_policy_matches_workload(np, workload)
         ],
         service_account=service_account,
+        pod_disruption_budgets=[
+            _build_pdb(pdb) for pdb in (pdbs or []) if _pdb_matches_workload(pdb, workload)
+        ],
     )
 
 
@@ -351,6 +387,7 @@ def build_namespace_inventory(
     pods: list[client.V1Pod] | None = None,
     network_policies: list[client.V1NetworkPolicy] | None = None,
     service_account_role_bindings: dict[str, list[RoleBindingInfo]] | None = None,
+    pdbs: list[client.V1PodDisruptionBudget] | None = None,
 ) -> NamespaceInventory:
     apps = [
         build_app(
@@ -363,6 +400,7 @@ def build_namespace_inventory(
             pods,
             network_policies,
             service_account_role_bindings,
+            pdbs,
         )
         for workload in workloads
     ]
@@ -460,6 +498,7 @@ def collect_cluster_inventory(
         service_account_role_bindings = _service_account_role_bindings(
             role_bindings, cluster_role_bindings, namespace
         )
+        pdbs = apis.policy_v1.list_namespaced_pod_disruption_budget(namespace).items
         namespace_inventories.append(
             build_namespace_inventory(
                 namespace,
@@ -472,6 +511,7 @@ def collect_cluster_inventory(
                 pods,
                 network_policies,
                 service_account_role_bindings,
+                pdbs,
             )
         )
 

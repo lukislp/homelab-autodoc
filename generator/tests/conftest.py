@@ -11,6 +11,7 @@ from autodoc_core.models import (
     IngressRule,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    PodDisruptionBudgetInfo,
     RoleBindingInfo,
     ServiceAccountInfo,
     ServiceInfo,
@@ -91,6 +92,7 @@ def sample_app() -> App:
                 RoleBindingInfo(name="web-sa-view", role_kind="ClusterRole", role_name="view")
             ],
         ),
+        pod_disruption_budgets=[PodDisruptionBudgetInfo(name="web-pdb", min_available="1")],
     )
 
 

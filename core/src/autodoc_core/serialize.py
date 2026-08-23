@@ -21,6 +21,7 @@ from .models import (
     NetworkPolicyInfo,
     NetworkPolicyRule,
     NodeInfo,
+    PodDisruptionBudgetInfo,
     RoleBindingInfo,
     ServiceAccountInfo,
     ServiceInfo,
@@ -137,6 +138,14 @@ def _service_account_from_dict(d: dict) -> ServiceAccountInfo:
     )
 
 
+def _pdb_from_dict(d: dict) -> PodDisruptionBudgetInfo:
+    return PodDisruptionBudgetInfo(
+        name=d["name"],
+        min_available=d.get("min_available"),
+        max_unavailable=d.get("max_unavailable"),
+    )
+
+
 def _app_from_dict(d: dict) -> App:
     autoscaler = d.get("autoscaler")
     service_account = d.get("service_account")
@@ -158,6 +167,7 @@ def _app_from_dict(d: dict) -> App:
         nodes=list(d.get("nodes", [])),
         network_policies=[_network_policy_from_dict(np) for np in d.get("network_policies", [])],
         service_account=_service_account_from_dict(service_account) if service_account else None,
+        pod_disruption_budgets=[_pdb_from_dict(p) for p in d.get("pod_disruption_budgets", [])],
     )
 
 

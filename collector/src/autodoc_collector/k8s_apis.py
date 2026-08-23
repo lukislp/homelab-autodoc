@@ -19,6 +19,7 @@ class K8sApis:
     custom_objects: client.CustomObjectsApi
     autoscaling_v2: client.AutoscalingV2Api
     rbac_v1: client.RbacAuthorizationV1Api
+    policy_v1: client.PolicyV1Api
 
     @classmethod
     def build(cls) -> K8sApis:
@@ -30,4 +31,5 @@ class K8sApis:
             custom_objects=client.CustomObjectsApi(),
             autoscaling_v2=client.AutoscalingV2Api(),
             rbac_v1=client.RbacAuthorizationV1Api(),
+            policy_v1=client.PolicyV1Api(),
         )

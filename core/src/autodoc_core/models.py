@@ -116,6 +116,16 @@ class ServiceAccountInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class PodDisruptionBudgetInfo:
+    name: str
+    # Exactly one of these is normally set (Kubernetes defaults maxUnavailable
+    # to 1 only when neither is specified) - kept as raw IntOrString strings
+    # (e.g. "1", "50%"), never parsed here.
+    min_available: str | None = None
+    max_unavailable: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class App:
     name: str
     kind: str
@@ -134,6 +144,7 @@ class App:
     nodes: list[str] = field(default_factory=list)  # names of nodes running this app's pods
     network_policies: list[NetworkPolicyInfo] = field(default_factory=list)
     service_account: ServiceAccountInfo | None = None
+    pod_disruption_budgets: list[PodDisruptionBudgetInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
