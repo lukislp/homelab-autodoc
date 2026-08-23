@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/lukislp/homelab-autodoc/compare/v1.31.1...v1.32.0) (2026-08-23)
+
+
+### Features
+
+* **server:** let an admin delete a registered cluster ([69f9c60](https://github.com/lukislp/homelab-autodoc/commit/69f9c603f74ecae80747840b0f768fedfdfff693))
+
 ## [1.31.1](https://github.com/lukislp/homelab-autodoc/compare/v1.31.0...v1.31.1) (2026-08-23)
 
 
