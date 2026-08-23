@@ -323,6 +323,22 @@ def _write_root_index(storage: Storage) -> None:
     (storage.docs_dir / "index.md").write_text("\n".join(lines), encoding="utf-8")
 
 
+def rebuild_site_after_cluster_delete(storage: Storage, mkdocs_config_path: Path) -> None:
+    """The cheap counterpart to rebuild_all_sites for the delete endpoint
+    (routes_clusters.py): every remaining cluster's generated pages are still
+    on disk and unchanged (written at startup and on every push), and the
+    deleted cluster's pages are already removed by the caller - only the root
+    index still references the deleted cluster. Rewriting it plus one static
+    build is all that's needed. A full rebuild_all_sites here would redo the
+    LLM prose for every remaining cluster; in production that took close to a
+    minute, long enough for the admin to reload the docs index mid-rebuild and
+    see the deleted cluster's card still there (and for a reverse proxy to
+    time the DELETE request out).
+    """
+    _write_root_index(storage)
+    build_static_site(mkdocs_config_path)
+
+
 def rebuild_all_sites(storage: Storage, llm: LLMClient | None, mkdocs_config_path: Path) -> None:
     """Regenerates every cluster's docs from the persisted inventory and rebuilds
     the static site. Meant to run on server startup: docs_dir/site_dir live on

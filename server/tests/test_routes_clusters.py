@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from autodoc_server.logic import site_builder
 from autodoc_server.logic.storage import Storage
 from autodoc_server.web.app import app
-from autodoc_server.web.deps import get_llm, get_storage
+from autodoc_server.web.deps import get_storage
 from autodoc_server.web.session import require_admin_session
 
 
@@ -14,7 +14,6 @@ from autodoc_server.web.session import require_admin_session
 def client(tmp_path, monkeypatch):
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
     app.dependency_overrides[get_storage] = lambda: storage
-    app.dependency_overrides[get_llm] = lambda: None
     monkeypatch.setattr(site_builder, "build_static_site", lambda _path: None)
 
     yield TestClient(app), storage
@@ -60,6 +59,28 @@ def test_admin_can_delete_a_cluster(admin_client, sample_inventory):
     assert storage.has_inventory("homelab") is False
     assert not (storage.docs_dir / "homelab").exists()
     assert test_client.get("/api/admin/clusters").json() == []
+
+
+def test_delete_updates_the_root_index_without_touching_other_clusters(
+    admin_client, sample_inventory
+):
+    test_client, storage = admin_client
+    storage.save_inventory("keep-me", sample_inventory)
+    storage.save_inventory("kill-me", sample_inventory)
+    site_builder.regenerate_cluster_docs(storage, "keep-me", llm=None)
+    site_builder.regenerate_cluster_docs(storage, "kill-me", llm=None)
+    kept_page = storage.docs_dir / "keep-me" / "demo" / "web.md"
+    kept_mtime = kept_page.stat().st_mtime_ns
+
+    response = test_client.delete("/api/admin/clusters/kill-me")
+
+    assert response.status_code == 200
+    root_index = (storage.docs_dir / "index.md").read_text(encoding="utf-8")
+    assert "kill-me" not in root_index
+    assert "keep-me" in root_index
+    # The delete rebuild must not regenerate the surviving cluster's pages
+    # (that's the slow, LLM-backed path - see rebuild_site_after_cluster_delete).
+    assert kept_page.stat().st_mtime_ns == kept_mtime
 
 
 def test_delete_unknown_cluster_is_404(admin_client):
