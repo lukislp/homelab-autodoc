@@ -8,7 +8,7 @@ from pathlib import Path
 from autodoc_core.diff import Change
 from autodoc_core.models import App, ClusterInventory, NamespaceInventory
 from autodoc_generator import changelog as changelog_render
-from autodoc_generator import diagrams, render
+from autodoc_generator import diagrams, facts, render
 from autodoc_generator.llm import LLMClient
 from autodoc_generator.prose import generate_summary
 
@@ -33,6 +33,7 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
                 render.render_app_page(app, namespace.name, summary), encoding="utf-8"
             )
         _write_namespace_diagram(storage, cluster_name, namespace)
+        _write_namespace_dependencies_page(storage, cluster_name, namespace)
 
     _write_cluster_index(storage, cluster_name, inventory)
     _write_cluster_diagram(storage, cluster_name, inventory)
@@ -74,6 +75,17 @@ def _write_namespace_diagram(
     page = f"# {namespace.name} - Topology\n\n```mermaid\n{diagram}\n```"
     (storage.docs_dir / cluster_name / namespace.name / "topology.md").write_text(
         page, encoding="utf-8"
+    )
+
+
+def _write_namespace_dependencies_page(
+    storage: Storage, cluster_name: str, namespace: NamespaceInventory
+) -> None:
+    table = facts.dependency_usage_table(namespace)
+    lines = [f"# {namespace.name} - Dependencies", ""]
+    lines.append(table if table else "No ConfigMap/Secret references collected yet.")
+    (storage.docs_dir / cluster_name / namespace.name / "dependencies.md").write_text(
+        "\n".join(lines), encoding="utf-8"
     )
 
 

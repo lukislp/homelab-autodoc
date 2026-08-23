@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from autodoc_core.models import App
+from autodoc_core.models import App, NamespaceInventory
 
 from .formatting import format_timestamp
 
@@ -168,3 +168,22 @@ def metadata_table(app: App) -> str:
             value = value[:_MAX_ANNOTATION_VALUE_LENGTH] + "…"
         rows.append(f"| `{key}` | {value} |")
     return "\n".join(rows)
+
+
+def dependency_usage_table(namespace: NamespaceInventory) -> str:
+    """Reverse of the per-app Dependencies table: for each ConfigMap/Secret in
+    this namespace, which apps reference it and how - instead of, per app,
+    which ConfigMaps/Secrets it references. Namespace-scoped like
+    ConfigMaps/Secrets themselves are, not cluster-wide.
+    """
+    usage: dict[tuple[str, str], list[str]] = {}
+    for app in namespace.apps:
+        for ref in app.config_refs:
+            usage.setdefault((ref.kind, ref.name), []).append(f"{app.name} ({ref.via})")
+    if not usage:
+        return ""
+    rows = [
+        f"| {kind} | {name} | {', '.join(sorted(users))} |"
+        for (kind, name), users in sorted(usage.items())
+    ]
+    return "\n".join(["| Kind | Name | Used By |", "|---|---|---|", *rows])

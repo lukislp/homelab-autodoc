@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 import pytest
-from autodoc_core.models import App, ClusterInventory, Container, NamespaceInventory
+from autodoc_core.models import (
+    App,
+    ClusterInventory,
+    ConfigReference,
+    Container,
+    NamespaceInventory,
+)
 
 
 @pytest.fixture
@@ -19,6 +25,7 @@ def sample_inventory() -> ClusterInventory:
                         replicas=2,
                         ready_replicas=2,
                         containers=[Container(name="web", image="nginx:1.25.3", ports=[8080])],
+                        config_refs=[ConfigReference(kind="Secret", name="web-secrets", via="env")],
                     )
                 ],
             )
