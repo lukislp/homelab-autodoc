@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/lukislp/homelab-autodoc/compare/v1.22.0...v1.23.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document each app's ServiceAccount and its RBAC bindings ([be4b45e](https://github.com/lukislp/homelab-autodoc/commit/be4b45e2f7dfb5f5879b1f4d1ed94158f0e9099e))
+
 # [1.22.0](https://github.com/lukislp/homelab-autodoc/compare/v1.21.0...v1.22.0) (2026-08-23)
 
 
