@@ -1,3 +1,10 @@
+## [1.41.8](https://github.com/lukislp/homelab-autodoc/compare/v1.41.7...v1.41.8) (2026-08-23)
+
+
+### Bug Fixes
+
+* **server:** lower the topology box's min-height floor to 360px ([ea3b7d7](https://github.com/lukislp/homelab-autodoc/commit/ea3b7d7420ea6e177c8af487e8d32d914cb0bc2e))
+
 ## [1.41.7](https://github.com/lukislp/homelab-autodoc/compare/v1.41.6...v1.41.7) (2026-08-23)
 
 
