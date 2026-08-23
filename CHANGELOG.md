@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/lukislp/homelab-autodoc/compare/v1.26.0...v1.27.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document each app's rollout strategy ([9a623c2](https://github.com/lukislp/homelab-autodoc/commit/9a623c28aaa781956a1a6e3839e7a4c04638fd3d))
+
 # [1.26.0](https://github.com/lukislp/homelab-autodoc/compare/v1.25.0...v1.26.0) (2026-08-23)
 
 
