@@ -22,6 +22,7 @@ from .models import (
     NetworkPolicyRule,
     ServiceInfo,
     ServicePort,
+    StorageClassInfo,
     Volume,
 )
 
@@ -149,11 +150,22 @@ def _namespace_from_dict(d: dict) -> NamespaceInventory:
     return NamespaceInventory(name=d["name"], apps=[_app_from_dict(a) for a in d.get("apps", [])])
 
 
+def _storage_class_from_dict(d: dict) -> StorageClassInfo:
+    return StorageClassInfo(
+        name=d["name"],
+        provisioner=d["provisioner"],
+        reclaim_policy=d.get("reclaim_policy"),
+        volume_binding_mode=d.get("volume_binding_mode"),
+        allow_volume_expansion=d.get("allow_volume_expansion"),
+    )
+
+
 def from_dict(data: dict) -> ClusterInventory:
     return ClusterInventory(
         cluster_name=data["cluster_name"],
         collected_at=data["collected_at"],
         namespaces=[_namespace_from_dict(ns) for ns in data.get("namespaces", [])],
+        storage_classes=[_storage_class_from_dict(sc) for sc in data.get("storage_classes", [])],
     )
 
 

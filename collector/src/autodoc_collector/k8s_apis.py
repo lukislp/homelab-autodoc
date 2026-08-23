@@ -18,6 +18,7 @@ class K8sApis:
     # the generic (untyped, dict-based) way to read any CRD.
     custom_objects: client.CustomObjectsApi
     autoscaling_v2: client.AutoscalingV2Api
+    storage_v1: client.StorageV1Api
 
     @classmethod
     def build(cls) -> K8sApis:
@@ -28,4 +29,5 @@ class K8sApis:
             batch_v1=client.BatchV1Api(),
             custom_objects=client.CustomObjectsApi(),
             autoscaling_v2=client.AutoscalingV2Api(),
+            storage_v1=client.StorageV1Api(),
         )

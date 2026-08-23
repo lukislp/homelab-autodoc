@@ -129,7 +129,17 @@ class NamespaceInventory:
 
 
 @dataclass(frozen=True, slots=True)
+class StorageClassInfo:
+    name: str
+    provisioner: str
+    reclaim_policy: str | None = None
+    volume_binding_mode: str | None = None
+    allow_volume_expansion: bool | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class ClusterInventory:
     cluster_name: str
     collected_at: str
     namespaces: list[NamespaceInventory] = field(default_factory=list)
+    storage_classes: list[StorageClassInfo] = field(default_factory=list)

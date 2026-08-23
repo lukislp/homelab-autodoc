@@ -16,6 +16,7 @@ from autodoc_core.models import (
     NetworkPolicyRule,
     ServiceInfo,
     ServicePort,
+    StorageClassInfo,
     Volume,
 )
 from autodoc_core.serialize import from_text, to_text
@@ -103,6 +104,15 @@ def _sample_inventory() -> ClusterInventory:
                 ],
             )
         ],
+        storage_classes=[
+            StorageClassInfo(
+                name="local-path",
+                provisioner="rancher.io/local-path",
+                reclaim_policy="Delete",
+                volume_binding_mode="WaitForFirstConsumer",
+                allow_volume_expansion=False,
+            )
+        ],
     )
 
 
@@ -173,3 +183,11 @@ def test_app_without_network_policies_round_trips_as_empty_list():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.namespaces[0].apps[0].network_policies == []
+
+
+def test_cluster_inventory_without_storage_classes_round_trips_as_empty_list():
+    inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-22T00:00:00+00:00")
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.storage_classes == []

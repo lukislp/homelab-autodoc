@@ -14,6 +14,7 @@ from autodoc_collector.collect import (
     _autoscaler_for_workload,
     _build_autoscaler,
     _build_network_policy,
+    _build_storage_class,
     _list_hpas,
     _list_httproutes,
     _network_policy_matches_workload,
@@ -216,6 +217,7 @@ def test_list_httproutes_returns_empty_when_gateway_api_crd_is_missing():
         batch_v1=None,
         custom_objects=FakeCustomObjects(),
         autoscaling_v2=None,
+        storage_v1=None,
     )
 
     assert _list_httproutes(apis, "demo") == []
@@ -233,6 +235,7 @@ def test_list_httproutes_reraises_non_404_errors():
         batch_v1=None,
         custom_objects=FakeCustomObjects(),
         autoscaling_v2=None,
+        storage_v1=None,
     )
 
     with pytest.raises(ApiException):
@@ -552,6 +555,24 @@ def test_build_app_without_network_policies_leaves_list_empty():
     app = build_app(workload, [], [], [])
 
     assert app.network_policies == []
+
+
+def test_build_storage_class_extracts_provisioner_and_policy():
+    raw = client.V1StorageClass(
+        metadata=client.V1ObjectMeta(name="local-path"),
+        provisioner="rancher.io/local-path",
+        reclaim_policy="Delete",
+        volume_binding_mode="WaitForFirstConsumer",
+        allow_volume_expansion=False,
+    )
+
+    info = _build_storage_class(raw)
+
+    assert info.name == "local-path"
+    assert info.provisioner == "rancher.io/local-path"
+    assert info.reclaim_policy == "Delete"
+    assert info.volume_binding_mode == "WaitForFirstConsumer"
+    assert info.allow_volume_expansion is False
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

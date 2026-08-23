@@ -8,7 +8,7 @@ from pathlib import Path
 from autodoc_core.diff import Change
 from autodoc_core.models import App, ClusterInventory, NamespaceInventory
 from autodoc_generator import changelog as changelog_render
-from autodoc_generator import diagrams, render
+from autodoc_generator import diagrams, facts, render
 from autodoc_generator.llm import LLMClient
 from autodoc_generator.prose import generate_summary
 
@@ -36,6 +36,7 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
 
     _write_cluster_index(storage, cluster_name, inventory)
     _write_cluster_diagram(storage, cluster_name, inventory)
+    _write_storage_classes_page(storage, cluster_name, inventory)
     _write_changelog_page(storage, cluster_name)
     _write_root_index(storage)
 
@@ -57,7 +58,8 @@ def _write_cluster_index(storage: Storage, cluster_name: str, inventory: Cluster
     lines = [
         f"# {cluster_name}",
         "",
-        "[Topology](topology.md) · [Changelog](changelog.md)",
+        "[Topology](topology.md) · [Storage Classes](storage-classes.md) · "
+        "[Changelog](changelog.md)",
         "",
         "| Namespace | Apps |",
         "|---|---|",
@@ -83,6 +85,17 @@ def _write_cluster_diagram(
     diagram = diagrams.build_cluster_diagram(inventory)
     page = f"# {cluster_name} - Topology\n\n```mermaid\n{diagram}\n```"
     (storage.docs_dir / cluster_name / "topology.md").write_text(page, encoding="utf-8")
+
+
+def _write_storage_classes_page(
+    storage: Storage, cluster_name: str, inventory: ClusterInventory
+) -> None:
+    table = facts.storage_classes_table(inventory.storage_classes)
+    lines = [f"# {cluster_name} - Storage Classes", ""]
+    lines.append(table if table else "No StorageClass data collected yet.")
+    (storage.docs_dir / cluster_name / "storage-classes.md").write_text(
+        "\n".join(lines), encoding="utf-8"
+    )
 
 
 def _write_changelog_page(storage: Storage, cluster_name: str) -> None:
