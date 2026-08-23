@@ -1,3 +1,11 @@
+# [1.26.0](https://github.com/lukislp/homelab-autodoc/compare/v1.25.0...v1.26.0) (2026-08-23)
+
+
+### Features
+
+* add a per-cluster StorageClasses page ([c602eff](https://github.com/lukislp/homelab-autodoc/commit/c602eff454a35f6586065a938ad9a075db4abc4a))
+* add a per-namespace ConfigMap/Secret usage page ([96b880a](https://github.com/lukislp/homelab-autodoc/commit/96b880aa3d017fe50343601565f79473915402b4))
+
 # [1.25.0](https://github.com/lukislp/homelab-autodoc/compare/v1.24.0...v1.25.0) (2026-08-23)
 
 
