@@ -20,6 +20,7 @@ from .models import (
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    NodeInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -149,11 +150,26 @@ def _namespace_from_dict(d: dict) -> NamespaceInventory:
     return NamespaceInventory(name=d["name"], apps=[_app_from_dict(a) for a in d.get("apps", [])])
 
 
+def _node_info_from_dict(d: dict) -> NodeInfo:
+    return NodeInfo(
+        name=d["name"],
+        architecture=d["architecture"],
+        kubelet_version=d["kubelet_version"],
+        os_image=d["os_image"],
+        capacity_cpu=d["capacity_cpu"],
+        capacity_memory=d["capacity_memory"],
+        allocatable_cpu=d["allocatable_cpu"],
+        allocatable_memory=d["allocatable_memory"],
+        ready=d["ready"],
+    )
+
+
 def from_dict(data: dict) -> ClusterInventory:
     return ClusterInventory(
         cluster_name=data["cluster_name"],
         collected_at=data["collected_at"],
         namespaces=[_namespace_from_dict(ns) for ns in data.get("namespaces", [])],
+        nodes=[_node_info_from_dict(n) for n in data.get("nodes", [])],
     )
 
 
