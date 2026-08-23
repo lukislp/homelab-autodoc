@@ -28,6 +28,21 @@ class ProbeInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class ContainerSecurityInfo:
+    # Each flag is the *effective* value - a container-level securityContext
+    # setting if present, else the pod-level podSecurityContext's setting for
+    # the fields that support one (run_as_non_root, seccomp_profile). Capability
+    # add/drop and read_only_root_filesystem/allow_privilege_escalation have no
+    # pod-level equivalent, so those are container-only.
+    run_as_non_root: bool | None = None
+    read_only_root_filesystem: bool | None = None
+    allow_privilege_escalation: bool | None = None
+    added_capabilities: list[str] = field(default_factory=list)
+    dropped_capabilities: list[str] = field(default_factory=list)
+    seccomp_profile: str | None = None  # e.g. "RuntimeDefault", "Localhost:profiles/foo.json"
+
+
+@dataclass(frozen=True, slots=True)
 class Container:
     name: str
     image: str
@@ -37,6 +52,7 @@ class Container:
     env: list[EnvVar] = field(default_factory=list)
     is_init: bool = False
     probes: list[ProbeInfo] = field(default_factory=list)
+    security: ContainerSecurityInfo | None = None
 
 
 @dataclass(frozen=True, slots=True)

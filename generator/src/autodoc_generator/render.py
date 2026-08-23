@@ -32,6 +32,7 @@ def render_app_page(app: App, namespace: str, summary: str | None = None) -> str
         diagram=diagrams.build_app_diagram(app),
         containers_table=facts.containers_table(app),
         probes_table=facts.probes_table(app),
+        security_table=facts.security_table(app),
         services_table=facts.services_table(app),
         ingresses_table=facts.ingresses_table(app),
         volumes_table=facts.volumes_table(app),

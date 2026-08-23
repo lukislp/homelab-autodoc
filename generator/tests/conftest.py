@@ -6,6 +6,7 @@ from autodoc_core.models import (
     Autoscaler,
     ConfigReference,
     Container,
+    ContainerSecurityInfo,
     EnvVar,
     IngressInfo,
     IngressRule,
@@ -42,6 +43,13 @@ def sample_app() -> App:
                     EnvVar(name="API_KEY", value_from="Secret:web-secrets/API_KEY"),
                 ],
                 probes=[ProbeInfo(kind="liveness", check="HTTP :8080/healthz", period_seconds=10)],
+                security=ContainerSecurityInfo(
+                    run_as_non_root=True,
+                    read_only_root_filesystem=True,
+                    allow_privilege_escalation=False,
+                    dropped_capabilities=["ALL"],
+                    seccomp_profile="RuntimeDefault",
+                ),
             ),
         ],
         volumes=[

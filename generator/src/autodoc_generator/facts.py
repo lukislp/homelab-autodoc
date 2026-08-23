@@ -31,6 +31,41 @@ def probes_table(app: App) -> str:
     return "\n".join([header, "|---|---|---|---|", *rows])
 
 
+def _describe_tristate(value: bool | None) -> str:
+    if value is None:
+        return "-"
+    return "yes" if value else "no"
+
+
+def security_table(app: App) -> str:
+    if not any(c.security for c in app.containers):
+        return ""
+    rows = []
+    for c in sorted(app.containers, key=lambda c: c.name):
+        s = c.security
+        if s is None:
+            rows.append(f"| {c.name} | - | - | - | - | - |")
+            continue
+        capabilities = (
+            ", ".join(
+                [f"+{cap}" for cap in s.added_capabilities]
+                + [f"-{cap}" for cap in s.dropped_capabilities]
+            )
+            or "-"
+        )
+        rows.append(
+            f"| {c.name} | {_describe_tristate(s.run_as_non_root)} | "
+            f"{_describe_tristate(s.read_only_root_filesystem)} | "
+            f"{_describe_tristate(s.allow_privilege_escalation)} | {capabilities} | "
+            f"{s.seccomp_profile or '-'} |"
+        )
+    header = (
+        "| Container | Run as Non-Root | Read-Only Root FS | Priv. Escalation | "
+        "Capabilities | Seccomp |"
+    )
+    return "\n".join([header, "|---|---|---|---|---|---|", *rows])
+
+
 def services_table(app: App) -> str:
     if not app.services:
         return ""

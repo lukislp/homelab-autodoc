@@ -6,7 +6,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from autodoc_core.models import ConfigReference, Container, EnvVar, RolloutStrategyInfo
+from autodoc_core.models import (
+    ConfigReference,
+    Container,
+    ContainerSecurityInfo,
+    EnvVar,
+    RolloutStrategyInfo,
+)
 from kubernetes import client
 
 from autodoc_collector.workloads import (
@@ -197,6 +203,126 @@ def test_deployment_collector_normalizes_resources_env_and_config_refs():
             ConfigReference(kind="Secret", name="web-tls", via="volume"),
         }
     )
+
+
+def test_deployment_collector_normalizes_container_level_security_context():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    containers=[
+                        client.V1Container(
+                            name="web",
+                            image="nginx:1.25.3",
+                            security_context=client.V1SecurityContext(
+                                run_as_non_root=True,
+                                read_only_root_filesystem=True,
+                                allow_privilege_escalation=False,
+                                capabilities=client.V1Capabilities(
+                                    add=["NET_BIND_SERVICE"], drop=["ALL"]
+                                ),
+                                seccomp_profile=client.V1SeccompProfile(type="RuntimeDefault"),
+                            ),
+                        )
+                    ],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.containers[0].security == ContainerSecurityInfo(
+        run_as_non_root=True,
+        read_only_root_filesystem=True,
+        allow_privilege_escalation=False,
+        added_capabilities=["NET_BIND_SERVICE"],
+        dropped_capabilities=["ALL"],
+        seccomp_profile="RuntimeDefault",
+    )
+
+
+def test_deployment_collector_falls_back_to_pod_level_security_context():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    security_context=client.V1PodSecurityContext(
+                        run_as_non_root=True,
+                        seccomp_profile=client.V1SeccompProfile(
+                            type="Localhost", localhost_profile="profiles/web.json"
+                        ),
+                    ),
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.containers[0].security == ContainerSecurityInfo(
+        run_as_non_root=True, seccomp_profile="Localhost:profiles/web.json"
+    )
+
+
+def test_deployment_collector_container_level_security_overrides_pod_level():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    security_context=client.V1PodSecurityContext(run_as_non_root=True),
+                    containers=[
+                        client.V1Container(
+                            name="web",
+                            image="nginx:1.25.3",
+                            security_context=client.V1SecurityContext(run_as_non_root=False),
+                        )
+                    ],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.containers[0].security == ContainerSecurityInfo(run_as_non_root=False)
+
+
+def test_deployment_collector_without_security_context_leaves_security_none():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")]
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.containers[0].security is None
 
 
 def test_deployment_collector_normalizes_image_pull_secrets():
