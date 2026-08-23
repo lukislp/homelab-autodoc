@@ -1,3 +1,10 @@
+# [1.31.0](https://github.com/lukislp/homelab-autodoc/compare/v1.30.1...v1.31.0) (2026-08-23)
+
+
+### Features
+
+* **docs:** replace the global nav tree with hub cards and a scoped sidebar ([3f44e52](https://github.com/lukislp/homelab-autodoc/commit/3f44e522ffea3083f4d4db303c68f2c28476193d))
+
 ## [1.30.1](https://github.com/lukislp/homelab-autodoc/compare/v1.30.0...v1.30.1) (2026-08-23)
 
 
