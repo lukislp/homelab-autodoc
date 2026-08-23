@@ -1,3 +1,11 @@
+## [1.41.3](https://github.com/lukislp/homelab-autodoc/compare/v1.41.2...v1.41.3) (2026-08-23)
+
+
+### Bug Fixes
+
+* cut a release for the pinned-sidebars layout round ([04ada95](https://github.com/lukislp/homelab-autodoc/commit/04ada959fd735987bccdb1459a39a880211bb979)), closes [#70](https://github.com/lukislp/homelab-autodoc/issues/70) [#69](https://github.com/lukislp/homelab-autodoc/issues/69)
+* **server:** keep sidebars pinned and fit topology pages to one viewport ([6493533](https://github.com/lukislp/homelab-autodoc/commit/6493533c56958efa99c1b6b5b85ec44068459fc2))
+
 ## [1.41.2](https://github.com/lukislp/homelab-autodoc/compare/v1.41.1...v1.41.2) (2026-08-23)
 
 
