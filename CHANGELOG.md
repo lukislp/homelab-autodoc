@@ -1,3 +1,10 @@
+## [1.30.1](https://github.com/lukislp/homelab-autodoc/compare/v1.30.0...v1.30.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **collector:** read exec probe action via the client's actual attribute name ([45ff4ce](https://github.com/lukislp/homelab-autodoc/commit/45ff4ceb91102753a0e525f7d7c9737e27fa1fcb))
+
 # [1.30.0](https://github.com/lukislp/homelab-autodoc/compare/v1.29.0...v1.30.0) (2026-08-23)
 
 
