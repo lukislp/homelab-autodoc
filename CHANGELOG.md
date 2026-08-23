@@ -1,3 +1,10 @@
+## [1.41.1](https://github.com/lukislp/homelab-autodoc/compare/v1.41.0...v1.41.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **k8s:** bump the collector image to 1.41.0 ([f171f2f](https://github.com/lukislp/homelab-autodoc/commit/f171f2f995e5b82cc03f09719d2c5fcaf31317fd))
+
 # [1.41.0](https://github.com/lukislp/homelab-autodoc/compare/v1.40.0...v1.41.0) (2026-08-23)
 
 
