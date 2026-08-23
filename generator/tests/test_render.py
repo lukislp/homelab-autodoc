@@ -14,6 +14,7 @@ def test_render_app_page_without_summary_omits_the_summary_section(sample_app):
     assert "### Containers" in page
     assert "### Network Policies" in page
     assert "### Nodes" in page
+    assert "### Scheduling" in page
     assert "### Resources" in page
     assert "### Autoscaling" in page
     assert "### Environment" in page
@@ -38,6 +39,7 @@ def test_render_app_page_for_bare_app_omits_empty_fact_sections(bare_app):
     assert "### Volumes" not in page
     assert "### Network Policies" not in page
     assert "### Nodes" not in page
+    assert "### Scheduling" not in page
     assert "### Resources" not in page
     assert "### Autoscaling" not in page
     assert "### Environment" not in page

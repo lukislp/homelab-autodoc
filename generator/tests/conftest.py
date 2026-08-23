@@ -83,6 +83,9 @@ def sample_app() -> App:
                 ],
             )
         ],
+        node_selector={"kubernetes.io/arch": "arm64"},
+        node_affinity=["required: kubernetes.io/arch In (arm64)"],
+        tolerations=["node-role.kubernetes.io/master Exists:NoSchedule"],
     )
 
 

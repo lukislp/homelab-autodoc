@@ -283,6 +283,9 @@ def build_app(
             for np in (network_policies or [])
             if _network_policy_matches_workload(np, workload)
         ],
+        node_selector=workload.node_selector,
+        node_affinity=workload.node_affinity,
+        tolerations=workload.tolerations,
     )
 
 

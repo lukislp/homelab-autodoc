@@ -142,6 +142,9 @@ def _app_from_dict(d: dict) -> App:
         autoscaler=_autoscaler_from_dict(autoscaler) if autoscaler else None,
         nodes=list(d.get("nodes", [])),
         network_policies=[_network_policy_from_dict(np) for np in d.get("network_policies", [])],
+        node_selector=dict(d.get("node_selector", {})),
+        node_affinity=list(d.get("node_affinity", [])),
+        tolerations=list(d.get("tolerations", [])),
     )
 
 

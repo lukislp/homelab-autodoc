@@ -34,6 +34,9 @@ def _workload(
     created_at: str | None = None,
     owners: list[str] | None = None,
     config_refs: frozenset[ConfigReference] = frozenset(),
+    node_selector: dict[str, str] | None = None,
+    node_affinity: list[str] | None = None,
+    tolerations: list[str] | None = None,
 ) -> NormalizedWorkload:
     return NormalizedWorkload(
         kind=kind,
@@ -48,6 +51,9 @@ def _workload(
         created_at=created_at,
         owners=owners or [],
         config_refs=config_refs,
+        node_selector=node_selector or {},
+        node_affinity=node_affinity or [],
+        tolerations=tolerations or [],
     )
 
 
@@ -552,6 +558,30 @@ def test_build_app_without_network_policies_leaves_list_empty():
     app = build_app(workload, [], [], [])
 
     assert app.network_policies == []
+
+
+def test_build_app_copies_scheduling_constraints_from_workload():
+    workload = _workload(
+        node_selector={"kubernetes.io/arch": "arm64"},
+        node_affinity=["required: kubernetes.io/arch In (arm64)"],
+        tolerations=["node-role.kubernetes.io/master Exists:NoSchedule"],
+    )
+
+    app = build_app(workload, [], [], [])
+
+    assert app.node_selector == {"kubernetes.io/arch": "arm64"}
+    assert app.node_affinity == ["required: kubernetes.io/arch In (arm64)"]
+    assert app.tolerations == ["node-role.kubernetes.io/master Exists:NoSchedule"]
+
+
+def test_build_app_without_scheduling_constraints_leaves_empty_defaults():
+    workload = _workload()
+
+    app = build_app(workload, [], [], [])
+
+    assert app.node_selector == {}
+    assert app.node_affinity == []
+    assert app.tolerations == []
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

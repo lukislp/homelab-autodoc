@@ -29,6 +29,9 @@ class NormalizedWorkload:
     created_at: str | None = None
     owners: list[str] = field(default_factory=list)
     config_refs: frozenset[ConfigReference] = frozenset()
+    node_selector: dict[str, str] = field(default_factory=dict)
+    node_affinity: list[str] = field(default_factory=list)
+    tolerations: list[str] = field(default_factory=list)
 
 
 class WorkloadCollector(Protocol):
@@ -112,6 +115,48 @@ def _config_refs_from_pod_spec(pod_spec: client.V1PodSpec) -> frozenset[ConfigRe
     return frozenset(refs)
 
 
+def _describe_node_selector_requirement(req: client.V1NodeSelectorRequirement) -> str:
+    if req.operator in ("Exists", "DoesNotExist"):
+        return f"{req.key} {req.operator}"
+    return f"{req.key} {req.operator} ({','.join(req.values or [])})"
+
+
+def _describe_node_selector_term(term: client.V1NodeSelectorTerm) -> str:
+    parts = [_describe_node_selector_requirement(r) for r in (term.match_expressions or [])]
+    parts += [_describe_node_selector_requirement(r) for r in (term.match_fields or [])]
+    return " AND ".join(parts) if parts else "any node"
+
+
+def _node_affinity_from_pod_spec(pod_spec: client.V1PodSpec) -> list[str]:
+    affinity = pod_spec.affinity.node_affinity if pod_spec.affinity else None
+    if not affinity:
+        return []
+    result = []
+    required = affinity.required_during_scheduling_ignored_during_execution
+    for term in (required.node_selector_terms if required else None) or []:
+        result.append(f"required: {_describe_node_selector_term(term)}")
+    for preferred in affinity.preferred_during_scheduling_ignored_during_execution or []:
+        description = _describe_node_selector_term(preferred.preference)
+        result.append(f"preferred (weight {preferred.weight}): {description}")
+    return result
+
+
+def _describe_toleration(t: client.V1Toleration) -> str:
+    if t.operator == "Exists" and not t.key:
+        base = "all taints"
+    elif t.operator == "Exists":
+        base = f"{t.key} Exists"
+    else:
+        base = f"{t.key}={t.value}" if t.value else (t.key or "")
+    effect = f":{t.effect}" if t.effect else ""
+    seconds = f" ({t.toleration_seconds}s)" if t.toleration_seconds is not None else ""
+    return f"{base}{effect}{seconds}"
+
+
+def _tolerations_from_pod_spec(pod_spec: client.V1PodSpec) -> list[str]:
+    return [_describe_toleration(t) for t in (pod_spec.tolerations or [])]
+
+
 def _owners_from_metadata(meta: client.V1ObjectMeta) -> list[str]:
     return [f"{o.kind}/{o.name}" for o in (meta.owner_references or [])]
 
@@ -139,6 +184,9 @@ class DeploymentCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            node_selector=dict(pod_spec.node_selector or {}),
+            node_affinity=_node_affinity_from_pod_spec(pod_spec),
+            tolerations=_tolerations_from_pod_spec(pod_spec),
         )
 
 
@@ -167,6 +215,9 @@ class StatefulSetCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            node_selector=dict(pod_spec.node_selector or {}),
+            node_affinity=_node_affinity_from_pod_spec(pod_spec),
+            tolerations=_tolerations_from_pod_spec(pod_spec),
         )
 
 
@@ -195,6 +246,9 @@ class DaemonSetCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            node_selector=dict(pod_spec.node_selector or {}),
+            node_affinity=_node_affinity_from_pod_spec(pod_spec),
+            tolerations=_tolerations_from_pod_spec(pod_spec),
         )
 
 
@@ -226,6 +280,9 @@ class CronJobCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            node_selector=dict(pod_spec.node_selector or {}),
+            node_affinity=_node_affinity_from_pod_spec(pod_spec),
+            tolerations=_tolerations_from_pod_spec(pod_spec),
         )
 
 

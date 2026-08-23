@@ -12,6 +12,7 @@ from autodoc_generator.facts import (
     network_policies_table,
     nodes_table,
     resources_table,
+    scheduling_table,
     services_table,
     volumes_table,
 )
@@ -84,6 +85,18 @@ def test_nodes_table_lists_sorted_node_names(sample_app):
 
 def test_nodes_table_empty_when_app_has_no_nodes(bare_app):
     assert nodes_table(bare_app) == ""
+
+
+def test_scheduling_table_lists_selector_affinity_and_tolerations(sample_app):
+    table = scheduling_table(sample_app)
+
+    assert "| Node Selector | kubernetes.io/arch=arm64 |" in table
+    assert "| Node Affinity | required: kubernetes.io/arch In (arm64) |" in table
+    assert "| Toleration | node-role.kubernetes.io/master Exists:NoSchedule |" in table
+
+
+def test_scheduling_table_empty_when_app_has_no_constraints(bare_app):
+    assert scheduling_table(bare_app) == ""
 
 
 def test_network_policies_table_describes_ingress_peers_and_unrestricted_egress(sample_app):
@@ -160,6 +173,7 @@ def test_all_tables_empty_for_bare_app(bare_app):
     assert resources_table(bare_app) == ""
     assert autoscaler_table(bare_app) == ""
     assert nodes_table(bare_app) == ""
+    assert scheduling_table(bare_app) == ""
     assert network_policies_table(bare_app) == ""
     assert env_table(bare_app) == ""
     assert dependencies_table(bare_app) == ""
