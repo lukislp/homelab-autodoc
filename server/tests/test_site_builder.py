@@ -53,6 +53,7 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     assert (
         "| demo-limits | Container | cpu | - | - | 500m | 100m |" in namespace_resource_governance
     )
+    assert 'data-collected-at="2026-08-22T00:00:00+00:00"' in cluster_index
     assert "__demo__" in cluster_index
     assert "](demo/index.md)" in cluster_index
     assert '<span class="ns-dot ns-dot--ok">' in cluster_index
@@ -83,6 +84,7 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     assert "[homelab-autodoc](../index.md) · [homelab](index.md) · **Nodes**" in nodes_page
     assert "[Open Admin →](/admin/)" in root_index
     assert "[Browse →](homelab/index.md)" in root_index
+    assert 'data-collected-at="2026-08-22T00:00:00+00:00"' in root_index
     assert '<div class="grid cards" markdown>' in root_index
 
     # Every generated page hides Material's global nav tree in favor of a

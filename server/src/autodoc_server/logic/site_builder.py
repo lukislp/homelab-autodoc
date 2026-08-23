@@ -157,6 +157,8 @@ def _write_cluster_index(
             inventory, drift_count, findings_count=len(findings.evaluate_cluster(inventory))
         ),
         "",
+        facts.collection_freshness(inventory.collected_at),
+        "",
         '<p class="section-label">Namespaces</p>',
         "",
         '<div class="grid cards" markdown>',
@@ -324,12 +326,17 @@ def _write_root_index(storage: Storage) -> None:
         "",
     ]
     for cluster_name in storage.list_clusters():
+        # list_clusters only names clusters whose inventory.json exists, so
+        # this load can't 404; collected_at feeds the card's freshness stamp.
+        inventory = storage.load_inventory(cluster_name)
         lines += [
             f"-   __{cluster_name}__",
             "",
             "    ---",
             "",
             f"    Living documentation for the `{cluster_name}` cluster.",
+            "",
+            f"    {facts.collection_freshness(inventory.collected_at)}",
             "",
             f"    [Browse →]({cluster_name}/index.md)",
             "",

@@ -21,6 +21,7 @@ from autodoc_generator.facts import (
     app_is_fully_ready,
     autoscaler_table,
     cluster_stat_chips,
+    collection_freshness,
     containers_table,
     dependencies_table,
     dependency_usage_table,
@@ -592,3 +593,13 @@ def test_node_specs_table_shows_not_ready_status():
 
 def test_node_specs_table_empty_for_no_nodes():
     assert node_specs_table([]) == ""
+
+
+def test_collection_freshness_carries_iso_stamp_and_absolute_fallback():
+    stamp = collection_freshness("2026-08-23T02:00:00+00:00")
+
+    # freshness.js reads the raw ISO value; the rendered text is the no-JS
+    # fallback and must already be human-readable on its own.
+    assert 'data-collected-at="2026-08-23T02:00:00+00:00"' in stamp
+    assert "collected 2026-08-23 02:00 UTC" in stamp
+    assert stamp.startswith('<span class="freshness"')
