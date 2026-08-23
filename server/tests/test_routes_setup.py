@@ -32,7 +32,7 @@ def test_status_reports_not_configured_initially(client):
     response = test_client.get("/api/auth/status")
 
     assert response.status_code == 200
-    assert response.json() == {"configured": False, "identity": None}
+    assert response.json() == {"configured": False, "provider": None, "identity": None}
 
 
 def test_setup_succeeds_when_not_yet_configured(client):
@@ -42,7 +42,9 @@ def test_setup_succeeds_when_not_yet_configured(client):
 
     assert response.status_code == 200
     assert store.is_configured() is True
-    assert test_client.get("/api/auth/status").json()["configured"] is True
+    status = test_client.get("/api/auth/status").json()
+    assert status["configured"] is True
+    assert status["provider"] == "github"
 
 
 def test_setup_without_a_session_is_rejected_once_already_configured(client):

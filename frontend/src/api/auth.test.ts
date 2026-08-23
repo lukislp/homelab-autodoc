@@ -4,12 +4,14 @@ import { getAuthStatus, loginUrl, logoutUrl, submitSetup } from "./auth";
 
 describe("api/auth", () => {
   it("getAuthStatus fetches /api/auth/status", async () => {
-    const spy = vi.spyOn(client, "getJson").mockResolvedValue({ configured: true, identity: null });
+    const spy = vi
+      .spyOn(client, "getJson")
+      .mockResolvedValue({ configured: true, provider: "github", identity: null });
 
     const result = await getAuthStatus();
 
     expect(spy).toHaveBeenCalledWith("/api/auth/status");
-    expect(result).toEqual({ configured: true, identity: null });
+    expect(result).toEqual({ configured: true, provider: "github", identity: null });
   });
 
   it("submitSetup posts the payload to /api/setup", async () => {

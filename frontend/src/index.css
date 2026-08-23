@@ -34,6 +34,14 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* Pre-login states (loading, error, setup, login prompt): brand + a small
+   centered card. The logged-in management view uses .page instead. */
+.centered {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 2.5rem 1rem;
@@ -66,8 +74,56 @@ body {
   box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
 }
 
-.card--wide {
-  max-width: 640px;
+/* Logged-in management view: full-viewport with a header bar. */
+.page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.page-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.page-nav a {
+  color: var(--muted);
+}
+
+.page-nav a:hover {
+  color: var(--text);
+}
+
+.page-main {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem 2rem 2rem;
 }
 
 h1 {
@@ -136,19 +192,6 @@ button.danger {
   color: var(--danger);
 }
 
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.topbar a {
-  color: var(--muted);
-}
-
 .device-row {
   display: flex;
   align-items: center;
@@ -194,11 +237,25 @@ button.danger {
 }
 
 @media (max-width: 480px) {
-  #root {
+  .centered {
     padding: 1.5rem 0.75rem;
   }
 
   .card {
+    padding: 1.5rem;
+    border-radius: 14px;
+  }
+
+  .page-header {
+    flex-wrap: wrap;
+    padding: 0.9rem 1rem;
+  }
+
+  .page-main {
+    padding: 1.25rem 0.75rem;
+  }
+
+  .panel {
     padding: 1.5rem;
     border-radius: 14px;
   }

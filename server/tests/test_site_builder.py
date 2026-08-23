@@ -218,9 +218,10 @@ def test_deleting_the_last_cluster_and_rebuilding_drops_it_from_the_built_site(
     tmp_path, sample_inventory
 ):
     # Exercises the exact sequence routes_clusters.py's delete endpoint runs:
-    # remove the data + generated docs, rebuild_all_sites (which on its own
-    # would skip the actual build with zero clusters left), then an explicit
-    # build_static_site call to guarantee the served site catches up.
+    # remove the data + generated docs, then rebuild_site_after_cluster_delete
+    # (root index rewrite + one static build - deliberately NOT the full
+    # rebuild_all_sites, which would also skip the build with zero clusters
+    # left).
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
     storage.save_inventory("homelab", sample_inventory)
     site_dir = tmp_path / "site"
@@ -234,8 +235,7 @@ def test_deleting_the_last_cluster_and_rebuilding_drops_it_from_the_built_site(
 
     storage.delete_cluster("homelab")
     shutil.rmtree(storage.docs_dir / "homelab", ignore_errors=True)
-    site_builder.rebuild_all_sites(storage, llm=None, mkdocs_config_path=config_path)
-    site_builder.build_static_site(config_path)
+    site_builder.rebuild_site_after_cluster_delete(storage, config_path)
 
     assert not (storage.docs_dir / "homelab").exists()
     assert not (site_dir / "homelab").exists()

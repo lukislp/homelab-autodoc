@@ -8,7 +8,7 @@ import { SetupForm } from "./components/SetupForm";
 import { useAuthStatus } from "./hooks/useAuthStatus";
 import { useClusters } from "./hooks/useClusters";
 import { usePendingDevices } from "./hooks/usePendingDevices";
-import type { SetupPayload } from "./types";
+import type { Provider, SetupPayload } from "./types";
 
 function Brand() {
   return (
@@ -19,8 +19,16 @@ function Brand() {
   );
 }
 
-function Card({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
-  return <div className={wide ? "card card--wide" : "card"}>{children}</div>;
+// Centered-card treatment for the pre-login states (loading, error, setup,
+// login prompt) - the typical login-form look. The logged-in management view
+// (DevicesView) is full-screen instead.
+function CenteredCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="centered">
+      <Brand />
+      <div className="card">{children}</div>
+    </div>
+  );
 }
 
 function SetupView() {
@@ -42,13 +50,18 @@ function SetupView() {
   return <SetupForm onSubmit={handleSubmit} submitting={submitting} error={error} />;
 }
 
-function LoginPromptView() {
+const LOGIN_LABELS: Record<Provider, string> = {
+  github: "Login with GitHub",
+  oidc: "Login with SSO",
+};
+
+function LoginPromptView({ provider }: { provider: Provider | null }) {
   return (
     <>
       <h1>Admin login</h1>
       <p>Admin login is configured. Sign in to manage pending cluster registrations.</p>
       <a className="button-link" href={loginUrl()}>
-        Log in
+        {provider ? LOGIN_LABELS[provider] : "Log in"}
       </a>
     </>
   );
@@ -59,20 +72,32 @@ function DevicesView({ identity }: { identity: string }) {
   const { clusters, loading: clustersLoading, error: clustersError, remove } = useClusters();
 
   return (
-    <>
-      <div className="topbar">
-        <span>{identity}</span>
-        <a href={logoutUrl()}>Log out</a>
-      </div>
-      {loading && <p className="empty">Loading…</p>}
-      {error && <p className="error">{error}</p>}
-      {!loading && !error && <DeviceList devices={devices} onApprove={approve} onDeny={deny} />}
-      {clustersLoading && <p className="empty">Loading…</p>}
-      {clustersError && <p className="error">{clustersError}</p>}
-      {!clustersLoading && !clustersError && (
-        <ClusterList clusters={clusters} onDelete={remove} />
-      )}
-    </>
+    <div className="page">
+      <header className="page-header">
+        <Brand />
+        <nav className="page-nav">
+          <a href="/">← Back to docs</a>
+          <span className="identity">{identity}</span>
+          <a href={logoutUrl()}>Log out</a>
+        </nav>
+      </header>
+      <main className="page-main">
+        <section className="panel">
+          {loading && <p className="empty">Loading…</p>}
+          {error && <p className="error">{error}</p>}
+          {!loading && !error && (
+            <DeviceList devices={devices} onApprove={approve} onDeny={deny} />
+          )}
+        </section>
+        <section className="panel">
+          {clustersLoading && <p className="empty">Loading…</p>}
+          {clustersError && <p className="error">{clustersError}</p>}
+          {!clustersLoading && !clustersError && (
+            <ClusterList clusters={clusters} onDelete={remove} />
+          )}
+        </section>
+      </main>
+    </div>
   );
 }
 
@@ -81,38 +106,27 @@ export default function App() {
 
   if (loading) {
     return (
-      <>
-        <Brand />
-        <Card>
-          <p className="empty">Loading…</p>
-        </Card>
-      </>
+      <CenteredCard>
+        <p className="empty">Loading…</p>
+      </CenteredCard>
     );
   }
 
   if (error || !status) {
     return (
-      <>
-        <Brand />
-        <Card>
-          <p className="error">{error ?? "Could not reach the server."}</p>
-        </Card>
-      </>
+      <CenteredCard>
+        <p className="error">{error ?? "Could not reach the server."}</p>
+      </CenteredCard>
     );
   }
 
+  if (status.identity) {
+    return <DevicesView identity={status.identity} />;
+  }
+
   return (
-    <>
-      <Brand />
-      <Card wide={Boolean(status.identity)}>
-        {!status.configured ? (
-          <SetupView />
-        ) : !status.identity ? (
-          <LoginPromptView />
-        ) : (
-          <DevicesView identity={status.identity} />
-        )}
-      </Card>
-    </>
+    <CenteredCard>
+      {!status.configured ? <SetupView /> : <LoginPromptView provider={status.provider} />}
+    </CenteredCard>
   );
 }
