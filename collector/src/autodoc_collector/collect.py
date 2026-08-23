@@ -20,11 +20,16 @@ from autodoc_core.models import (
     Volume,
 )
 from kubernetes import client
+from kubernetes.client.exceptions import ApiException
 
 from .k8s_apis import K8sApis
 from .workloads import DEFAULT_WORKLOAD_COLLECTORS, NormalizedWorkload, WorkloadCollector
 
 DEFAULT_SYSTEM_NAMESPACES = frozenset({"kube-system", "kube-public", "kube-node-lease"})
+
+_HTTPROUTE_GROUP = "gateway.networking.k8s.io"
+_HTTPROUTE_VERSION = "v1"
+_HTTPROUTE_PLURAL = "httproutes"
 
 
 def _selector_matches(selector: dict[str, str] | None, pod_labels: dict[str, str]) -> bool:
@@ -90,11 +95,54 @@ def _ingress_targets_services(raw: client.V1Ingress, service_names: set[str]) ->
     return False
 
 
+def _build_httproute(raw: dict) -> IngressInfo:
+    """HTTPRoute (Gateway API) is a CRD, so this reads a plain dict from
+    CustomObjectsApi, not a typed client.V1* object like _build_ingress does.
+    Normalized into the same IngressInfo/IngressRule shape as classic Ingress -
+    from a docs page's point of view, "how is this app reached externally" is
+    the same question regardless of which K8s API answers it, so the existing
+    facts table/diagram code needs no changes at all to show either. No
+    tls_hosts: HTTPRoute doesn't declare TLS itself - that's on the Gateway's
+    own listeners, a separate resource this collector doesn't read.
+    """
+    spec = raw.get("spec", {})
+    hostnames = spec.get("hostnames") or [None]
+    rules: list[IngressRule] = []
+    for hostname in hostnames:
+        for rule in spec.get("rules", []):
+            matches = rule.get("matches") or [{}]
+            paths = [m.get("path", {}).get("value", "/") for m in matches]
+            for backend in rule.get("backendRefs", []):
+                service_name = backend.get("name")
+                if not service_name:
+                    continue
+                port = backend.get("port")
+                for path in paths:
+                    rules.append(
+                        IngressRule(
+                            host=hostname,
+                            path=path,
+                            service_name=service_name,
+                            service_port=str(port) if port is not None else "",
+                        )
+                    )
+    return IngressInfo(name=raw.get("metadata", {}).get("name", ""), rules=rules, tls_hosts=[])
+
+
+def _httproute_targets_services(raw: dict, service_names: set[str]) -> bool:
+    for rule in raw.get("spec", {}).get("rules", []):
+        for backend in rule.get("backendRefs", []):
+            if backend.get("name") in service_names:
+                return True
+    return False
+
+
 def build_app(
     workload: NormalizedWorkload,
     services: list[client.V1Service],
     ingresses: list[client.V1Ingress],
     pvcs: list[client.V1PersistentVolumeClaim],
+    httproutes: list[dict] | None = None,
 ) -> App:
     matched_services = [
         svc for svc in services if _selector_matches(svc.spec.selector, workload.pod_labels)
@@ -102,6 +150,11 @@ def build_app(
     matched_service_names = {svc.metadata.name for svc in matched_services}
     matched_ingresses = [
         ing for ing in ingresses if _ingress_targets_services(ing, matched_service_names)
+    ]
+    matched_httproutes = [
+        route
+        for route in (httproutes or [])
+        if _httproute_targets_services(route, matched_service_names)
     ]
     matched_pvcs = [pvc for pvc in pvcs if pvc.metadata.name in workload.claim_names]
 
@@ -113,7 +166,8 @@ def build_app(
         containers=workload.containers,
         volumes=[_build_volume(pvc) for pvc in matched_pvcs],
         services=[_build_service(svc) for svc in matched_services],
-        ingresses=[_build_ingress(ing) for ing in matched_ingresses],
+        ingresses=[_build_ingress(ing) for ing in matched_ingresses]
+        + [_build_httproute(route) for route in matched_httproutes],
         labels=workload.labels,
         annotations=workload.annotations,
         created_at=workload.created_at,
@@ -128,9 +182,30 @@ def build_namespace_inventory(
     services: list[client.V1Service],
     ingresses: list[client.V1Ingress],
     pvcs: list[client.V1PersistentVolumeClaim],
+    httproutes: list[dict] | None = None,
 ) -> NamespaceInventory:
-    apps = [build_app(workload, services, ingresses, pvcs) for workload in workloads]
+    apps = [build_app(workload, services, ingresses, pvcs, httproutes) for workload in workloads]
     return NamespaceInventory(name=namespace, apps=apps)
+
+
+def _list_httproutes(apis: K8sApis, namespace: str) -> list[dict]:
+    """Cluster-invariant: a cluster without the Gateway API CRDs installed
+    (or too old a version to have this one) 404s here - that's expected, not
+    an error, so this collector works the same whether or not Gateway API is
+    present at all.
+    """
+    try:
+        result = apis.custom_objects.list_namespaced_custom_object(
+            group=_HTTPROUTE_GROUP,
+            version=_HTTPROUTE_VERSION,
+            namespace=namespace,
+            plural=_HTTPROUTE_PLURAL,
+        )
+    except ApiException as e:
+        if e.status == 404:
+            return []
+        raise
+    return result.get("items", [])
 
 
 def collect_cluster_inventory(
@@ -161,8 +236,9 @@ def collect_cluster_inventory(
         services = apis.core_v1.list_namespaced_service(namespace).items
         ingresses = apis.networking_v1.list_namespaced_ingress(namespace).items
         pvcs = apis.core_v1.list_namespaced_persistent_volume_claim(namespace).items
+        httproutes = _list_httproutes(apis, namespace)
         namespace_inventories.append(
-            build_namespace_inventory(namespace, workloads, services, ingresses, pvcs)
+            build_namespace_inventory(namespace, workloads, services, ingresses, pvcs, httproutes)
         )
 
     return ClusterInventory(

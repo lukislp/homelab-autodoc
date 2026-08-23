@@ -13,6 +13,10 @@ class K8sApis:
     apps_v1: client.AppsV1Api
     networking_v1: client.NetworkingV1Api
     batch_v1: client.BatchV1Api
+    # Gateway API (HTTPRoute) is a CRD, not part of the core/apps/networking
+    # API groups the typed client ships bindings for - CustomObjectsApi is
+    # the generic (untyped, dict-based) way to read any CRD.
+    custom_objects: client.CustomObjectsApi
 
     @classmethod
     def build(cls) -> K8sApis:
@@ -21,4 +25,5 @@ class K8sApis:
             apps_v1=client.AppsV1Api(),
             networking_v1=client.NetworkingV1Api(),
             batch_v1=client.BatchV1Api(),
+            custom_objects=client.CustomObjectsApi(),
         )

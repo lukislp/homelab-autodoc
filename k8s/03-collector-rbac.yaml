@@ -33,6 +33,13 @@ rules:
   - apiGroups: ["networking.k8s.io"]
     resources: ["ingresses"]
     verbs: ["get", "list", "watch"]
+  # Gateway API - safe to grant even on a cluster that doesn't have this CRD
+  # installed at all: RBAC rules for a resource type the API server doesn't
+  # know about are simply inert, never an error (the collector's own 404
+  # handling is what actually makes it cluster-invariant).
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
