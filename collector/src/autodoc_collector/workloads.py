@@ -34,6 +34,7 @@ class NormalizedWorkload:
     node_affinity: list[str] = field(default_factory=list)
     tolerations: list[str] = field(default_factory=list)
     rollout_strategy: RolloutStrategyInfo | None = None
+    image_pull_secrets: frozenset[str] = frozenset()
 
 
 class WorkloadCollector(Protocol):
@@ -198,6 +199,12 @@ def _owners_from_metadata(meta: client.V1ObjectMeta) -> list[str]:
     return [f"{o.kind}/{o.name}" for o in (meta.owner_references or [])]
 
 
+def _image_pull_secrets_from_pod_spec(pod_spec: client.V1PodSpec) -> frozenset[str]:
+    return frozenset(
+        ref.name for ref in (pod_spec.image_pull_secrets or []) if ref.name is not None
+    )
+
+
 def _rollout_strategy_from_deployment(
     strategy: client.V1DeploymentStrategy | None,
 ) -> RolloutStrategyInfo | None:
@@ -275,6 +282,7 @@ class DeploymentCollector:
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),
             rollout_strategy=_rollout_strategy_from_deployment(deployment.spec.strategy),
+            image_pull_secrets=_image_pull_secrets_from_pod_spec(pod_spec),
         )
 
 
@@ -308,6 +316,7 @@ class StatefulSetCollector:
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),
             rollout_strategy=_rollout_strategy_from_stateful_set(stateful_set.spec.update_strategy),
+            image_pull_secrets=_image_pull_secrets_from_pod_spec(pod_spec),
         )
 
 
@@ -341,6 +350,7 @@ class DaemonSetCollector:
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),
             rollout_strategy=_rollout_strategy_from_daemon_set(daemon_set.spec.update_strategy),
+            image_pull_secrets=_image_pull_secrets_from_pod_spec(pod_spec),
         )
 
 
@@ -376,6 +386,7 @@ class CronJobCollector:
             node_selector=dict(pod_spec.node_selector or {}),
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),
+            image_pull_secrets=_image_pull_secrets_from_pod_spec(pod_spec),
         )
 
 

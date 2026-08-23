@@ -3,6 +3,7 @@ from __future__ import annotations
 from autodoc_core.models import (
     App,
     ConfigReference,
+    Container,
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
@@ -17,6 +18,7 @@ from autodoc_generator.facts import (
     dependencies_table,
     dependency_usage_table,
     env_table,
+    image_pull_secrets_table,
     ingresses_table,
     metadata_table,
     network_policies_table,
@@ -24,6 +26,7 @@ from autodoc_generator.facts import (
     nodes_table,
     pod_disruption_budgets_table,
     probes_table,
+    registries_table,
     resources_table,
     rollout_strategy_table,
     scheduling_table,
@@ -140,6 +143,42 @@ def test_autoscaler_table_lists_replica_bounds_and_cpu_target(sample_app):
 
 def test_autoscaler_table_empty_when_app_has_no_autoscaler(bare_app):
     assert autoscaler_table(bare_app) == ""
+
+
+def test_registries_table_lists_docker_hub_for_unqualified_image(sample_app):
+    table = registries_table(sample_app)
+
+    assert "| web | `nginx:1.25.3` | docker.io |" in table
+
+
+def test_registries_table_lists_explicit_registry_host():
+    app = App(
+        name="server",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        containers=[
+            Container(name="server", image="ghcr.io/lukislp/homelab-autodoc-server:1.20.1")
+        ],
+    )
+
+    table = registries_table(app)
+
+    assert "| server | `ghcr.io/lukislp/homelab-autodoc-server:1.20.1` | ghcr.io |" in table
+
+
+def test_registries_table_empty_when_app_has_no_containers(bare_app):
+    assert registries_table(bare_app) == ""
+
+
+def test_image_pull_secrets_table_lists_sorted_secret_names(sample_app):
+    table = image_pull_secrets_table(sample_app)
+
+    assert "| ghcr-pull-secret |" in table
+
+
+def test_image_pull_secrets_table_empty_when_app_has_no_pull_secrets(bare_app):
+    assert image_pull_secrets_table(bare_app) == ""
 
 
 def test_rollout_strategy_table_lists_strategy_and_surge_settings(sample_app):
@@ -283,6 +322,8 @@ def test_metadata_table_drops_noisy_last_applied_configuration_annotation():
 def test_all_tables_empty_for_bare_app(bare_app):
     assert containers_table(bare_app) == ""
     assert probes_table(bare_app) == ""
+    assert registries_table(bare_app) == ""
+    assert image_pull_secrets_table(bare_app) == ""
     assert services_table(bare_app) == ""
     assert ingresses_table(bare_app) == ""
     assert volumes_table(bare_app) == ""

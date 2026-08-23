@@ -378,6 +378,7 @@ def build_app(
         node_affinity=workload.node_affinity,
         tolerations=workload.tolerations,
         rollout_strategy=workload.rollout_strategy,
+        image_pull_secrets=sorted(workload.image_pull_secrets),
     )
 
 

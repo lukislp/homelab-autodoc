@@ -113,6 +113,38 @@ def rollout_strategy_table(app: App) -> str:
     return "\n".join(rows)
 
 
+def _parse_registry(image: str) -> str:
+    """Docker's own reference-parsing rule: no slash at all means Docker Hub
+    ("nginx:1.25.3"); with a slash, the first path segment is the registry
+    only if it looks like a host (contains "." or ":", or is "localhost") -
+    otherwise it's a Docker Hub namespace ("library/nginx", "bitnami/redis").
+    """
+    ref = image.split("@", 1)[0]  # strip a digest, e.g. "...@sha256:..." - irrelevant here
+    if "/" not in ref:
+        return "docker.io"
+    first_segment = ref.split("/", 1)[0]
+    if "." in first_segment or ":" in first_segment or first_segment == "localhost":
+        return first_segment
+    return "docker.io"
+
+
+def registries_table(app: App) -> str:
+    if not app.containers:
+        return ""
+    rows = [
+        f"| {c.name} | `{c.image}` | {_parse_registry(c.image)} |"
+        for c in sorted(app.containers, key=lambda c: c.name)
+    ]
+    return "\n".join(["| Container | Image | Registry |", "|---|---|---|", *rows])
+
+
+def image_pull_secrets_table(app: App) -> str:
+    if not app.image_pull_secrets:
+        return ""
+    rows = [f"| {name} |" for name in sorted(app.image_pull_secrets)]
+    return "\n".join(["| Pull Secret |", "|---|", *rows])
+
+
 def nodes_table(app: App) -> str:
     if not app.nodes:
         return ""

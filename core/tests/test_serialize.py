@@ -137,6 +137,7 @@ def _sample_inventory() -> ClusterInventory:
                             max_surge="25%",
                             max_unavailable="0",
                         ),
+                        image_pull_secrets=["ghcr-pull-secret"],
                     )
                 ],
             )
@@ -325,3 +326,16 @@ def test_app_without_rollout_strategy_round_trips_as_none():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.namespaces[0].apps[0].rollout_strategy is None
+
+
+def test_app_without_image_pull_secrets_round_trips_as_empty_list():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].image_pull_secrets == []

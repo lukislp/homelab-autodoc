@@ -193,6 +193,7 @@ def _app_from_dict(d: dict) -> App:
         rollout_strategy=_rollout_strategy_from_dict(rollout_strategy)
         if rollout_strategy
         else None,
+        image_pull_secrets=list(d.get("image_pull_secrets", [])),
     )
 
 

@@ -174,6 +174,8 @@ class App:
     # Human-readable toleration summaries, e.g. "node-role.kubernetes.io/master:NoSchedule".
     tolerations: list[str] = field(default_factory=list)
     rollout_strategy: RolloutStrategyInfo | None = None
+    # Names only, e.g. ["ghcr-pull-secret"] - never the referenced Secret's contents.
+    image_pull_secrets: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)

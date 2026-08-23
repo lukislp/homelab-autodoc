@@ -103,6 +103,7 @@ def sample_app() -> App:
         rollout_strategy=RolloutStrategyInfo(
             strategy_type="RollingUpdate", max_surge="25%", max_unavailable="0"
         ),
+        image_pull_secrets=["ghcr-pull-secret"],
     )
 
 

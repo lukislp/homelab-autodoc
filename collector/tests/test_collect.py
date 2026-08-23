@@ -44,6 +44,7 @@ def _workload(
     node_affinity: list[str] | None = None,
     tolerations: list[str] | None = None,
     rollout_strategy: RolloutStrategyInfo | None = None,
+    image_pull_secrets: frozenset[str] = frozenset(),
 ) -> NormalizedWorkload:
     return NormalizedWorkload(
         kind=kind,
@@ -63,6 +64,7 @@ def _workload(
         node_affinity=node_affinity or [],
         tolerations=tolerations or [],
         rollout_strategy=rollout_strategy,
+        image_pull_secrets=image_pull_secrets,
     )
 
 
@@ -899,6 +901,22 @@ def test_build_app_without_rollout_strategy_leaves_it_none():
     app = build_app(workload, [], [], [])
 
     assert app.rollout_strategy is None
+
+
+def test_build_app_copies_image_pull_secrets_from_workload():
+    workload = _workload(image_pull_secrets=frozenset({"ghcr-pull-secret"}))
+
+    app = build_app(workload, [], [], [])
+
+    assert app.image_pull_secrets == ["ghcr-pull-secret"]
+
+
+def test_build_app_without_image_pull_secrets_leaves_list_empty():
+    workload = _workload()
+
+    app = build_app(workload, [], [], [])
+
+    assert app.image_pull_secrets == []
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

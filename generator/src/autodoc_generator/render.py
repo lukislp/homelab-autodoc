@@ -46,6 +46,8 @@ def render_app_page(app: App, namespace: str, summary: str | None = None) -> str
         pod_disruption_budgets_table=facts.pod_disruption_budgets_table(app),
         scheduling_table=facts.scheduling_table(app),
         rollout_strategy_table=facts.rollout_strategy_table(app),
+        registries_table=facts.registries_table(app),
+        image_pull_secrets_table=facts.image_pull_secrets_table(app),
     )
 
 
