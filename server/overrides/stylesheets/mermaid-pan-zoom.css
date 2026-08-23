@@ -24,16 +24,25 @@
   box-sizing: border-box;
   overflow: hidden;
   width: 100%;
-  /* Sized so the WHOLE page fits one viewport: 100vh minus the chrome above
-     and below the box (Material header, breadcrumb, H1, and the cluster
-     pages' chip row underneath). A flat 80vh always overshot that budget
-     and forced the topology pages to scroll. min-height keeps the box
-     usable on short windows - there the page scrolls, by design. */
-  height: calc(100vh - 21rem);
+  /* Sized so the WHOLE page fits one viewport: 100vh minus the chrome
+     above the box. A flat 80vh always overshot that budget and forced the
+     topology pages to scroll. min-height keeps the box usable on short
+     windows - there the page scrolls, by design. The default budget is the
+     cluster topology's (header + breadcrumb + chip row, no visible H1);
+     the namespace variant below carries H1 and sidenav header instead.
+     Both offsets validated with a real browser against the deployed pages,
+     not estimated. */
+  height: calc(100vh - 15.5rem);
   min-height: 480px;
   padding-bottom: 40px;
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 4px;
+}
+
+/* Namespace topology keeps its visible H1 inside the two-column layout, so
+   its chrome budget differs from the cluster page's (measured: 22.5rem). */
+.ns-content .mermaid-zoom-viewport {
+  height: calc(100vh - 22.5rem);
 }
 
 /* Width is set inline by the JS to the diagram's measured natural width -
