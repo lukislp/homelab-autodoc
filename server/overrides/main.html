@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  {#- Client-fetched (not Material's self-hosting `theme.font`, which downloads
+     fonts at *build* time) - regenerate_cluster_docs runs on every server
+     startup, so a build-time dependency on Google's font CDN being reachable
+     would risk the docs server itself. This way a slow/unreachable font host
+     only ever degrades one page load to system fonts, never blocks a build. #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  >
+{% endblock %}

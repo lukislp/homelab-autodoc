@@ -10,10 +10,22 @@
 // So this doesn't reach inside at all: it treats the whole ".mermaid" host
 // as an opaque box and pans/zooms IT via a CSS transform, the same way you'd
 // zoom a photo - the shadow DOM content inside just comes along for the
-// ride. Detecting "Mermaid has actually rendered something" without being
-// able to query inside the shadow root: poll the host's own rendered size
-// instead (shadow DOM content still affects normal layout from the outside,
-// it's just not queryable) - once it grows past a trivial threshold, wrap it.
+// ride.
+//
+// Detecting "Mermaid has actually rendered something" without being able to
+// query inside the shadow root: NOT by the host's rendered size, even though
+// that's tempting (shadow DOM content does affect normal layout from the
+// outside, so it's readable). Before Mermaid processes it, the host is a
+// <pre> holding the raw, un-rendered diagram source as plain text - and a
+// <pre>'s natural width is the length of its longest source line, which
+// routinely exceeds any reasonable "looks big enough" threshold on its own.
+// Measuring at that point pins the pan/zoom to the wrong natural size
+// permanently (confirmed live: a 40px threshold was fooled by source text
+// alone, well before Mermaid even loaded). The reliable, encapsulation-safe
+// signal instead: Mermaid's own `run()` sets data-processed="true" on each
+// element once it has finished rendering into it - that attribute lives on
+// the host itself (light DOM), not inside the shadow root, so it's not
+// subject to the closed-root restriction at all.
 //
 // Initial zoom is "fit to view" (like a PDF viewer / lightbox): the viewport
 // (mermaid-pan-zoom.css) is a fixed-size box spanning the full reading
@@ -29,10 +41,9 @@
   // to this factor - beyond it a 3-node diagram turns into poster-sized
   // text. Raise to Infinity for a pure "always fill" behaviour.
   var MAX_FIT_SCALE = 2.5;
-  // A host that Mermaid hasn't rendered into yet is an empty block of one
-  // line-height (~20px) - require clearly more than that on BOTH axes before
-  // treating it as a rendered diagram (a bare ">= 20px height" check wrapped
-  // empty hosts in a 16px-wide box whenever Mermaid never rendered).
+  // Secondary sanity check alongside data-processed (belt and suspenders,
+  // e.g. against a Mermaid version that renders an empty/near-empty SVG) -
+  // no longer the primary readiness signal, see the top-of-file comment.
   var READY_MIN_PX = 40;
   var ZOOM_STEP = 1.3;
   var WHEEL_ZOOM_STEP = 1.15;
@@ -68,8 +79,15 @@
     return { width: height / perPx, height: height };
   }
 
-  function wrap(host) {
+  function wrap(host, skipProcessedCheck) {
     if (host.dataset.panZoomInit === "true") return;
+    // skipProcessedCheck is the timeout fallback (see the poll loop below):
+    // if Mermaid never sets data-processed within maxPollMs (a Mermaid
+    // version that doesn't set it, or it renders under a different
+    // attribute), fall back to the old size-only guess rather than leaving
+    // the diagram without pan/zoom forever - a possibly-mis-sized wrap still
+    // beats none.
+    if (!skipProcessedCheck && host.getAttribute("data-processed") !== "true") return;
     if (host.offsetHeight < READY_MIN_PX || host.offsetWidth < READY_MIN_PX) return;
     host.dataset.panZoomInit = "true";
 
@@ -214,12 +232,18 @@
     fitToView();
   }
 
-  function scan() {
-    document.querySelectorAll(".mermaid").forEach(wrap);
+  function scan(skipProcessedCheck) {
+    document.querySelectorAll(".mermaid").forEach(function (host) {
+      wrap(host, skipProcessedCheck);
+    });
   }
 
   // document$ is Material's own reactive navigation hook - fires on every
-  // page render, whether from a full page load or instant-navigation.
+  // page render, whether from a full page load or instant-navigation. Kept
+  // polling (rather than e.g. a MutationObserver) because Mermaid's render
+  // can itself be async and slow (mermaid.min.js loads from a CDN, in
+  // parallel with everything else on the page) - this simply checks back
+  // every 400ms until data-processed shows up, for up to 20s.
   document$.subscribe(function () {
     scan();
     var elapsedMs = 0;
@@ -227,8 +251,9 @@
     var maxPollMs = 20000;
     var poll = setInterval(function () {
       elapsedMs += pollIntervalMs;
-      scan();
-      if (elapsedMs >= maxPollMs) clearInterval(poll);
+      var timedOut = elapsedMs >= maxPollMs;
+      scan(timedOut);
+      if (timedOut) clearInterval(poll);
     }, pollIntervalMs);
   });
 })();

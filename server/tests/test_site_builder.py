@@ -35,10 +35,13 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
 
     assert "# web" in app_page
     assert "nginx:1.25.3" in app_page
-    assert "[web](web.md)" in namespace_index
-    assert "[Topology](topology.md)" in namespace_index
-    assert "[Dependencies](dependencies.md)" in namespace_index
-    assert "[Resource Governance](resource-governance.md)" in namespace_index
+    assert "__web__" in namespace_index
+    assert "](web.md)" in namespace_index
+    assert '<span class="ns-dot ns-dot--ok">' in namespace_index
+    assert "[Topology](topology.md){: .chip-link }" in namespace_index
+    assert "[Dependencies](dependencies.md){: .chip-link }" in namespace_index
+    assert "[Resource Governance](resource-governance.md){: .chip-link }" in namespace_index
+    assert '<div class="stat-row">' in namespace_index
     assert "# demo - Topology" in namespace_topology
     assert "```mermaid" in namespace_topology
     assert "# demo - Dependencies" in namespace_dependencies
@@ -48,21 +51,77 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     assert (
         "| demo-limits | Container | cpu | - | - | 500m | 100m |" in namespace_resource_governance
     )
-    assert "[demo](demo/index.md)" in cluster_index
-    assert "[Topology](topology.md)" in cluster_index
-    assert "[Storage Classes](storage-classes.md)" in cluster_index
-    assert "[Nodes](nodes.md)" in cluster_index
-    assert "[Changelog](changelog.md)" in cluster_index
+    assert "__demo__" in cluster_index
+    assert "](demo/index.md)" in cluster_index
+    assert '<span class="ns-dot ns-dot--ok">' in cluster_index
+    assert '<div class="stat-row">' in cluster_index
+    assert "[Topology](topology.md){: .chip-link }" in cluster_index
+    assert "[Storage Classes](storage-classes.md){: .chip-link }" in cluster_index
+    assert "[Nodes](nodes.md){: .chip-link }" in cluster_index
+    assert "[Changelog](changelog.md){: .chip-link }" in cluster_index
     assert "# homelab - Topology" in cluster_topology
+    assert '<span class="chip-link chip-link--active">Topology</span>' in cluster_topology
+    assert "[Nodes](nodes.md){: .chip-link }" in cluster_topology
+    assert "[homelab-autodoc](../index.md) · [homelab](index.md) · **Topology**" in cluster_topology
     assert "# homelab - Storage Classes" in storage_classes_page
     assert "local-path" in storage_classes_page
     assert "rancher.io/local-path" in storage_classes_page
+    assert (
+        '<span class="chip-link chip-link--active">Storage Classes</span>' in storage_classes_page
+    )
+    assert (
+        "[homelab-autodoc](../index.md) · [homelab](index.md) · **Storage Classes**"
+        in storage_classes_page
+    )
     assert "# homelab - Nodes" in nodes_page
     assert "pi-node-1" in nodes_page
     assert "arm64" in nodes_page
+    assert '<span class="chip-link chip-link--active">Nodes</span>' in nodes_page
+    assert "[homelab-autodoc](../index.md) · [homelab](index.md) · **Nodes**" in nodes_page
     assert "[Open Admin →](/admin/)" in root_index
     assert "[Browse →](homelab/index.md)" in root_index
     assert '<div class="grid cards" markdown>' in root_index
+
+    # Every generated page hides Material's global nav tree in favor of a
+    # breadcrumb, plus - on namespace-scoped content pages - a compact
+    # sidebar scoped to just that namespace.
+    for page in (
+        app_page,
+        namespace_index,
+        namespace_topology,
+        namespace_dependencies,
+        namespace_resource_governance,
+        cluster_index,
+        cluster_topology,
+        storage_classes_page,
+        nodes_page,
+        root_index,
+    ):
+        assert page.startswith("---\nhide:\n  - navigation\n---")
+
+    assert (
+        "[homelab-autodoc](../../index.md) · [homelab](../index.md) · "
+        "[demo](index.md) · **web**" in app_page
+    )
+    assert (
+        "[homelab-autodoc](../../index.md) · [homelab](../index.md) · **demo**" in namespace_index
+    )
+    assert "[homelab-autodoc](../index.md) · **homelab**" in cluster_index
+    active = '<span class="ns-active"><span class="ns-list-dot ns-list-dot--ok"></span>web</span>'
+    assert active in app_page
+    assert '<span class="kind-badge">Deployment</span>' in app_page
+    assert '<span class="pill">2/2 ready</span>' in app_page
+    assert 'class="ns-sidenav"' in app_page
+    assert 'class="ns-sidenav"' in namespace_topology
+    assert 'class="ns-sidenav"' in namespace_dependencies
+    assert 'class="ns-sidenav"' in namespace_resource_governance
+    assert '<span class="ns-active">Topology</span>' in namespace_topology
+    assert '<span class="ns-active">Dependencies</span>' in namespace_dependencies
+    assert '<span class="ns-active">Resource Governance</span>' in namespace_resource_governance
+    # Hub pages (root, cluster, namespace index) show cards, not the sidebar.
+    assert "ns-sidenav" not in namespace_index
+    assert "ns-sidenav" not in cluster_index
+    assert "ns-sidenav" not in root_index
 
 
 def test_regenerate_cluster_docs_nodes_page_without_nodes(tmp_path):
@@ -85,6 +144,7 @@ def test_write_root_index_admin_tile_present_even_with_no_clusters(tmp_path):
 
     root_index = (storage.docs_dir / "index.md").read_text(encoding="utf-8")
     assert "[Open Admin →](/admin/)" in root_index
+    assert root_index.startswith("---\nhide:\n  - navigation\n---")
 
 
 def test_regenerate_cluster_docs_writes_changelog_page(tmp_path, sample_inventory):
@@ -101,8 +161,11 @@ def test_regenerate_cluster_docs_writes_changelog_page(tmp_path, sample_inventor
     site_builder.regenerate_cluster_docs(storage, "homelab", llm=None)
 
     changelog_page = (storage.docs_dir / "homelab" / "changelog.md").read_text(encoding="utf-8")
+    assert changelog_page.startswith("---\nhide:\n  - navigation\n---")
+    assert "[homelab-autodoc](../index.md) · [homelab](index.md) · **Changelog**" in changelog_page
     assert "# homelab - Changelog" in changelog_page
     assert "replicas: 2 -> 3" in changelog_page
+    assert '<span class="chip-link chip-link--active">Changelog</span>' in changelog_page
 
 
 def test_regenerate_cluster_docs_changelog_page_without_entries(tmp_path, sample_inventory):

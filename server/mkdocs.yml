@@ -4,11 +4,11 @@ site_dir: site
 theme:
   name: material
   custom_dir: overrides
-  features:
-    # With 14+ namespaces (each its own top-level nav entry, several with many
-    # apps) the full nav tree overflowed the viewport - prune renders only the
-    # current page's own path instead of every namespace's subtree at once.
-    - navigation.prune
+  # Material's own font loading is disabled - overrides/main.html links the
+  # three custom fonts directly (client-fetched, see that file's comment for
+  # why), so Material's default Roboto/Roboto Mono link would just be an
+  # unused, wasted request.
+  font: false
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -36,7 +36,8 @@ extra_javascript:
   # a manual stand-in for that: bump it whenever one of these files changes,
   # so a stale cached copy under a proxy or browser cache can never look like
   # this feature is broken when it's actually just serving old JS.
-  - javascripts/mermaid-pan-zoom.js?v=4
+  - javascripts/mermaid-pan-zoom.js?v=6
 extra_css:
   - stylesheets/mermaid-pan-zoom.css?v=5
-  - stylesheets/sidebar-scroll.css?v=2
+  - stylesheets/theme.css?v=1
+  - stylesheets/hub-nav.css?v=4

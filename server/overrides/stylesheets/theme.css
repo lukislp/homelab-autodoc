@@ -1,0 +1,82 @@
+/* Recolors Material's built-in design tokens instead of styling individual
+   components - Material derives nearly all of its chrome (header, links,
+   borders, code blocks, cards) from these CSS custom properties, so
+   overriding them here reskins the whole site consistently. Fonts are loaded
+   client-side via overrides/main.html; --md-text-font/--md-code-font are the
+   "slot" variables Material's own body rule composes into a full stack with
+   system fallbacks, so setting the family name alone is enough.
+*/
+
+:root {
+  --md-text-font: "Public Sans";
+  --md-code-font: "IBM Plex Mono";
+}
+
+:root,
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: #f4f5f8;
+  --md-default-fg-color: #1c2129;
+  --md-default-fg-color--light: #5a6272;
+  --md-default-fg-color--lighter: #8b93a3;
+  --md-default-fg-color--lightest: #dde1e8;
+  --md-code-bg-color: #edeff3;
+  --md-code-fg-color: #1c2129;
+  --md-primary-fg-color: #3f66d6;
+  --md-primary-fg-color--light: #5c80e0;
+  --md-primary-fg-color--dark: #2f52b8;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
+  --md-accent-fg-color: #3f66d6;
+  --md-accent-fg-color--transparent: #3f66d61a;
+  --md-accent-bg-color: #ffffff;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #10141b;
+  --md-default-fg-color: #e7eaf0;
+  --md-default-fg-color--light: #97a1b3;
+  --md-default-fg-color--lighter: #626c7d;
+  --md-default-fg-color--lightest: #2a3341;
+  --md-code-bg-color: #171d27;
+  --md-code-fg-color: #e7eaf0;
+  --md-primary-fg-color: #6f9bf2;
+  --md-primary-fg-color--light: #8dadf4;
+  --md-primary-fg-color--dark: #5583e0;
+  --md-primary-bg-color: #10141b;
+  --md-primary-bg-color--light: #10141bb3;
+  --md-accent-fg-color: #6f9bf2;
+  --md-accent-fg-color--transparent: #6f9bf226;
+  --md-accent-bg-color: #10141b;
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  font-family: "Manrope", "Segoe UI", system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* Material's own grid-cards rule (used by the root/cluster/namespace hub
+   pages) - softened corners and an accent border on hover/focus instead of
+   the default near-square corners and heavy drop shadow. */
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid.cards > ol > li,
+.md-typeset .grid > .card {
+  border-radius: 0.4rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid.cards > ol > li:hover,
+.md-typeset .grid > .card:hover,
+.md-typeset .grid.cards > ul > li:focus-within,
+.md-typeset .grid.cards > ol > li:focus-within,
+.md-typeset .grid > .card:focus-within {
+  border-color: var(--md-primary-fg-color);
+  transform: translateY(-1px);
+}

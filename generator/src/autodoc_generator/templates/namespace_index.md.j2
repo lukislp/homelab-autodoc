@@ -1,9 +1,28 @@
+---
+hide:
+  - navigation
+---
+
+<p class="ns-breadcrumb" markdown>{{ breadcrumb }}</p>
+
 # {{ namespace.name }}
 
-[Topology](topology.md) · [Dependencies](dependencies.md) · [Resource Governance](resource-governance.md)
+{{ stat_chips }}
 
-| App | Kind | Ready |
-|---|---|---|
+<p class="section-label">Applications</p>
+
+<div class="grid cards" markdown>
+
 {% for app in namespace.apps %}
-| [{{ app.name }}]({{ app.name }}.md) | {{ app.kind }} | {{ app.ready_replicas }}/{{ app.replicas }} |
+-   [__{{ app.name }}__ <span class="ns-dot {{ 'ns-dot--ok' if app.ready_replicas == app.replicas else 'ns-dot--warn' }}"></span>]({{ app.name }}.md)
+
+    {{ app.kind }}
+
+    {{ app.ready_replicas }}/{{ app.replicas }} ready
+
 {% endfor %}
+</div>
+
+<p class="section-label">Namespace Pages</p>
+
+[Topology](topology.md){: .chip-link } [Dependencies](dependencies.md){: .chip-link } [Resource Governance](resource-governance.md){: .chip-link }
