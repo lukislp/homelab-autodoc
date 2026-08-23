@@ -18,15 +18,19 @@
    upscaling. padding-bottom reserves room for the zoom controls below the
    diagram so the absolutely-positioned buttons never overlap it - the JS
    excludes that strip from the fit area. box-sizing: border-box keeps
-   80vh as the TOTAL box height, padding included. */
+   the calc() result as the TOTAL box height, padding included. */
 .mermaid-zoom-viewport {
   position: relative;
   box-sizing: border-box;
   overflow: hidden;
   width: 100%;
-  height: 80vh;
+  /* Sized so the WHOLE page fits one viewport: 100vh minus the chrome above
+     and below the box (Material header, breadcrumb, H1, and the cluster
+     pages' chip row underneath). A flat 80vh always overshot that budget
+     and forced the topology pages to scroll. min-height keeps the box
+     usable on short windows - there the page scrolls, by design. */
+  height: calc(100vh - 21rem);
   min-height: 480px;
-  max-height: 80vh;
   padding-bottom: 40px;
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 4px;
