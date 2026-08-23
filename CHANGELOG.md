@@ -1,3 +1,10 @@
+# [1.39.0](https://github.com/lukislp/homelab-autodoc/compare/v1.38.0...v1.39.0) (2026-08-23)
+
+
+### Features
+
+* **server:** fleet stats on the root-index cluster cards ([125fe3b](https://github.com/lukislp/homelab-autodoc/commit/125fe3bc0b8494aeba8dd5d5d7524bb8663990ef))
+
 # [1.38.0](https://github.com/lukislp/homelab-autodoc/compare/v1.37.0...v1.38.0) (2026-08-23)
 
 
