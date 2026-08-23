@@ -12,6 +12,7 @@ from autodoc_generator import diagrams, facts, findings, navigation, render
 from autodoc_generator.llm import LLMClient
 from autodoc_generator.prose import generate_drift_summary, generate_summary
 
+from .about import ABOUT_PAGE
 from .storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -381,9 +382,23 @@ def _write_root_index(storage: Storage) -> None:
             f"    [Browse →]({cluster_name}/index.md)",
             "",
         ]
-    lines.append("</div>")
+    lines += [
+        "-   __About__",
+        "",
+        "    ---",
+        "",
+        "    How this site documents itself - and where the LLM is fenced in.",
+        "",
+        "    [Read →](about.md)",
+        "",
+        "</div>",
+    ]
     storage.docs_dir.mkdir(parents=True, exist_ok=True)
     (storage.docs_dir / "index.md").write_text("\n".join(lines), encoding="utf-8")
+    # The About card just linked there, so the page must exist whenever the
+    # index does - written here rather than by a separate call site for that
+    # reason. The only page on the site that is written, not generated.
+    (storage.docs_dir / "about.md").write_text(ABOUT_PAGE, encoding="utf-8")
 
 
 def rebuild_site_after_cluster_delete(storage: Storage, mkdocs_config_path: Path) -> None:
