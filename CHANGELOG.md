@@ -1,3 +1,10 @@
+# [1.36.0](https://github.com/lukislp/homelab-autodoc/compare/v1.35.0...v1.36.0) (2026-08-23)
+
+
+### Features
+
+* **server:** cluster-wide images page ([4016a38](https://github.com/lukislp/homelab-autodoc/commit/4016a38583cae9f3c4bbf5d68fcd0dc2107438b3))
+
 # [1.35.0](https://github.com/lukislp/homelab-autodoc/compare/v1.34.0...v1.35.0) (2026-08-23)
 
 
