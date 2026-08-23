@@ -9,7 +9,12 @@ from datetime import UTC, datetime
 from autodoc_core.models import ConfigReference, Container, EnvVar
 from kubernetes import client
 
-from autodoc_collector.workloads import DeploymentCollector, StatefulSetCollector
+from autodoc_collector.workloads import (
+    CronJobCollector,
+    DaemonSetCollector,
+    DeploymentCollector,
+    StatefulSetCollector,
+)
 
 
 def test_deployment_collector_normalizes_pod_template():
@@ -181,5 +186,109 @@ def test_normalize_without_status_defaults_ready_replicas_to_zero():
     )
 
     workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.ready_replicas == 0
+
+
+def test_daemonset_collector_normalizes_pod_template():
+    daemon_set = client.V1DaemonSet(
+        metadata=client.V1ObjectMeta(name="node-exporter", labels={}),
+        spec=client.V1DaemonSetSpec(
+            selector=client.V1LabelSelector(match_labels={"app": "node-exporter"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "node-exporter"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="node-exporter", image="node-exporter:1.0")]
+                ),
+            ),
+        ),
+        status=client.V1DaemonSetStatus(
+            current_number_scheduled=2,
+            desired_number_scheduled=2,
+            number_misscheduled=0,
+            number_ready=2,
+        ),
+    )
+
+    workload = DaemonSetCollector().normalize(daemon_set)
+
+    assert workload.kind == "DaemonSet"
+    assert workload.name == "node-exporter"
+    assert workload.replicas == 2
+    assert workload.ready_replicas == 2
+    assert workload.pod_labels == {"app": "node-exporter"}
+
+
+def test_daemonset_collector_without_status_defaults_to_zero():
+    daemon_set = client.V1DaemonSet(
+        metadata=client.V1ObjectMeta(name="node-exporter", labels={}),
+        spec=client.V1DaemonSetSpec(
+            selector=client.V1LabelSelector(match_labels={"app": "node-exporter"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "node-exporter"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="node-exporter", image="node-exporter:1.0")]
+                ),
+            ),
+        ),
+        status=None,
+    )
+
+    workload = DaemonSetCollector().normalize(daemon_set)
+
+    assert workload.replicas == 0
+    assert workload.ready_replicas == 0
+
+
+def test_cronjob_collector_normalizes_job_template():
+    cron_job = client.V1CronJob(
+        metadata=client.V1ObjectMeta(name="autodoc-collector", labels={}),
+        spec=client.V1CronJobSpec(
+            schedule="0 2 * * *",
+            job_template=client.V1JobTemplateSpec(
+                spec=client.V1JobSpec(
+                    template=client.V1PodTemplateSpec(
+                        metadata=client.V1ObjectMeta(labels={}),
+                        spec=client.V1PodSpec(
+                            containers=[client.V1Container(name="collector", image="collector:1.0")]
+                        ),
+                    )
+                )
+            ),
+        ),
+        status=client.V1CronJobStatus(
+            active=[client.V1ObjectReference(name="autodoc-collector-123")]
+        ),
+    )
+
+    workload = CronJobCollector().normalize(cron_job)
+
+    assert workload.kind == "CronJob"
+    assert workload.name == "autodoc-collector"
+    assert workload.replicas == 1
+    assert workload.ready_replicas == 1
+    assert workload.containers[0].image == "collector:1.0"
+
+
+def test_cronjob_collector_not_currently_running():
+    cron_job = client.V1CronJob(
+        metadata=client.V1ObjectMeta(name="autodoc-collector", labels={}),
+        spec=client.V1CronJobSpec(
+            schedule="0 2 * * *",
+            job_template=client.V1JobTemplateSpec(
+                spec=client.V1JobSpec(
+                    template=client.V1PodTemplateSpec(
+                        metadata=client.V1ObjectMeta(labels={}),
+                        spec=client.V1PodSpec(
+                            containers=[client.V1Container(name="collector", image="collector:1.0")]
+                        ),
+                    )
+                )
+            ),
+        ),
+        status=client.V1CronJobStatus(active=None),
+    )
+
+    workload = CronJobCollector().normalize(cron_job)
 
     assert workload.ready_replicas == 0
