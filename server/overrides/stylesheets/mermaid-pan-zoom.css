@@ -1,30 +1,48 @@
-/* A fixed-height viewport for the pan-zoomable diagram, instead of an
-   unbounded-height page. The dense cluster-wide topology diagram is the
-   reason this exists - it's the one page where Material's default
-   scale-to-fit-column behavior makes text illegible.
-
-   Deliberately scoped to .mermaid--panzoom-active, NOT bare .mermaid:
-   mermaid-pan-zoom.js only adds that class once svg-pan-zoom is confirmed
-   initialized. Mermaid's own rendering is asynchronous and occasionally
-   never completes (a pre-existing upstream Mermaid/Material timing issue,
-   not something this project's code causes - reproduces even on GitHub's
-   own Mermaid renderer). If this constraint applied unconditionally, a
-   diagram whose JS never got the chance to attach pan-zoom would be
-   clipped by max-height/overflow with no scrollbar and no zoom controls to
-   see the rest - strictly worse than the plain, always-fully-visible
-   diagram this project had before. */
-.mermaid--panzoom-active {
+/* Applied once JS confirms Mermaid has actually rendered into a ".mermaid"
+   host (see mermaid-pan-zoom.js) - never unconditionally. If that JS never
+   gets the chance to run, the diagram falls back to its plain, always-fully-
+   visible static size instead of ever being clipped with no way to recover
+   the rest. */
+.mermaid-zoom-viewport {
+  position: relative;
+  overflow: hidden;
   min-height: 480px;
   max-height: 80vh;
-  overflow: hidden;
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 4px;
 }
 
-.mermaid--panzoom-active svg {
+.mermaid-zoom-host {
+  transform-origin: 0 0;
+  width: fit-content;
   cursor: grab;
 }
 
-.mermaid--panzoom-active svg:active {
+.mermaid-zoom-viewport.mermaid-zoom-dragging .mermaid-zoom-host {
   cursor: grabbing;
+}
+
+.mermaid-zoom-controls {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.mermaid-zoom-controls button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 4px;
+  background: var(--md-default-bg-color);
+  color: var(--md-default-fg-color);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mermaid-zoom-controls button:hover {
+  background: var(--md-code-bg-color);
 }
