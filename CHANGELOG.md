@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/lukislp/homelab-autodoc/compare/v1.17.0...v1.18.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document HorizontalPodAutoscaler configuration per app ([2a419f0](https://github.com/lukislp/homelab-autodoc/commit/2a419f03c17df0f115184b60ac390d0b58229de1))
+
 # [1.17.0](https://github.com/lukislp/homelab-autodoc/compare/v1.16.1...v1.17.0) (2026-08-23)
 
 
