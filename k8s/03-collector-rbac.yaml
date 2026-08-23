@@ -21,6 +21,11 @@ kind: ClusterRole
 metadata:
   name: autodoc-collector
 rules:
+  # "configmaps" feeds the dangling-reference check (names only end up in the
+  # inventory, never contents). "secrets" is deliberately ABSENT even though
+  # the same check would apply there: listing secrets returns their full
+  # values at the API level, and this collector's no-secret-access guarantee
+  # is worth more than flagging a dangling Secret reference.
   - apiGroups: [""]
     resources:
       [
@@ -31,6 +36,7 @@ rules:
         "nodes",
         "resourcequotas",
         "limitranges",
+        "configmaps",
       ]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]

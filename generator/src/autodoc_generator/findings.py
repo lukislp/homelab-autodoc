@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from autodoc_core.models import App, ClusterInventory, Container
+from autodoc_core.models import App, ClusterInventory, Container, NamespaceInventory
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,7 +169,56 @@ def _pdb_findings(app: App) -> list[Finding]:
     ]
 
 
-def evaluate_app(app: App) -> list[Finding]:
+def _config_reference_findings(app: App, namespace: NamespaceInventory) -> list[Finding]:
+    """Fires only when the collector actually gathered the namespace's
+    ConfigMap names (configmap_names is not None) - an older collector or
+    denied RBAC means "unknown", and unknown never becomes a finding. Secret
+    references are never checked: the collector deliberately has no secrets
+    access (see its RBAC manifest), so their existence is unknowable here.
+    """
+    if namespace.configmap_names is None:
+        return []
+    existing = set(namespace.configmap_names)
+    return [
+        Finding(
+            rule="missing-configmap",
+            subject=f"ConfigMap {ref.name}",
+            message=f"referenced via {ref.via} but no such ConfigMap exists in the namespace",
+        )
+        for ref in app.config_refs
+        if ref.kind == "ConfigMap" and ref.name not in existing
+    ]
+
+
+# Present in every namespace since Kubernetes 1.21, mounted implicitly for
+# API-server trust - never referenced by a workload spec, never an orphan.
+_WELL_KNOWN_CONFIGMAPS = frozenset({"kube-root-ca.crt"})
+
+
+def evaluate_namespace(namespace: NamespaceInventory) -> list[Finding]:
+    """Namespace-scoped rules (not attributable to a single workload):
+    currently just orphaned ConfigMaps. Worded as "no collected workload
+    references it" deliberately - a ConfigMap may serve something outside
+    the collected workload kinds (a Job, an operator reading it directly),
+    which this inventory can't see.
+    """
+    if namespace.configmap_names is None:
+        return []
+    referenced = {
+        ref.name for app in namespace.apps for ref in app.config_refs if ref.kind == "ConfigMap"
+    }
+    return [
+        Finding(
+            rule="orphaned-configmap",
+            subject=f"ConfigMap {name}",
+            message="exists but no collected workload references it",
+        )
+        for name in namespace.configmap_names
+        if name not in referenced and name not in _WELL_KNOWN_CONFIGMAPS
+    ]
+
+
+def evaluate_app(app: App, namespace: NamespaceInventory) -> list[Finding]:
     return [
         *_image_tag_findings(app),
         *_probe_findings(app),
@@ -177,16 +226,23 @@ def evaluate_app(app: App) -> list[Finding]:
         *_security_findings(app),
         *_network_policy_findings(app),
         *_pdb_findings(app),
+        *_config_reference_findings(app, namespace),
     ]
 
 
 def evaluate_cluster(inventory: ClusterInventory) -> list[ClusterFinding]:
-    return [
+    per_app = [
         ClusterFinding(namespace=namespace.name, app=app.name, finding=finding)
         for namespace in inventory.namespaces
         for app in namespace.apps
-        for finding in evaluate_app(app)
+        for finding in evaluate_app(app, namespace)
     ]
+    per_namespace = [
+        ClusterFinding(namespace=namespace.name, app="", finding=finding)
+        for namespace in inventory.namespaces
+        for finding in evaluate_namespace(namespace)
+    ]
+    return per_app + per_namespace
 
 
 def findings_table(findings: list[Finding]) -> str:
@@ -205,8 +261,8 @@ def cluster_findings_table(inventory: ClusterInventory) -> str:
         return ""
     rows = [
         f"| [{cf.namespace}]({cf.namespace}/index.md) | "
-        f"[{cf.app}]({cf.namespace}/{cf.app}.md) | "
-        f"`{cf.finding.rule}` | {cf.finding.subject} | {cf.finding.message} |"
+        + (f"[{cf.app}]({cf.namespace}/{cf.app}.md) | " if cf.app else "- | ")
+        + f"`{cf.finding.rule}` | {cf.finding.subject} | {cf.finding.message} |"
         for cf in sorted(
             cluster_findings,
             key=lambda cf: (cf.namespace, cf.app, cf.finding.subject, cf.finding.rule),

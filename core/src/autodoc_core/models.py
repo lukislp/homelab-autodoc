@@ -225,6 +225,14 @@ class NamespaceInventory:
     apps: list[App] = field(default_factory=list)
     resource_quotas: list[ResourceQuotaInfo] = field(default_factory=list)
     limit_ranges: list[LimitRangeInfo] = field(default_factory=list)
+    # Names of the ConfigMaps that exist in this namespace - existence only,
+    # never contents. None (as opposed to []) means this run didn't gather
+    # them (an older collector, or RBAC denied) - consumers must treat None
+    # as "unknown", never as "there are none". Secret names are deliberately
+    # NOT collected: listing secrets returns their full values at the API
+    # level, and the collector's no-secret-access guarantee outweighs being
+    # able to flag a dangling Secret reference.
+    configmap_names: list[str] | None = None
 
 
 @dataclass(frozen=True, slots=True)

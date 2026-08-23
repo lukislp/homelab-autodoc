@@ -33,7 +33,7 @@ def render_app_page(
         breadcrumb=navigation.breadcrumb(cluster_name, namespace.name, current=app.name),
         sidenav=navigation.namespace_sidenav(namespace, current=app.name),
         summary=summary,
-        findings_table=findings.findings_table(findings.evaluate_app(app)),
+        findings_table=findings.findings_table(findings.evaluate_app(app, namespace)),
         diagram=diagrams.build_app_diagram(app),
         containers_table=facts.containers_table(app),
         probes_table=facts.probes_table(app),

@@ -170,6 +170,7 @@ def _sample_inventory() -> ClusterInventory:
                         ],
                     )
                 ],
+                configmap_names=["kube-root-ca.crt", "web-config"],
             )
         ],
         storage_classes=[
@@ -412,3 +413,49 @@ def test_namespace_without_limit_ranges_round_trips_as_empty_list():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.namespaces[0].limit_ranges == []
+
+
+def test_namespace_without_collected_configmaps_round_trips_as_none():
+    # None means "this run didn't gather them" (older collector, RBAC denied)
+    # and must survive a round trip as None - collapsing it to [] would turn
+    # "unknown" into a false "there are none".
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo")],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].configmap_names is None
+
+
+def test_namespace_payload_predating_configmap_names_loads_as_none():
+    # A payload from a collector that predates the field has no such key at
+    # all - it must still load, as None.
+    text = to_text(
+        ClusterInventory(
+            cluster_name="homelab",
+            collected_at="2026-08-22T00:00:00+00:00",
+            namespaces=[NamespaceInventory(name="demo")],
+        ),
+        fmt="json",
+    )
+    data = json.loads(text)
+    del data["namespaces"][0]["configmap_names"]
+
+    reconstructed = from_text(json.dumps(data), fmt="json")
+
+    assert reconstructed.namespaces[0].configmap_names is None
+
+
+def test_namespace_with_empty_collected_configmaps_round_trips_as_empty_list():
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", configmap_names=[])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].configmap_names == []
