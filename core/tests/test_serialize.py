@@ -14,6 +14,11 @@ from autodoc_core.models import (
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    NodeInfo,
+    PodDisruptionBudgetInfo,
+    ProbeInfo,
+    RoleBindingInfo,
+    ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
     StorageClassInfo,
@@ -37,6 +42,11 @@ def _sample_inventory() -> ClusterInventory:
                         ready_replicas=2,
                         containers=[
                             Container(
+                                name="init-migrate",
+                                image="migrate:1.0",
+                                is_init=True,
+                            ),
+                            Container(
                                 name="web",
                                 image="nginx:1.25.3",
                                 ports=[8080],
@@ -49,7 +59,14 @@ def _sample_inventory() -> ClusterInventory:
                                         value_from="Secret:web-secrets/API_KEY",
                                     ),
                                 ],
-                            )
+                                probes=[
+                                    ProbeInfo(
+                                        kind="liveness",
+                                        check="HTTP :8080/healthz",
+                                        period_seconds=10,
+                                    )
+                                ],
+                            ),
                         ],
                         volumes=[
                             Volume(
@@ -100,6 +117,20 @@ def _sample_inventory() -> ClusterInventory:
                                 ],
                             )
                         ],
+                        service_account=ServiceAccountInfo(
+                            name="web-sa",
+                            role_bindings=[
+                                RoleBindingInfo(
+                                    name="web-sa-reader", role_kind="ClusterRole", role_name="view"
+                                )
+                            ],
+                        ),
+                        pod_disruption_budgets=[
+                            PodDisruptionBudgetInfo(name="web-pdb", min_available="1")
+                        ],
+                        node_selector={"kubernetes.io/arch": "arm64"},
+                        node_affinity=["required: kubernetes.io/arch In (arm64)"],
+                        tolerations=["node-role.kubernetes.io/master:NoSchedule"],
                     )
                 ],
             )
@@ -113,6 +144,19 @@ def _sample_inventory() -> ClusterInventory:
                 allow_volume_expansion=False,
             )
         ],
+        nodes=[
+            NodeInfo(
+                name="pi-node-1",
+                architecture="arm64",
+                kubelet_version="v1.31.2+k3s1",
+                os_image="Debian GNU/Linux 12 (bookworm)",
+                capacity_cpu="4",
+                capacity_memory="8065700Ki",
+                allocatable_cpu="3900m",
+                allocatable_memory="7500000Ki",
+                ready=True,
+            )
+        ],
     )
 
 
@@ -121,7 +165,7 @@ def test_to_text_json_round_trips():
     data = json.loads(text)
 
     assert data["cluster_name"] == "homelab"
-    assert data["namespaces"][0]["apps"][0]["containers"][0]["image"] == "nginx:1.25.3"
+    assert data["namespaces"][0]["apps"][0]["containers"][1]["image"] == "nginx:1.25.3"
 
 
 def test_to_text_json_compact_has_no_indentation():
@@ -185,9 +229,80 @@ def test_app_without_network_policies_round_trips_as_empty_list():
     assert reconstructed.namespaces[0].apps[0].network_policies == []
 
 
+def test_container_without_init_flag_or_probes_round_trips_to_defaults():
+    bare_app = App(
+        name="worker",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        containers=[Container(name="worker", image="worker:1.0")],
+    )
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    container = reconstructed.namespaces[0].apps[0].containers[0]
+    assert container.is_init is False
+    assert container.probes == []
+
+
+def test_app_without_service_account_round_trips_as_none():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].service_account is None
+
+
+def test_app_without_pod_disruption_budgets_round_trips_as_empty_list():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].pod_disruption_budgets == []
+
+
+def test_app_without_scheduling_constraints_round_trips_to_empty_defaults():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    app = reconstructed.namespaces[0].apps[0]
+    assert app.node_selector == {}
+    assert app.node_affinity == []
+    assert app.tolerations == []
+
+
 def test_cluster_inventory_without_storage_classes_round_trips_as_empty_list():
     inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-22T00:00:00+00:00")
 
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.storage_classes == []
+
+
+def test_cluster_inventory_without_nodes_round_trips_as_empty_list():
+    inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-22T00:00:00+00:00")
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.nodes == []

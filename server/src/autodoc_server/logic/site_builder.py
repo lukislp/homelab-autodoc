@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient | None) -> None:
     inventory = storage.load_inventory(cluster_name)
     cluster_dir = storage.docs_dir / cluster_name
+    cluster_dir.mkdir(parents=True, exist_ok=True)
 
     for namespace in inventory.namespaces:
         namespace_dir = cluster_dir / namespace.name
@@ -37,6 +38,7 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
     _write_cluster_index(storage, cluster_name, inventory)
     _write_cluster_diagram(storage, cluster_name, inventory)
     _write_storage_classes_page(storage, cluster_name, inventory)
+    _write_nodes_page(storage, cluster_name, inventory)
     _write_changelog_page(storage, cluster_name)
     _write_root_index(storage)
 
@@ -59,7 +61,7 @@ def _write_cluster_index(storage: Storage, cluster_name: str, inventory: Cluster
         f"# {cluster_name}",
         "",
         "[Topology](topology.md) · [Storage Classes](storage-classes.md) · "
-        "[Changelog](changelog.md)",
+        "[Nodes](nodes.md) · [Changelog](changelog.md)",
         "",
         "| Namespace | Apps |",
         "|---|---|",
@@ -96,6 +98,13 @@ def _write_storage_classes_page(
     (storage.docs_dir / cluster_name / "storage-classes.md").write_text(
         "\n".join(lines), encoding="utf-8"
     )
+
+
+def _write_nodes_page(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:
+    table = facts.node_specs_table(inventory.nodes)
+    lines = [f"# {cluster_name} - Nodes", ""]
+    lines.append(table if table else "No node data collected yet.")
+    (storage.docs_dir / cluster_name / "nodes.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def _write_changelog_page(storage: Storage, cluster_name: str) -> None:
