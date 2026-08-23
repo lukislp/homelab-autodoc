@@ -15,7 +15,10 @@ from autodoc_core.models import (
     NetworkPolicyInfo,
     NetworkPolicyRule,
     NodeInfo,
+    PodDisruptionBudgetInfo,
     ProbeInfo,
+    RoleBindingInfo,
+    ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -112,6 +115,17 @@ def _sample_inventory() -> ClusterInventory:
                                     )
                                 ],
                             )
+                        ],
+                        service_account=ServiceAccountInfo(
+                            name="web-sa",
+                            role_bindings=[
+                                RoleBindingInfo(
+                                    name="web-sa-reader", role_kind="ClusterRole", role_name="view"
+                                )
+                            ],
+                        ),
+                        pod_disruption_budgets=[
+                            PodDisruptionBudgetInfo(name="web-pdb", min_available="1")
                         ],
                     )
                 ],
@@ -221,6 +235,32 @@ def test_container_without_init_flag_or_probes_round_trips_to_defaults():
     container = reconstructed.namespaces[0].apps[0].containers[0]
     assert container.is_init is False
     assert container.probes == []
+
+
+def test_app_without_service_account_round_trips_as_none():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].service_account is None
+
+
+def test_app_without_pod_disruption_budgets_round_trips_as_empty_list():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].pod_disruption_budgets == []
 
 
 def test_cluster_inventory_without_nodes_round_trips_as_empty_list():

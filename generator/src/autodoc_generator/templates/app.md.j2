@@ -64,6 +64,12 @@
 {{ autoscaler_table }}
 
 {% endif %}
+{% if pod_disruption_budgets_table %}
+### Disruption Budget
+
+{{ pod_disruption_budgets_table }}
+
+{% endif %}
 {% if env_table %}
 ### Environment
 
@@ -74,6 +80,12 @@
 ### Dependencies
 
 {{ dependencies_table }}
+
+{% endif %}
+{% if service_account_table %}
+### Service Account
+
+{{ service_account_table }}
 
 {% endif %}
 {% if metadata_table %}

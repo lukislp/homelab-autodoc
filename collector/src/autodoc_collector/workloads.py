@@ -29,6 +29,7 @@ class NormalizedWorkload:
     created_at: str | None = None
     owners: list[str] = field(default_factory=list)
     config_refs: frozenset[ConfigReference] = frozenset()
+    service_account_name: str | None = None
 
 
 class WorkloadCollector(Protocol):
@@ -174,6 +175,7 @@ class DeploymentCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            service_account_name=pod_spec.service_account_name,
         )
 
 
@@ -202,6 +204,7 @@ class StatefulSetCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            service_account_name=pod_spec.service_account_name,
         )
 
 
@@ -230,6 +233,7 @@ class DaemonSetCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            service_account_name=pod_spec.service_account_name,
         )
 
 
@@ -261,6 +265,7 @@ class CronJobCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            service_account_name=pod_spec.service_account_name,
         )
 
 
