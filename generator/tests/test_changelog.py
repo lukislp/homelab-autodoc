@@ -31,3 +31,18 @@ def test_render_changelog_page_with_entries():
     assert "# homelab - Changelog" in text
     assert "## entry-1" in text
     assert "## entry-2" in text
+
+
+def test_render_changelog_page_with_summary_labels_it_and_keeps_entries():
+    page = changelog.render_changelog_page("homelab", ["## entry"], summary="Web scaled up.")
+
+    assert "## Summary (AI-generated)" in page
+    assert "Web scaled up." in page
+    # The deterministic entries always follow in full - prose never replaces facts.
+    assert page.index("Web scaled up.") < page.index("## entry")
+
+
+def test_render_changelog_page_without_summary_has_no_summary_heading():
+    page = changelog.render_changelog_page("homelab", ["## entry"])
+
+    assert "Summary (AI-generated)" not in page
