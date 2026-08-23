@@ -18,6 +18,8 @@ from .models import (
     IngressInfo,
     IngressRule,
     NamespaceInventory,
+    NetworkPolicyInfo,
+    NetworkPolicyRule,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -108,6 +110,19 @@ def _autoscaler_from_dict(d: dict) -> Autoscaler:
     )
 
 
+def _network_policy_rule_from_dict(d: dict) -> NetworkPolicyRule:
+    return NetworkPolicyRule(peers=list(d.get("peers", [])), ports=list(d.get("ports", [])))
+
+
+def _network_policy_from_dict(d: dict) -> NetworkPolicyInfo:
+    return NetworkPolicyInfo(
+        name=d["name"],
+        policy_types=list(d.get("policy_types", [])),
+        ingress=[_network_policy_rule_from_dict(r) for r in d.get("ingress", [])],
+        egress=[_network_policy_rule_from_dict(r) for r in d.get("egress", [])],
+    )
+
+
 def _app_from_dict(d: dict) -> App:
     autoscaler = d.get("autoscaler")
     return App(
@@ -126,6 +141,7 @@ def _app_from_dict(d: dict) -> App:
         config_refs=[_config_reference_from_dict(c) for c in d.get("config_refs", [])],
         autoscaler=_autoscaler_from_dict(autoscaler) if autoscaler else None,
         nodes=list(d.get("nodes", [])),
+        network_policies=[_network_policy_from_dict(np) for np in d.get("network_policies", [])],
     )
 
 

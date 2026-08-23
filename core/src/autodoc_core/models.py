@@ -86,6 +86,23 @@ class Autoscaler:
 
 
 @dataclass(frozen=True, slots=True)
+class NetworkPolicyRule:
+    # Human-readable peer descriptions, e.g. "pods:app=foo", "namespaces:all",
+    # "ipBlock:10.0.0.0/8". An empty list means "all sources/destinations" -
+    # the rule is present but has no peer restriction.
+    peers: list[str] = field(default_factory=list)
+    ports: list[str] = field(default_factory=list)  # e.g. "TCP/8080"; empty means all ports
+
+
+@dataclass(frozen=True, slots=True)
+class NetworkPolicyInfo:
+    name: str
+    policy_types: list[str] = field(default_factory=list)  # "Ingress" | "Egress"
+    ingress: list[NetworkPolicyRule] = field(default_factory=list)
+    egress: list[NetworkPolicyRule] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
 class App:
     name: str
     kind: str
@@ -102,6 +119,7 @@ class App:
     config_refs: list[ConfigReference] = field(default_factory=list)
     autoscaler: Autoscaler | None = None
     nodes: list[str] = field(default_factory=list)  # names of nodes running this app's pods
+    network_policies: list[NetworkPolicyInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)

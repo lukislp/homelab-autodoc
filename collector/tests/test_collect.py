@@ -13,8 +13,10 @@ from kubernetes.client.exceptions import ApiException
 from autodoc_collector.collect import (
     _autoscaler_for_workload,
     _build_autoscaler,
+    _build_network_policy,
     _list_hpas,
     _list_httproutes,
+    _network_policy_matches_workload,
     _node_names_for_workload,
     build_app,
     build_namespace_inventory,
@@ -441,6 +443,115 @@ def test_build_app_without_pods_leaves_nodes_empty():
     app = build_app(workload, [], [], [])
 
     assert app.nodes == []
+
+
+def _network_policy(
+    name: str,
+    pod_selector_labels: dict[str, str] | None = None,
+    pod_selector_expressions: list[client.V1LabelSelectorRequirement] | None = None,
+    policy_types: list[str] | None = None,
+    ingress: list[client.V1NetworkPolicyIngressRule] | None = None,
+    egress: list[client.V1NetworkPolicyEgressRule] | None = None,
+) -> client.V1NetworkPolicy:
+    return client.V1NetworkPolicy(
+        metadata=client.V1ObjectMeta(name=name),
+        spec=client.V1NetworkPolicySpec(
+            pod_selector=client.V1LabelSelector(
+                match_labels=pod_selector_labels, match_expressions=pod_selector_expressions
+            ),
+            policy_types=policy_types,
+            ingress=ingress,
+            egress=egress,
+        ),
+    )
+
+
+def test_network_policy_matches_workload_by_pod_selector_labels():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    policy = _network_policy("allow-web", pod_selector_labels={"app": "web"})
+
+    assert _network_policy_matches_workload(policy, workload) is True
+
+
+def test_network_policy_with_non_matching_selector_is_excluded():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    policy = _network_policy("allow-other", pod_selector_labels={"app": "other"})
+
+    assert _network_policy_matches_workload(policy, workload) is False
+
+
+def test_network_policy_with_empty_pod_selector_matches_every_workload():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    policy = _network_policy("deny-all")
+
+    assert _network_policy_matches_workload(policy, workload) is True
+
+
+def test_network_policy_with_match_expressions_is_not_evaluated():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    policy = _network_policy(
+        "allow-expr",
+        pod_selector_expressions=[
+            client.V1LabelSelectorRequirement(key="app", operator="In", values=["web"])
+        ],
+    )
+
+    assert _network_policy_matches_workload(policy, workload) is False
+
+
+def test_build_network_policy_describes_pod_namespace_and_ip_block_peers():
+    policy = _network_policy(
+        "allow-web",
+        pod_selector_labels={"app": "web"},
+        policy_types=["Ingress", "Egress"],
+        ingress=[
+            client.V1NetworkPolicyIngressRule(
+                _from=[
+                    client.V1NetworkPolicyPeer(
+                        pod_selector=client.V1LabelSelector(match_labels={"app": "traefik"})
+                    ),
+                    client.V1NetworkPolicyPeer(
+                        namespace_selector=client.V1LabelSelector(
+                            match_labels={"kubernetes.io/metadata.name": "monitoring"}
+                        )
+                    ),
+                    client.V1NetworkPolicyPeer(ip_block=client.V1IPBlock(cidr="10.0.0.0/8")),
+                ],
+                ports=[client.V1NetworkPolicyPort(protocol="TCP", port=8080)],
+            )
+        ],
+        egress=[client.V1NetworkPolicyEgressRule(to=[])],
+    )
+
+    info = _build_network_policy(policy)
+
+    assert info.name == "allow-web"
+    assert info.policy_types == ["Ingress", "Egress"]
+    assert info.ingress[0].peers == [
+        "pods:app=traefik",
+        "namespaces:kubernetes.io/metadata.name=monitoring",
+        "ipBlock:10.0.0.0/8",
+    ]
+    assert info.ingress[0].ports == ["TCP/8080"]
+    assert info.egress[0].peers == []  # empty `to` list means "all destinations"
+
+
+def test_build_app_wires_matching_network_policies():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    matching_policy = _network_policy("allow-web", pod_selector_labels={"app": "web"})
+    other_policy = _network_policy("allow-other", pod_selector_labels={"app": "other"})
+
+    app = build_app(workload, [], [], [], network_policies=[matching_policy, other_policy])
+
+    assert [np.name for np in app.network_policies] == ["allow-web"]
+
+
+def test_build_app_without_network_policies_leaves_list_empty():
+    workload = _workload()
+
+    app = build_app(workload, [], [], [])
+
+    assert app.network_policies == []
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

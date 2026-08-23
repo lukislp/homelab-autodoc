@@ -16,6 +16,8 @@ from autodoc_core.models import (
     IngressInfo,
     IngressRule,
     NamespaceInventory,
+    NetworkPolicyInfo,
+    NetworkPolicyRule,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -181,6 +183,60 @@ def _node_names_for_workload(pods: list[client.V1Pod], workload: NormalizedWorkl
     return sorted(names)
 
 
+def _describe_selector(selector: dict[str, str] | None) -> str:
+    return ",".join(f"{k}={v}" for k, v in sorted((selector or {}).items())) or "all"
+
+
+def _describe_peer(peer: client.V1NetworkPolicyPeer) -> str:
+    if peer.ip_block is not None:
+        return f"ipBlock:{peer.ip_block.cidr}"
+    if peer.namespace_selector is not None:
+        return f"namespaces:{_describe_selector(peer.namespace_selector.match_labels)}"
+    if peer.pod_selector is not None:
+        return f"pods:{_describe_selector(peer.pod_selector.match_labels)}"
+    return "unknown"
+
+
+def _describe_port(port: client.V1NetworkPolicyPort) -> str:
+    protocol = port.protocol or "TCP"
+    return f"{protocol}/{port.port}" if port.port is not None else protocol
+
+
+def _build_network_policy_rule(
+    peers: list[client.V1NetworkPolicyPeer] | None, ports: list[client.V1NetworkPolicyPort] | None
+) -> NetworkPolicyRule:
+    return NetworkPolicyRule(
+        peers=[_describe_peer(p) for p in (peers or [])],
+        ports=[_describe_port(p) for p in (ports or [])],
+    )
+
+
+def _build_network_policy(raw: client.V1NetworkPolicy) -> NetworkPolicyInfo:
+    return NetworkPolicyInfo(
+        name=raw.metadata.name,
+        policy_types=list(raw.spec.policy_types or []),
+        ingress=[_build_network_policy_rule(r._from, r.ports) for r in (raw.spec.ingress or [])],
+        egress=[_build_network_policy_rule(r.to, r.ports) for r in (raw.spec.egress or [])],
+    )
+
+
+def _network_policy_matches_workload(
+    raw: client.V1NetworkPolicy, workload: NormalizedWorkload
+) -> bool:
+    """Only matchLabels is evaluated - the same simplification already used
+    for Service selectors (always plain dict selectors). A podSelector using
+    matchExpressions is skipped rather than guessed at, to avoid claiming a
+    policy applies to an app it might not.
+    """
+    selector = raw.spec.pod_selector
+    if selector and selector.match_expressions:
+        return False
+    match_labels = selector.match_labels if selector else None
+    if not match_labels:
+        return True  # empty/absent podSelector selects every pod in the namespace
+    return _selector_matches(match_labels, workload.pod_labels)
+
+
 def build_app(
     workload: NormalizedWorkload,
     services: list[client.V1Service],
@@ -189,6 +245,7 @@ def build_app(
     httproutes: list[dict] | None = None,
     hpas: list[client.V2HorizontalPodAutoscaler] | None = None,
     pods: list[client.V1Pod] | None = None,
+    network_policies: list[client.V1NetworkPolicy] | None = None,
 ) -> App:
     matched_services = [
         svc for svc in services if _selector_matches(svc.spec.selector, workload.pod_labels)
@@ -221,6 +278,11 @@ def build_app(
         config_refs=sorted(workload.config_refs, key=lambda c: (c.kind, c.name, c.via)),
         autoscaler=_autoscaler_for_workload(hpas or [], workload),
         nodes=_node_names_for_workload(pods or [], workload),
+        network_policies=[
+            _build_network_policy(np)
+            for np in (network_policies or [])
+            if _network_policy_matches_workload(np, workload)
+        ],
     )
 
 
@@ -233,9 +295,10 @@ def build_namespace_inventory(
     httproutes: list[dict] | None = None,
     hpas: list[client.V2HorizontalPodAutoscaler] | None = None,
     pods: list[client.V1Pod] | None = None,
+    network_policies: list[client.V1NetworkPolicy] | None = None,
 ) -> NamespaceInventory:
     apps = [
-        build_app(workload, services, ingresses, pvcs, httproutes, hpas, pods)
+        build_app(workload, services, ingresses, pvcs, httproutes, hpas, pods, network_policies)
         for workload in workloads
     ]
     return NamespaceInventory(name=namespace, apps=apps)
@@ -307,9 +370,18 @@ def collect_cluster_inventory(
         httproutes = _list_httproutes(apis, namespace)
         hpas = _list_hpas(apis, namespace)
         pods = apis.core_v1.list_namespaced_pod(namespace).items
+        network_policies = apis.networking_v1.list_namespaced_network_policy(namespace).items
         namespace_inventories.append(
             build_namespace_inventory(
-                namespace, workloads, services, ingresses, pvcs, httproutes, hpas, pods
+                namespace,
+                workloads,
+                services,
+                ingresses,
+                pvcs,
+                httproutes,
+                hpas,
+                pods,
+                network_policies,
             )
         )
 
