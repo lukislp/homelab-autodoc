@@ -276,6 +276,72 @@ def test_deployment_collector_normalizes_tolerations():
     ]
 
 
+def test_deployment_collector_normalizes_init_containers_before_regular_ones():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    init_containers=[
+                        client.V1Container(name="migrate", image="migrate:1.0"),
+                    ],
+                    containers=[
+                        client.V1Container(name="web", image="nginx:1.25.3"),
+                    ],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert [(c.name, c.is_init) for c in workload.containers] == [
+        ("migrate", True),
+        ("web", False),
+    ]
+
+
+def test_deployment_collector_normalizes_probes():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    containers=[
+                        client.V1Container(
+                            name="web",
+                            image="nginx:1.25.3",
+                            liveness_probe=client.V1Probe(
+                                http_get=client.V1HTTPGetAction(path="/healthz", port=8080),
+                                period_seconds=10,
+                            ),
+                            readiness_probe=client.V1Probe(
+                                tcp_socket=client.V1TCPSocketAction(port=8080)
+                            ),
+                        ),
+                    ],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    probes = workload.containers[0].probes
+    assert {(p.kind, p.check, p.period_seconds) for p in probes} == {
+        ("liveness", "HTTP :8080/healthz", 10),
+        ("readiness", "TCP :8080", None),
+    }
+
+
 def test_deployment_collector_normalizes_service_account_name():
     deployment = client.V1Deployment(
         metadata=client.V1ObjectMeta(name="web", labels={}),

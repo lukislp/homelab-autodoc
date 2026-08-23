@@ -11,10 +11,24 @@ def containers_table(app: App) -> str:
     if not app.containers:
         return ""
     rows = [
-        f"| {c.name} | `{c.image}` | {', '.join(map(str, c.ports)) or '-'} |"
-        for c in sorted(app.containers, key=lambda c: c.name)
+        f"| {c.name} | {'Yes' if c.is_init else '-'} | `{c.image}` | "
+        f"{', '.join(map(str, c.ports)) or '-'} |"
+        # Init containers first, in the order they actually run in.
+        for c in sorted(app.containers, key=lambda c: (not c.is_init, c.name))
     ]
-    return "\n".join(["| Container | Image | Ports |", "|---|---|---|", *rows])
+    return "\n".join(["| Container | Init | Image | Ports |", "|---|---|---|---|", *rows])
+
+
+def probes_table(app: App) -> str:
+    if not any(c.probes for c in app.containers):
+        return ""
+    rows = []
+    for c in sorted(app.containers, key=lambda c: c.name):
+        for p in sorted(c.probes, key=lambda p: p.kind):
+            period = f"{p.period_seconds}s" if p.period_seconds is not None else "-"
+            rows.append(f"| {c.name} | {p.kind} | {p.check} | {period} |")
+    header = "| Container | Type | Check | Period |"
+    return "\n".join([header, "|---|---|---|---|", *rows])
 
 
 def services_table(app: App) -> str:

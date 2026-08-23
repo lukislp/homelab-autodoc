@@ -16,6 +16,7 @@ from autodoc_core.models import (
     NetworkPolicyRule,
     NodeInfo,
     PodDisruptionBudgetInfo,
+    ProbeInfo,
     RoleBindingInfo,
     ServiceAccountInfo,
     ServiceInfo,
@@ -40,6 +41,11 @@ def _sample_inventory() -> ClusterInventory:
                         ready_replicas=2,
                         containers=[
                             Container(
+                                name="init-migrate",
+                                image="migrate:1.0",
+                                is_init=True,
+                            ),
+                            Container(
                                 name="web",
                                 image="nginx:1.25.3",
                                 ports=[8080],
@@ -52,7 +58,14 @@ def _sample_inventory() -> ClusterInventory:
                                         value_from="Secret:web-secrets/API_KEY",
                                     ),
                                 ],
-                            )
+                                probes=[
+                                    ProbeInfo(
+                                        kind="liveness",
+                                        check="HTTP :8080/healthz",
+                                        period_seconds=10,
+                                    )
+                                ],
+                            ),
                         ],
                         volumes=[
                             Volume(
@@ -142,7 +155,7 @@ def test_to_text_json_round_trips():
     data = json.loads(text)
 
     assert data["cluster_name"] == "homelab"
-    assert data["namespaces"][0]["apps"][0]["containers"][0]["image"] == "nginx:1.25.3"
+    assert data["namespaces"][0]["apps"][0]["containers"][1]["image"] == "nginx:1.25.3"
 
 
 def test_to_text_json_compact_has_no_indentation():
@@ -204,6 +217,27 @@ def test_app_without_network_policies_round_trips_as_empty_list():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.namespaces[0].apps[0].network_policies == []
+
+
+def test_container_without_init_flag_or_probes_round_trips_to_defaults():
+    bare_app = App(
+        name="worker",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        containers=[Container(name="worker", image="worker:1.0")],
+    )
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    container = reconstructed.namespaces[0].apps[0].containers[0]
+    assert container.is_init is False
+    assert container.probes == []
 
 
 def test_app_without_service_account_round_trips_as_none():
