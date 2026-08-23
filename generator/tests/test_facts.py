@@ -8,6 +8,7 @@ from autodoc_core.models import (
     NetworkPolicyRule,
     NodeInfo,
     ServiceAccountInfo,
+    StorageClassInfo,
 )
 
 from autodoc_generator.facts import (
@@ -27,6 +28,7 @@ from autodoc_generator.facts import (
     scheduling_table,
     service_account_table,
     services_table,
+    storage_classes_table,
     volumes_table,
 )
 
@@ -280,6 +282,26 @@ def test_all_tables_empty_for_bare_app(bare_app):
     assert env_table(bare_app) == ""
     assert dependencies_table(bare_app) == ""
     assert metadata_table(bare_app) == ""
+
+
+def test_storage_classes_table_lists_provisioner_and_policy():
+    storage_classes = [
+        StorageClassInfo(
+            name="local-path",
+            provisioner="rancher.io/local-path",
+            reclaim_policy="Delete",
+            volume_binding_mode="WaitForFirstConsumer",
+            allow_volume_expansion=False,
+        )
+    ]
+
+    table = storage_classes_table(storage_classes)
+
+    assert "| local-path | rancher.io/local-path | Delete | WaitForFirstConsumer | False |" in table
+
+
+def test_storage_classes_table_empty_for_no_storage_classes():
+    assert storage_classes_table([]) == ""
 
 
 def test_node_specs_table_lists_capacity_and_allocatable():

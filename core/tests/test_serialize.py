@@ -21,6 +21,7 @@ from autodoc_core.models import (
     ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
+    StorageClassInfo,
     Volume,
 )
 from autodoc_core.serialize import from_text, to_text
@@ -132,6 +133,15 @@ def _sample_inventory() -> ClusterInventory:
                         tolerations=["node-role.kubernetes.io/master:NoSchedule"],
                     )
                 ],
+            )
+        ],
+        storage_classes=[
+            StorageClassInfo(
+                name="local-path",
+                provisioner="rancher.io/local-path",
+                reclaim_policy="Delete",
+                volume_binding_mode="WaitForFirstConsumer",
+                allow_volume_expansion=False,
             )
         ],
         nodes=[
@@ -280,6 +290,14 @@ def test_app_without_scheduling_constraints_round_trips_to_empty_defaults():
     assert app.node_selector == {}
     assert app.node_affinity == []
     assert app.tolerations == []
+
+
+def test_cluster_inventory_without_storage_classes_round_trips_as_empty_list():
+    inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-22T00:00:00+00:00")
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.storage_classes == []
 
 
 def test_cluster_inventory_without_nodes_round_trips_as_empty_list():

@@ -8,6 +8,7 @@ from autodoc_core.models import (
     Container,
     NamespaceInventory,
     NodeInfo,
+    StorageClassInfo,
 )
 
 
@@ -31,6 +32,7 @@ def sample_inventory() -> ClusterInventory:
                 ],
             )
         ],
+        storage_classes=[StorageClassInfo(name="local-path", provisioner="rancher.io/local-path")],
         nodes=[
             NodeInfo(
                 name="pi-node-1",

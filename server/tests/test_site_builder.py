@@ -24,6 +24,9 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     )
     cluster_index = (storage.docs_dir / "homelab" / "index.md").read_text(encoding="utf-8")
     cluster_topology = (storage.docs_dir / "homelab" / "topology.md").read_text(encoding="utf-8")
+    storage_classes_page = (storage.docs_dir / "homelab" / "storage-classes.md").read_text(
+        encoding="utf-8"
+    )
     nodes_page = (storage.docs_dir / "homelab" / "nodes.md").read_text(encoding="utf-8")
     root_index = (storage.docs_dir / "index.md").read_text(encoding="utf-8")
 
@@ -38,9 +41,13 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     assert "| Secret | web-secrets | web (env) |" in namespace_dependencies
     assert "[demo](demo/index.md)" in cluster_index
     assert "[Topology](topology.md)" in cluster_index
+    assert "[Storage Classes](storage-classes.md)" in cluster_index
     assert "[Nodes](nodes.md)" in cluster_index
     assert "[Changelog](changelog.md)" in cluster_index
     assert "# homelab - Topology" in cluster_topology
+    assert "# homelab - Storage Classes" in storage_classes_page
+    assert "local-path" in storage_classes_page
+    assert "rancher.io/local-path" in storage_classes_page
     assert "# homelab - Nodes" in nodes_page
     assert "pi-node-1" in nodes_page
     assert "arm64" in nodes_page
