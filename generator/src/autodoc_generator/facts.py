@@ -123,6 +123,18 @@ def network_policies_table(app: App) -> str:
     return "\n".join([header, "|---|---|---|---|", *rows])
 
 
+def pod_disruption_budgets_table(app: App) -> str:
+    if not app.pod_disruption_budgets:
+        return ""
+    rows = []
+    for pdb in sorted(app.pod_disruption_budgets, key=lambda p: p.name):
+        min_available = pdb.min_available if pdb.min_available is not None else "-"
+        max_unavailable = pdb.max_unavailable if pdb.max_unavailable is not None else "-"
+        rows.append(f"| {pdb.name} | {min_available} | {max_unavailable} |")
+    header = "| PDB | Min Available | Max Unavailable |"
+    return "\n".join([header, "|---|---|---|", *rows])
+
+
 def env_table(app: App) -> str:
     """Never shows a literal env var's actual value - only its name and, for a
     valueFrom reference, which ConfigMap/Secret key it points at. The docs site

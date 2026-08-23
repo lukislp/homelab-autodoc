@@ -15,10 +15,12 @@ from autodoc_collector.collect import (
     _build_autoscaler,
     _build_network_policy,
     _build_node,
+    _build_pdb,
     _list_hpas,
     _list_httproutes,
     _network_policy_matches_workload,
     _node_names_for_workload,
+    _pdb_matches_workload,
     build_app,
     build_namespace_inventory,
 )
@@ -217,6 +219,7 @@ def test_list_httproutes_returns_empty_when_gateway_api_crd_is_missing():
         batch_v1=None,
         custom_objects=FakeCustomObjects(),
         autoscaling_v2=None,
+        policy_v1=None,
     )
 
     assert _list_httproutes(apis, "demo") == []
@@ -234,6 +237,7 @@ def test_list_httproutes_reraises_non_404_errors():
         batch_v1=None,
         custom_objects=FakeCustomObjects(),
         autoscaling_v2=None,
+        policy_v1=None,
     )
 
     with pytest.raises(ApiException):
@@ -555,6 +559,27 @@ def test_build_app_without_network_policies_leaves_list_empty():
     assert app.network_policies == []
 
 
+def _pdb(
+    name: str,
+    selector_labels: dict[str, str] | None = None,
+    selector_expressions: list[client.V1LabelSelectorRequirement] | None = None,
+    min_available: object | None = None,
+    max_unavailable: object | None = None,
+    no_selector: bool = False,
+) -> client.V1PodDisruptionBudget:
+    selector = None
+    if not no_selector:
+        selector = client.V1LabelSelector(
+            match_labels=selector_labels, match_expressions=selector_expressions
+        )
+    return client.V1PodDisruptionBudget(
+        metadata=client.V1ObjectMeta(name=name),
+        spec=client.V1PodDisruptionBudgetSpec(
+            selector=selector, min_available=min_available, max_unavailable=max_unavailable
+        ),
+    )
+
+
 def _node(
     name: str = "pi-node-1",
     architecture: str = "arm64",
@@ -584,6 +609,83 @@ def _node(
             conditions=[client.V1NodeCondition(type="Ready", status="True" if ready else "False")],
         ),
     )
+
+
+def test_build_pdb_reads_min_available():
+    pdb = _pdb("web-pdb", selector_labels={"app": "web"}, min_available=1)
+
+    info = _build_pdb(pdb)
+
+    assert info.name == "web-pdb"
+    assert info.min_available == "1"
+    assert info.max_unavailable is None
+
+
+def test_build_pdb_reads_max_unavailable_percentage():
+    pdb = _pdb("web-pdb", selector_labels={"app": "web"}, max_unavailable="50%")
+
+    info = _build_pdb(pdb)
+
+    assert info.max_unavailable == "50%"
+    assert info.min_available is None
+
+
+def test_pdb_matches_workload_by_selector_labels():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    pdb = _pdb("web-pdb", selector_labels={"app": "web"})
+
+    assert _pdb_matches_workload(pdb, workload) is True
+
+
+def test_pdb_with_non_matching_selector_is_excluded():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    pdb = _pdb("other-pdb", selector_labels={"app": "other"})
+
+    assert _pdb_matches_workload(pdb, workload) is False
+
+
+def test_pdb_with_empty_selector_matches_every_workload():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    pdb = _pdb("blanket-pdb", selector_labels=None)
+
+    assert _pdb_matches_workload(pdb, workload) is True
+
+
+def test_pdb_with_null_selector_matches_no_workload():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    pdb = _pdb("no-selector-pdb", no_selector=True)
+
+    assert _pdb_matches_workload(pdb, workload) is False
+
+
+def test_pdb_with_match_expressions_is_not_evaluated():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    pdb = _pdb(
+        "expr-pdb",
+        selector_expressions=[
+            client.V1LabelSelectorRequirement(key="app", operator="In", values=["web"])
+        ],
+    )
+
+    assert _pdb_matches_workload(pdb, workload) is False
+
+
+def test_build_app_wires_matching_pdbs():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    matching_pdb = _pdb("web-pdb", selector_labels={"app": "web"}, min_available=1)
+    other_pdb = _pdb("other-pdb", selector_labels={"app": "other"})
+
+    app = build_app(workload, [], [], [], pdbs=[matching_pdb, other_pdb])
+
+    assert [pdb.name for pdb in app.pod_disruption_budgets] == ["web-pdb"]
+
+
+def test_build_app_without_pdbs_leaves_list_empty():
+    workload = _workload()
+
+    app = build_app(workload, [], [], [])
+
+    assert app.pod_disruption_budgets == []
 
 
 def test_build_node_extracts_spec_and_capacity():

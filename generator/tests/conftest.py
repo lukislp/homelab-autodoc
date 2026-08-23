@@ -11,6 +11,7 @@ from autodoc_core.models import (
     IngressRule,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    PodDisruptionBudgetInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -83,6 +84,7 @@ def sample_app() -> App:
                 ],
             )
         ],
+        pod_disruption_budgets=[PodDisruptionBudgetInfo(name="web-pdb", min_available="1")],
     )
 
 

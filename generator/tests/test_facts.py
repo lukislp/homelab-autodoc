@@ -12,6 +12,7 @@ from autodoc_generator.facts import (
     network_policies_table,
     node_specs_table,
     nodes_table,
+    pod_disruption_budgets_table,
     resources_table,
     services_table,
     volumes_table,
@@ -131,6 +132,16 @@ def test_network_policies_table_empty_when_app_has_no_policies(bare_app):
     assert network_policies_table(bare_app) == ""
 
 
+def test_pod_disruption_budgets_table_lists_min_available(sample_app):
+    table = pod_disruption_budgets_table(sample_app)
+
+    assert "| web-pdb | 1 | - |" in table
+
+
+def test_pod_disruption_budgets_table_empty_when_app_has_no_pdbs(bare_app):
+    assert pod_disruption_budgets_table(bare_app) == ""
+
+
 def test_metadata_table_lists_created_owners_and_annotations(sample_app):
     table = metadata_table(sample_app)
 
@@ -162,6 +173,7 @@ def test_all_tables_empty_for_bare_app(bare_app):
     assert autoscaler_table(bare_app) == ""
     assert nodes_table(bare_app) == ""
     assert network_policies_table(bare_app) == ""
+    assert pod_disruption_budgets_table(bare_app) == ""
     assert env_table(bare_app) == ""
     assert dependencies_table(bare_app) == ""
     assert metadata_table(bare_app) == ""

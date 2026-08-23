@@ -58,6 +58,12 @@
 {{ autoscaler_table }}
 
 {% endif %}
+{% if pod_disruption_budgets_table %}
+### Disruption Budget
+
+{{ pod_disruption_budgets_table }}
+
+{% endif %}
 {% if env_table %}
 ### Environment
 

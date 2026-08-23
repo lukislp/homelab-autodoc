@@ -15,6 +15,7 @@ from autodoc_core.models import (
     NetworkPolicyInfo,
     NetworkPolicyRule,
     NodeInfo,
+    PodDisruptionBudgetInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -99,6 +100,9 @@ def _sample_inventory() -> ClusterInventory:
                                     )
                                 ],
                             )
+                        ],
+                        pod_disruption_budgets=[
+                            PodDisruptionBudgetInfo(name="web-pdb", min_available="1")
                         ],
                     )
                 ],
@@ -187,6 +191,19 @@ def test_app_without_network_policies_round_trips_as_empty_list():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.namespaces[0].apps[0].network_policies == []
+
+
+def test_app_without_pod_disruption_budgets_round_trips_as_empty_list():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].pod_disruption_budgets == []
 
 
 def test_cluster_inventory_without_nodes_round_trips_as_empty_list():
