@@ -1,3 +1,15 @@
+# [1.35.0](https://github.com/lukislp/homelab-autodoc/compare/v1.34.0...v1.35.0) (2026-08-23)
+
+
+### Bug Fixes
+
+* **repo:** ignore the server's generated docs_src tree ([f2829db](https://github.com/lukislp/homelab-autodoc/commit/f2829db40bdf259add2800b37380b1e63a5b65a8))
+
+
+### Features
+
+* **server:** live collection-freshness stamp on cluster cards ([ef29982](https://github.com/lukislp/homelab-autodoc/commit/ef29982b8c5c0eca760a3022d351c88f674fa004))
+
 # [1.34.0](https://github.com/lukislp/homelab-autodoc/compare/v1.33.1...v1.34.0) (2026-08-23)
 
 
