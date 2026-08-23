@@ -207,7 +207,7 @@ def _write_namespace_dependencies_page(
     storage: Storage, cluster_name: str, namespace: NamespaceInventory
 ) -> None:
     table = facts.dependency_usage_table(namespace)
-    body = table if table else "No ConfigMap/Secret references collected yet."
+    body = table if table else "No workload in this namespace references a ConfigMap or Secret."
     page = _namespace_content_page(
         cluster_name, namespace, "dependencies", f"{namespace.name} - Dependencies", body
     )
@@ -224,9 +224,9 @@ def _write_namespace_resource_governance_page(
     body = "\n\n".join(
         [
             "## Resource Quotas",
-            quotas_table if quotas_table else "No ResourceQuota data collected yet.",
+            quotas_table if quotas_table else "No ResourceQuotas exist in this namespace.",
             "## Limit Ranges",
-            limits_table if limits_table else "No LimitRange data collected yet.",
+            limits_table if limits_table else "No LimitRanges exist in this namespace.",
         ]
     )
     page = _namespace_content_page(
@@ -275,7 +275,7 @@ def _write_storage_classes_page(
     storage: Storage, cluster_name: str, inventory: ClusterInventory
 ) -> None:
     table = facts.storage_classes_table(inventory.storage_classes)
-    body = table if table else "No StorageClass data collected yet."
+    body = table if table else "No StorageClasses exist in this cluster."
     page = _cluster_content_page(
         cluster_name, "storage-classes", f"{cluster_name} - Storage Classes", body
     )

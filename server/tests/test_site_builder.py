@@ -366,3 +366,36 @@ def test_root_index_carries_an_about_card_and_the_page_exists(tmp_path):
     assert "# About this site" in about_page
     assert "hallucination boundary" in about_page
     assert "github.com/lukislp/homelab-autodoc" in about_page
+
+
+def test_empty_governance_and_dependency_states_say_none_exist(tmp_path):
+    # "collected yet" would wrongly suggest a collector gap - these objects
+    # are always collected, so an empty page means none exist.
+    from autodoc_core.models import App, NamespaceInventory
+
+    bare = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-23T00:00:00+00:00",
+        namespaces=[
+            NamespaceInventory(
+                name="empty-ns",
+                apps=[App(name="web", kind="Deployment", replicas=1, ready_replicas=1)],
+            )
+        ],
+    )
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", bare)
+
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=None)
+
+    governance = (storage.docs_dir / "homelab" / "empty-ns" / "resource-governance.md").read_text(
+        encoding="utf-8"
+    )
+    dependencies = (storage.docs_dir / "homelab" / "empty-ns" / "dependencies.md").read_text(
+        encoding="utf-8"
+    )
+    assert "No ResourceQuotas exist in this namespace." in governance
+    assert "No LimitRanges exist in this namespace." in governance
+    assert "No workload in this namespace references a ConfigMap or Secret." in dependencies
+    assert "collected yet" not in governance
+    assert "collected yet" not in dependencies
