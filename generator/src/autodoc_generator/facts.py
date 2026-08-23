@@ -491,3 +491,32 @@ def cluster_images_table(inventory: ClusterInventory) -> str:
         for image, users in sorted(used_by.items())
     ]
     return "\n".join(["| Image | Registry | Used By |", "|---|---|---|", *rows])
+
+
+def _plural(count: int, noun: str) -> str:
+    return f"{count} {noun}{'' if count == 1 else 's'}"
+
+
+def cluster_card_facts(inventory: ClusterInventory, drift_count: int, findings_count: int) -> str:
+    """The root-index card's two compact fact lines - scale on the first
+    (namespaces/apps/nodes plus the kubelet version, or versions when the
+    nodes disagree, which is itself worth noticing), health signals on the
+    second. Drift gets the warn tint when non-zero, matching the stat chips;
+    findings stay neutral - a homelab almost always has some, and a
+    permanently red number on every card would train the eye to ignore it.
+    """
+    app_count = sum(len(namespace.apps) for namespace in inventory.namespaces)
+    scale = [
+        _plural(len(inventory.namespaces), "namespace"),
+        _plural(app_count, "app"),
+        _plural(len(inventory.nodes), "node"),
+    ]
+    versions = sorted({node.kubelet_version for node in inventory.nodes})
+    if versions:
+        scale.append(" / ".join(versions))
+    drift_class = "card-facts card-facts--warn" if drift_count > 0 else "card-facts"
+    return (
+        f'<span class="card-facts">{" · ".join(scale)}</span><br>'
+        f'<span class="{drift_class}">{_plural(findings_count, "finding")} · '
+        f"{drift_count} drift last run</span>"
+    )
