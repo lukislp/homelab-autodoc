@@ -1,3 +1,10 @@
+## [1.41.5](https://github.com/lukislp/homelab-autodoc/compare/v1.41.4...v1.41.5) (2026-08-23)
+
+
+### Bug Fixes
+
+* **server:** pin the breadcrumb while the content scrolls ([7a107bd](https://github.com/lukislp/homelab-autodoc/commit/7a107bddbbe30d4a470e50a2806fe0a90f8394d1))
+
 ## [1.41.4](https://github.com/lukislp/homelab-autodoc/compare/v1.41.3...v1.41.4) (2026-08-23)
 
 
