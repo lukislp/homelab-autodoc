@@ -1,3 +1,11 @@
+## [1.32.1](https://github.com/lukislp/homelab-autodoc/compare/v1.32.0...v1.32.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **admin-ui:** full-screen management view and provider-labeled login ([1950e9c](https://github.com/lukislp/homelab-autodoc/commit/1950e9ca6d76af4c22151872b8eec5b6ee69316a))
+* **server:** rebuild only the root index after a cluster delete ([b44f5a8](https://github.com/lukislp/homelab-autodoc/commit/b44f5a8aa748449ceb9a2dcb6c866233ce503be0))
+
 # [1.32.0](https://github.com/lukislp/homelab-autodoc/compare/v1.31.1...v1.32.0) (2026-08-23)
 
 
