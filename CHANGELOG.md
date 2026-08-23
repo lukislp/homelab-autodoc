@@ -1,3 +1,10 @@
+## [1.41.7](https://github.com/lukislp/homelab-autodoc/compare/v1.41.6...v1.41.7) (2026-08-23)
+
+
+### Bug Fixes
+
+* **server:** absorb the cluster topology's last 16px of overflow ([67b35b1](https://github.com/lukislp/homelab-autodoc/commit/67b35b12168e373aff9d11bb3da074d7f147bdef))
+
 ## [1.41.6](https://github.com/lukislp/homelab-autodoc/compare/v1.41.5...v1.41.6) (2026-08-23)
 
 
