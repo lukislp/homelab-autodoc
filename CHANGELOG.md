@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/lukislp/homelab-autodoc/compare/v1.15.2...v1.16.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** collect DaemonSet and CronJob workloads ([d081f16](https://github.com/lukislp/homelab-autodoc/commit/d081f16ece1143d72708fac7ecaf8733e465c588))
+
 ## [1.15.2](https://github.com/lukislp/homelab-autodoc/compare/v1.15.1...v1.15.2) (2026-08-23)
 
 
