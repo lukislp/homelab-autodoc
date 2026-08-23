@@ -471,3 +471,23 @@ def node_specs_table(nodes: list[NodeInfo]) -> str:
         "Memory (Capacity) | Memory (Allocatable) |"
     )
     return "\n".join([header, "|---|---|---|---|---|---|---|---|---|", *rows])
+
+
+def cluster_images_table(inventory: ClusterInventory) -> str:
+    """Cluster-wide, deduplicated: every image running anywhere in the
+    cluster, and which workloads run it - version sprawl (two apps on
+    different Postgres tags) becomes visible at a glance. Init containers
+    count too: their images are pulled and run just the same.
+    """
+    used_by: dict[str, set[str]] = {}
+    for namespace in inventory.namespaces:
+        for app in namespace.apps:
+            for container in app.containers:
+                used_by.setdefault(container.image, set()).add(f"{namespace.name}/{app.name}")
+    if not used_by:
+        return ""
+    rows = [
+        f"| `{image}` | {_parse_registry(image)} | {', '.join(sorted(users))} |"
+        for image, users in sorted(used_by.items())
+    ]
+    return "\n".join(["| Image | Registry | Used By |", "|---|---|---|", *rows])
