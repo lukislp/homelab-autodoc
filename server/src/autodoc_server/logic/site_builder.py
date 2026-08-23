@@ -35,6 +35,7 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
             )
         _write_namespace_diagram(storage, cluster_name, namespace)
         _write_namespace_dependencies_page(storage, cluster_name, namespace)
+        _write_namespace_resource_governance_page(storage, cluster_name, namespace)
 
     _write_cluster_index(storage, cluster_name, inventory)
     _write_cluster_diagram(storage, cluster_name, inventory)
@@ -89,6 +90,24 @@ def _write_namespace_dependencies_page(
     lines = [f"# {namespace.name} - Dependencies", ""]
     lines.append(table if table else "No ConfigMap/Secret references collected yet.")
     (storage.docs_dir / cluster_name / namespace.name / "dependencies.md").write_text(
+        "\n".join(lines), encoding="utf-8"
+    )
+
+
+def _write_namespace_resource_governance_page(
+    storage: Storage, cluster_name: str, namespace: NamespaceInventory
+) -> None:
+    lines = [f"# {namespace.name} - Resource Governance", ""]
+    quotas_table = facts.resource_quotas_table(namespace)
+    lines.append("## Resource Quotas")
+    lines.append("")
+    lines.append(quotas_table if quotas_table else "No ResourceQuota data collected yet.")
+    lines.append("")
+    limits_table = facts.limit_ranges_table(namespace)
+    lines.append("## Limit Ranges")
+    lines.append("")
+    lines.append(limits_table if limits_table else "No LimitRange data collected yet.")
+    (storage.docs_dir / cluster_name / namespace.name / "resource-governance.md").write_text(
         "\n".join(lines), encoding="utf-8"
     )
 

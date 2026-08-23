@@ -6,8 +6,11 @@ from autodoc_core.models import (
     ClusterInventory,
     ConfigReference,
     Container,
+    LimitRangeInfo,
+    LimitRangeItemInfo,
     NamespaceInventory,
     NodeInfo,
+    ResourceQuotaInfo,
     StorageClassInfo,
 )
 
@@ -28,6 +31,25 @@ def sample_inventory() -> ClusterInventory:
                         ready_replicas=2,
                         containers=[Container(name="web", image="nginx:1.25.3", ports=[8080])],
                         config_refs=[ConfigReference(kind="Secret", name="web-secrets", via="env")],
+                    )
+                ],
+                resource_quotas=[
+                    ResourceQuotaInfo(
+                        name="demo-quota",
+                        hard={"requests.cpu": "4", "pods": "20"},
+                        used={"requests.cpu": "1500m", "pods": "6"},
+                    )
+                ],
+                limit_ranges=[
+                    LimitRangeInfo(
+                        name="demo-limits",
+                        limits=[
+                            LimitRangeItemInfo(
+                                kind="Container",
+                                default={"cpu": "500m", "memory": "256Mi"},
+                                default_request={"cpu": "100m", "memory": "128Mi"},
+                            )
+                        ],
                     )
                 ],
             )

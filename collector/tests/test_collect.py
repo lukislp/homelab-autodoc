@@ -13,9 +13,12 @@ from kubernetes.client.exceptions import ApiException
 from autodoc_collector.collect import (
     _autoscaler_for_workload,
     _build_autoscaler,
+    _build_limit_range,
+    _build_limit_range_item,
     _build_network_policy,
     _build_node,
     _build_pdb,
+    _build_resource_quota,
     _build_storage_class,
     _list_hpas,
     _list_httproutes,
@@ -917,6 +920,114 @@ def test_build_app_without_image_pull_secrets_leaves_list_empty():
     app = build_app(workload, [], [], [])
 
     assert app.image_pull_secrets == []
+
+
+def _resource_quota(
+    name: str = "demo-quota",
+    hard: dict[str, str] | None = None,
+    used: dict[str, str] | None = None,
+) -> client.V1ResourceQuota:
+    return client.V1ResourceQuota(
+        metadata=client.V1ObjectMeta(name=name),
+        spec=client.V1ResourceQuotaSpec(hard=hard or {"requests.cpu": "4", "pods": "20"}),
+        status=client.V1ResourceQuotaStatus(
+            hard=hard or {"requests.cpu": "4", "pods": "20"},
+            used=used or {"requests.cpu": "1500m", "pods": "6"},
+        ),
+    )
+
+
+def _limit_range(name: str = "demo-limits") -> client.V1LimitRange:
+    return client.V1LimitRange(
+        metadata=client.V1ObjectMeta(name=name),
+        spec=client.V1LimitRangeSpec(
+            limits=[
+                client.V1LimitRangeItem(
+                    type="Container",
+                    default={"cpu": "500m", "memory": "256Mi"},
+                    default_request={"cpu": "100m", "memory": "128Mi"},
+                )
+            ]
+        ),
+    )
+
+
+def test_build_resource_quota_reads_hard_and_used_from_status():
+    quota = _resource_quota(
+        hard={"requests.cpu": "4", "pods": "20"}, used={"requests.cpu": "1500m", "pods": "6"}
+    )
+
+    info = _build_resource_quota(quota)
+
+    assert info.name == "demo-quota"
+    assert info.hard == {"requests.cpu": "4", "pods": "20"}
+    assert info.used == {"requests.cpu": "1500m", "pods": "6"}
+
+
+def test_build_resource_quota_falls_back_to_spec_hard_when_status_missing():
+    quota = client.V1ResourceQuota(
+        metadata=client.V1ObjectMeta(name="demo-quota"),
+        spec=client.V1ResourceQuotaSpec(hard={"pods": "20"}),
+        status=None,
+    )
+
+    info = _build_resource_quota(quota)
+
+    assert info.hard == {"pods": "20"}
+    assert info.used == {}
+
+
+def test_build_limit_range_item_reads_min_max_default():
+    item = client.V1LimitRangeItem(
+        type="Container",
+        min={"cpu": "50m"},
+        max={"cpu": "2"},
+        default={"cpu": "500m", "memory": "256Mi"},
+        default_request={"cpu": "100m", "memory": "128Mi"},
+    )
+
+    info = _build_limit_range_item(item)
+
+    assert info.kind == "Container"
+    assert info.min == {"cpu": "50m"}
+    assert info.max == {"cpu": "2"}
+    assert info.default == {"cpu": "500m", "memory": "256Mi"}
+    assert info.default_request == {"cpu": "100m", "memory": "128Mi"}
+
+
+def test_build_limit_range_collects_its_items():
+    limit_range = _limit_range()
+
+    info = _build_limit_range(limit_range)
+
+    assert info.name == "demo-limits"
+    assert [item.kind for item in info.limits] == ["Container"]
+
+
+def test_build_namespace_inventory_wires_resource_quotas_and_limit_ranges():
+    workload = _workload()
+
+    inventory = build_namespace_inventory(
+        "demo",
+        [workload],
+        [],
+        [],
+        [],
+        resource_quotas=[_resource_quota()],
+        limit_ranges=[_limit_range()],
+    )
+
+    assert [rq.name for rq in inventory.resource_quotas] == ["demo-quota"]
+    assert [lr.name for lr in inventory.limit_ranges] == ["demo-limits"]
+
+
+def test_build_namespace_inventory_without_quotas_or_limit_ranges_leaves_lists_empty():
+    workload = _workload()
+
+    inventory = build_namespace_inventory("demo", [workload], [], [], [])
+
+    assert inventory.resource_quotas == []
+    assert inventory.limit_ranges == []
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

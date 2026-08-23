@@ -195,9 +195,36 @@ class App:
 
 
 @dataclass(frozen=True, slots=True)
+class ResourceQuotaInfo:
+    name: str
+    # Raw Kubernetes quantity strings (e.g. "4", "8Gi"), keyed by resource name
+    # (e.g. "requests.cpu", "limits.memory", "pods") - never parsed here.
+    hard: dict[str, str] = field(default_factory=dict)
+    used: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class LimitRangeItemInfo:
+    kind: str  # "Container" | "Pod" | "PersistentVolumeClaim"
+    # Raw Kubernetes quantity strings, keyed by resource name (e.g. "cpu", "memory").
+    min: dict[str, str] = field(default_factory=dict)
+    max: dict[str, str] = field(default_factory=dict)
+    default: dict[str, str] = field(default_factory=dict)
+    default_request: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class LimitRangeInfo:
+    name: str
+    limits: list[LimitRangeItemInfo] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
 class NamespaceInventory:
     name: str
     apps: list[App] = field(default_factory=list)
+    resource_quotas: list[ResourceQuotaInfo] = field(default_factory=list)
+    limit_ranges: list[LimitRangeInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)

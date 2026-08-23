@@ -12,12 +12,15 @@ from autodoc_core.models import (
     EnvVar,
     IngressInfo,
     IngressRule,
+    LimitRangeInfo,
+    LimitRangeItemInfo,
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
     NodeInfo,
     PodDisruptionBudgetInfo,
     ProbeInfo,
+    ResourceQuotaInfo,
     RoleBindingInfo,
     RolloutStrategyInfo,
     ServiceAccountInfo,
@@ -146,6 +149,25 @@ def _sample_inventory() -> ClusterInventory:
                             max_unavailable="0",
                         ),
                         image_pull_secrets=["ghcr-pull-secret"],
+                    )
+                ],
+                resource_quotas=[
+                    ResourceQuotaInfo(
+                        name="demo-quota",
+                        hard={"requests.cpu": "4", "pods": "20"},
+                        used={"requests.cpu": "1500m", "pods": "6"},
+                    )
+                ],
+                limit_ranges=[
+                    LimitRangeInfo(
+                        name="demo-limits",
+                        limits=[
+                            LimitRangeItemInfo(
+                                kind="Container",
+                                default={"cpu": "500m", "memory": "256Mi"},
+                                default_request={"cpu": "100m", "memory": "128Mi"},
+                            )
+                        ],
                     )
                 ],
             )
@@ -366,3 +388,27 @@ def test_app_without_image_pull_secrets_round_trips_as_empty_list():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.namespaces[0].apps[0].image_pull_secrets == []
+
+
+def test_namespace_without_resource_quotas_round_trips_as_empty_list():
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo")],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].resource_quotas == []
+
+
+def test_namespace_without_limit_ranges_round_trips_as_empty_list():
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo")],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].limit_ranges == []

@@ -18,12 +18,15 @@ from .models import (
     EnvVar,
     IngressInfo,
     IngressRule,
+    LimitRangeInfo,
+    LimitRangeItemInfo,
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
     NodeInfo,
     PodDisruptionBudgetInfo,
     ProbeInfo,
+    ResourceQuotaInfo,
     RoleBindingInfo,
     RolloutStrategyInfo,
     ServiceAccountInfo,
@@ -211,8 +214,36 @@ def _app_from_dict(d: dict) -> App:
     )
 
 
+def _resource_quota_from_dict(d: dict) -> ResourceQuotaInfo:
+    return ResourceQuotaInfo(
+        name=d["name"], hard=dict(d.get("hard", {})), used=dict(d.get("used", {}))
+    )
+
+
+def _limit_range_item_from_dict(d: dict) -> LimitRangeItemInfo:
+    return LimitRangeItemInfo(
+        kind=d["kind"],
+        min=dict(d.get("min", {})),
+        max=dict(d.get("max", {})),
+        default=dict(d.get("default", {})),
+        default_request=dict(d.get("default_request", {})),
+    )
+
+
+def _limit_range_from_dict(d: dict) -> LimitRangeInfo:
+    return LimitRangeInfo(
+        name=d["name"],
+        limits=[_limit_range_item_from_dict(item) for item in d.get("limits", [])],
+    )
+
+
 def _namespace_from_dict(d: dict) -> NamespaceInventory:
-    return NamespaceInventory(name=d["name"], apps=[_app_from_dict(a) for a in d.get("apps", [])])
+    return NamespaceInventory(
+        name=d["name"],
+        apps=[_app_from_dict(a) for a in d.get("apps", [])],
+        resource_quotas=[_resource_quota_from_dict(rq) for rq in d.get("resource_quotas", [])],
+        limit_ranges=[_limit_range_from_dict(lr) for lr in d.get("limit_ranges", [])],
+    )
 
 
 def _storage_class_from_dict(d: dict) -> StorageClassInfo:

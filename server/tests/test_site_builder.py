@@ -22,6 +22,9 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     namespace_dependencies = (storage.docs_dir / "homelab" / "demo" / "dependencies.md").read_text(
         encoding="utf-8"
     )
+    namespace_resource_governance = (
+        storage.docs_dir / "homelab" / "demo" / "resource-governance.md"
+    ).read_text(encoding="utf-8")
     cluster_index = (storage.docs_dir / "homelab" / "index.md").read_text(encoding="utf-8")
     cluster_topology = (storage.docs_dir / "homelab" / "topology.md").read_text(encoding="utf-8")
     storage_classes_page = (storage.docs_dir / "homelab" / "storage-classes.md").read_text(
@@ -35,10 +38,16 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     assert "[web](web.md)" in namespace_index
     assert "[Topology](topology.md)" in namespace_index
     assert "[Dependencies](dependencies.md)" in namespace_index
+    assert "[Resource Governance](resource-governance.md)" in namespace_index
     assert "# demo - Topology" in namespace_topology
     assert "```mermaid" in namespace_topology
     assert "# demo - Dependencies" in namespace_dependencies
     assert "| Secret | web-secrets | web (env) |" in namespace_dependencies
+    assert "# demo - Resource Governance" in namespace_resource_governance
+    assert "| demo-quota | pods | 20 | 6 |" in namespace_resource_governance
+    assert (
+        "| demo-limits | Container | cpu | - | - | 500m | 100m |" in namespace_resource_governance
+    )
     assert "[demo](demo/index.md)" in cluster_index
     assert "[Topology](topology.md)" in cluster_index
     assert "[Storage Classes](storage-classes.md)" in cluster_index

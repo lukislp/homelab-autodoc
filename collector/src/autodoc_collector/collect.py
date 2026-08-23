@@ -15,11 +15,14 @@ from autodoc_core.models import (
     ClusterInventory,
     IngressInfo,
     IngressRule,
+    LimitRangeInfo,
+    LimitRangeItemInfo,
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
     NodeInfo,
     PodDisruptionBudgetInfo,
+    ResourceQuotaInfo,
     RoleBindingInfo,
     ServiceAccountInfo,
     ServiceInfo,
@@ -313,6 +316,29 @@ def _pdb_matches_workload(raw: client.V1PodDisruptionBudget, workload: Normalize
     return _selector_matches(selector.match_labels, workload.pod_labels)
 
 
+def _build_resource_quota(raw: client.V1ResourceQuota) -> ResourceQuotaInfo:
+    hard = raw.status.hard if raw.status and raw.status.hard else (raw.spec.hard or {})
+    used = raw.status.used if raw.status and raw.status.used else {}
+    return ResourceQuotaInfo(name=raw.metadata.name, hard=dict(hard), used=dict(used))
+
+
+def _build_limit_range_item(raw: client.V1LimitRangeItem) -> LimitRangeItemInfo:
+    return LimitRangeItemInfo(
+        kind=raw.type,
+        min=dict(raw.min or {}),
+        max=dict(raw.max or {}),
+        default=dict(raw.default or {}),
+        default_request=dict(raw.default_request or {}),
+    )
+
+
+def _build_limit_range(raw: client.V1LimitRange) -> LimitRangeInfo:
+    return LimitRangeInfo(
+        name=raw.metadata.name,
+        limits=[_build_limit_range_item(item) for item in (raw.spec.limits or [])],
+    )
+
+
 def build_app(
     workload: NormalizedWorkload,
     services: list[client.V1Service],
@@ -394,6 +420,8 @@ def build_namespace_inventory(
     network_policies: list[client.V1NetworkPolicy] | None = None,
     service_account_role_bindings: dict[str, list[RoleBindingInfo]] | None = None,
     pdbs: list[client.V1PodDisruptionBudget] | None = None,
+    resource_quotas: list[client.V1ResourceQuota] | None = None,
+    limit_ranges: list[client.V1LimitRange] | None = None,
 ) -> NamespaceInventory:
     apps = [
         build_app(
@@ -410,7 +438,12 @@ def build_namespace_inventory(
         )
         for workload in workloads
     ]
-    return NamespaceInventory(name=namespace, apps=apps)
+    return NamespaceInventory(
+        name=namespace,
+        apps=apps,
+        resource_quotas=[_build_resource_quota(rq) for rq in (resource_quotas or [])],
+        limit_ranges=[_build_limit_range(lr) for lr in (limit_ranges or [])],
+    )
 
 
 def _list_httproutes(apis: K8sApis, namespace: str) -> list[dict]:
@@ -515,6 +548,8 @@ def collect_cluster_inventory(
             role_bindings, cluster_role_bindings, namespace
         )
         pdbs = apis.policy_v1.list_namespaced_pod_disruption_budget(namespace).items
+        resource_quotas = apis.core_v1.list_namespaced_resource_quota(namespace).items
+        limit_ranges = apis.core_v1.list_namespaced_limit_range(namespace).items
         namespace_inventories.append(
             build_namespace_inventory(
                 namespace,
@@ -528,6 +563,8 @@ def collect_cluster_inventory(
                 network_policies,
                 service_account_role_bindings,
                 pdbs,
+                resource_quotas,
+                limit_ranges,
             )
         )
 

@@ -5,10 +5,13 @@ from autodoc_core.models import (
     ConfigReference,
     Container,
     ContainerSecurityInfo,
+    LimitRangeInfo,
+    LimitRangeItemInfo,
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
     NodeInfo,
+    ResourceQuotaInfo,
     ServiceAccountInfo,
     StorageClassInfo,
 )
@@ -21,6 +24,7 @@ from autodoc_generator.facts import (
     env_table,
     image_pull_secrets_table,
     ingresses_table,
+    limit_ranges_table,
     metadata_table,
     network_policies_table,
     node_specs_table,
@@ -28,6 +32,7 @@ from autodoc_generator.facts import (
     pod_disruption_budgets_table,
     probes_table,
     registries_table,
+    resource_quotas_table,
     resources_table,
     rollout_strategy_table,
     scheduling_table,
@@ -159,6 +164,61 @@ def test_dependency_usage_table_empty_for_namespace_with_no_config_refs():
     )
 
     assert dependency_usage_table(namespace) == ""
+
+
+def test_resource_quotas_table_lists_hard_and_used_per_resource():
+    namespace = NamespaceInventory(
+        name="demo",
+        resource_quotas=[
+            ResourceQuotaInfo(
+                name="demo-quota",
+                hard={"requests.cpu": "4", "pods": "20"},
+                used={"requests.cpu": "1500m", "pods": "6"},
+            )
+        ],
+    )
+
+    table = resource_quotas_table(namespace)
+
+    assert "| demo-quota | pods | 20 | 6 |" in table
+    assert "| demo-quota | requests.cpu | 4 | 1500m |" in table
+
+
+def test_resource_quotas_table_empty_for_namespace_without_quotas():
+    namespace = NamespaceInventory(name="demo")
+
+    assert resource_quotas_table(namespace) == ""
+
+
+def test_limit_ranges_table_lists_min_max_default_per_resource():
+    namespace = NamespaceInventory(
+        name="demo",
+        limit_ranges=[
+            LimitRangeInfo(
+                name="demo-limits",
+                limits=[
+                    LimitRangeItemInfo(
+                        kind="Container",
+                        min={"cpu": "50m"},
+                        max={"cpu": "2"},
+                        default={"cpu": "500m", "memory": "256Mi"},
+                        default_request={"cpu": "100m", "memory": "128Mi"},
+                    )
+                ],
+            )
+        ],
+    )
+
+    table = limit_ranges_table(namespace)
+
+    assert "| demo-limits | Container | cpu | 50m | 2 | 500m | 100m |" in table
+    assert "| demo-limits | Container | memory | - | - | 256Mi | 128Mi |" in table
+
+
+def test_limit_ranges_table_empty_for_namespace_without_limit_ranges():
+    namespace = NamespaceInventory(name="demo")
+
+    assert limit_ranges_table(namespace) == ""
 
 
 def test_autoscaler_table_lists_replica_bounds_and_cpu_target(sample_app):
