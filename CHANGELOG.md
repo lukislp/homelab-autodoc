@@ -1,3 +1,10 @@
+## [1.41.2](https://github.com/lukislp/homelab-autodoc/compare/v1.41.1...v1.41.2) (2026-08-23)
+
+
+### Bug Fixes
+
+* **server:** empty-state texts say none exist, not 'not collected yet' ([8d421ac](https://github.com/lukislp/homelab-autodoc/commit/8d421ac38b8ec946db151d502e3e0066fabc8e97))
+
 ## [1.41.1](https://github.com/lukislp/homelab-autodoc/compare/v1.41.0...v1.41.1) (2026-08-23)
 
 
