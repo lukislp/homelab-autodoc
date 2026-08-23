@@ -339,6 +339,25 @@ def _build_limit_range(raw: client.V1LimitRange) -> LimitRangeInfo:
     )
 
 
+def _list_configmap_names(apis: K8sApis, namespace: str) -> list[str] | None:
+    """Existence only - the names feed the dangling-reference check, contents
+    are never read past this call and never persisted. Secrets are
+    deliberately not listed at all, not even for names: the API returns full
+    secret values on a list, and the collector's no-secret-access guarantee
+    (see the RBAC manifest) is worth more than flagging a dangling Secret
+    reference. None (not []) when RBAC denies the read: this collector may
+    run against a cluster whose ClusterRole predates the configmaps grant,
+    and "unknown" must stay distinguishable from "there are none".
+    """
+    try:
+        items = apis.core_v1.list_namespaced_config_map(namespace).items
+    except ApiException as e:
+        if e.status == 403:
+            return None
+        raise
+    return sorted(cm.metadata.name for cm in items)
+
+
 def build_app(
     workload: NormalizedWorkload,
     services: list[client.V1Service],
@@ -422,6 +441,7 @@ def build_namespace_inventory(
     pdbs: list[client.V1PodDisruptionBudget] | None = None,
     resource_quotas: list[client.V1ResourceQuota] | None = None,
     limit_ranges: list[client.V1LimitRange] | None = None,
+    configmap_names: list[str] | None = None,
 ) -> NamespaceInventory:
     apps = [
         build_app(
@@ -443,6 +463,9 @@ def build_namespace_inventory(
         apps=apps,
         resource_quotas=[_build_resource_quota(rq) for rq in (resource_quotas or [])],
         limit_ranges=[_build_limit_range(lr) for lr in (limit_ranges or [])],
+        # None stays None here ("not collected"), unlike the or-[] fields
+        # above - see the model's own comment on the distinction.
+        configmap_names=configmap_names,
     )
 
 
@@ -550,6 +573,7 @@ def collect_cluster_inventory(
         pdbs = apis.policy_v1.list_namespaced_pod_disruption_budget(namespace).items
         resource_quotas = apis.core_v1.list_namespaced_resource_quota(namespace).items
         limit_ranges = apis.core_v1.list_namespaced_limit_range(namespace).items
+        configmap_names = _list_configmap_names(apis, namespace)
         namespace_inventories.append(
             build_namespace_inventory(
                 namespace,
@@ -565,6 +589,7 @@ def collect_cluster_inventory(
                 pdbs,
                 resource_quotas,
                 limit_ranges,
+                configmap_names,
             )
         )
 

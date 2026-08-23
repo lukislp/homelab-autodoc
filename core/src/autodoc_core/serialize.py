@@ -238,11 +238,16 @@ def _limit_range_from_dict(d: dict) -> LimitRangeInfo:
 
 
 def _namespace_from_dict(d: dict) -> NamespaceInventory:
+    # configmap_names distinguishes None ("not collected") from [] ("collected,
+    # none exist") - see the model's own comment - so unlike every other list
+    # field it must NOT be defaulted to [] here.
+    configmap_names = d.get("configmap_names")
     return NamespaceInventory(
         name=d["name"],
         apps=[_app_from_dict(a) for a in d.get("apps", [])],
         resource_quotas=[_resource_quota_from_dict(rq) for rq in d.get("resource_quotas", [])],
         limit_ranges=[_limit_range_from_dict(lr) for lr in d.get("limit_ranges", [])],
+        configmap_names=list(configmap_names) if configmap_names is not None else None,
     )
 
 

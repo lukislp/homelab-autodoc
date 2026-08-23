@@ -20,6 +20,7 @@ from autodoc_collector.collect import (
     _build_pdb,
     _build_resource_quota,
     _build_storage_class,
+    _list_configmap_names,
     _list_hpas,
     _list_httproutes,
     _network_policy_matches_workload,
@@ -1042,3 +1043,57 @@ def test_multiple_workloads_of_different_kinds_produce_multiple_apps():
         ("web", "Deployment"),
         ("db", "StatefulSet"),
     ]
+
+
+class _FakeCoreV1ConfigMaps:
+    def __init__(self, names: list[str] | None = None, exception: ApiException | None = None):
+        self._names = names or []
+        self._exception = exception
+
+    def list_namespaced_config_map(self, namespace: str):
+        if self._exception:
+            raise self._exception
+        items = [
+            client.V1ConfigMap(metadata=client.V1ObjectMeta(name=name)) for name in self._names
+        ]
+        return client.V1ConfigMapList(items=items)
+
+
+class _FakeApisWithCoreV1:
+    def __init__(self, core_v1):
+        self.core_v1 = core_v1
+
+
+def test_list_configmap_names_returns_sorted_names():
+    apis = _FakeApisWithCoreV1(_FakeCoreV1ConfigMaps(names=["zeta", "alpha"]))
+
+    assert _list_configmap_names(apis, "demo") == ["alpha", "zeta"]
+
+
+def test_list_configmap_names_returns_none_when_rbac_denies():
+    # The ClusterRole may predate the configmaps grant - "unknown" (None)
+    # must stay distinguishable from "there are none" ([]).
+    apis = _FakeApisWithCoreV1(_FakeCoreV1ConfigMaps(exception=ApiException(status=403)))
+
+    assert _list_configmap_names(apis, "demo") is None
+
+
+def test_list_configmap_names_reraises_non_403_errors():
+    apis = _FakeApisWithCoreV1(_FakeCoreV1ConfigMaps(exception=ApiException(status=500)))
+
+    with pytest.raises(ApiException):
+        _list_configmap_names(apis, "demo")
+
+
+def test_build_namespace_inventory_wires_configmap_names():
+    inventory = build_namespace_inventory(
+        "demo", [_workload()], [], [], [], configmap_names=["app-config"]
+    )
+
+    assert inventory.configmap_names == ["app-config"]
+
+
+def test_build_namespace_inventory_keeps_uncollected_configmap_names_none():
+    inventory = build_namespace_inventory("demo", [_workload()], [], [], [])
+
+    assert inventory.configmap_names is None
