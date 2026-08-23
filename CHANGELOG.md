@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/lukislp/homelab-autodoc/compare/v1.24.0...v1.25.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document node affinity, node selector, and tolerations ([39ecd29](https://github.com/lukislp/homelab-autodoc/commit/39ecd295c2936246eefe7cf62048e17455ef76a0))
+
 # [1.24.0](https://github.com/lukislp/homelab-autodoc/compare/v1.23.0...v1.24.0) (2026-08-23)
 
 
