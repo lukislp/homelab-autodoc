@@ -383,12 +383,13 @@ def _stat_row_html(chips: list[tuple[str, str, bool]]) -> str:
     return '<div class="stat-row">' + "".join(cells) + "</div>"
 
 
-def cluster_stat_chips(inventory: ClusterInventory, drift_count: int) -> str:
+def cluster_stat_chips(inventory: ClusterInventory, drift_count: int, findings_count: int) -> str:
     return _stat_row_html(
         [
             (str(len(inventory.namespaces)), "Namespaces", False),
             (str(len(inventory.nodes)), "Nodes", False),
             (str(len(inventory.storage_classes)), "Storage Classes", False),
+            (str(findings_count), "Findings", findings_count > 0),
             (str(drift_count), "Drift, Last Run", drift_count > 0),
         ]
     )
