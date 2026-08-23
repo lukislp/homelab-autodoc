@@ -23,6 +23,11 @@
   position: relative;
   box-sizing: border-box;
   overflow: hidden;
+  /* Hand ALL touch gestures inside the box to the pan/zoom script
+     (mermaid-pan-zoom.js): without this the browser consumes one-finger
+     drags as page scrolling and pinches as page zoom, and the diagram
+     never sees them - the reason touch panning didn't work on iPhone. */
+  touch-action: none;
   width: 100%;
   /* Sized so the WHOLE page fits one viewport: 100vh minus the chrome
      above the box. A flat 80vh always overshot that budget and forced the
