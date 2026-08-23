@@ -46,7 +46,7 @@ spec:
       serviceAccountName: default
       containers:
         - name: server
-          image: ghcr.io/lukislp/homelab-autodoc-server:1.24.0 # {"$imagepolicy": "flux-system:homelab-autodoc-server"}
+          image: ghcr.io/lukislp/homelab-autodoc-server:1.25.0 # {"$imagepolicy": "flux-system:homelab-autodoc-server"}
           ports:
             - containerPort: 8000
           env:
