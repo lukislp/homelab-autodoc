@@ -544,3 +544,41 @@ def cluster_card_facts(inventory: ClusterInventory, drift_count: int, findings_c
         f'<span class="{drift_class}">{_plural(findings_count, "finding")} · '
         f"{drift_count} drift last run</span>"
     )
+
+
+# Flux's kustomize/helm controllers label everything they apply; plain Helm
+# marks its releases via managed-by plus release annotations. All read from
+# labels/annotations the collector already gathers - no new inventory field.
+_FLUX_KUSTOMIZATION_NAME = "kustomize.toolkit.fluxcd.io/name"
+_FLUX_KUSTOMIZATION_NAMESPACE = "kustomize.toolkit.fluxcd.io/namespace"
+_FLUX_HELMRELEASE_NAME = "helm.toolkit.fluxcd.io/name"
+_FLUX_HELMRELEASE_NAMESPACE = "helm.toolkit.fluxcd.io/namespace"
+_HELM_MANAGED_BY = "app.kubernetes.io/managed-by"
+_HELM_RELEASE_ANNOTATION = "meta.helm.sh/release-name"
+
+
+def managed_by(app: App) -> str | None:
+    """Who owns this workload's manifest: a Flux Kustomization, a Flux
+    HelmRelease, a plain Helm release - or None when none of their markers
+    are present, which the caller renders as nothing rather than guessing
+    "manual" (an unmarked workload might still be applied by tooling this
+    heuristic doesn't know).
+    """
+
+    def flux_ref(name_label: str, namespace_label: str) -> str | None:
+        name = app.labels.get(name_label)
+        if not name:
+            return None
+        namespace = app.labels.get(namespace_label)
+        return f"{namespace}/{name}" if namespace else name
+
+    kustomization = flux_ref(_FLUX_KUSTOMIZATION_NAME, _FLUX_KUSTOMIZATION_NAMESPACE)
+    if kustomization:
+        return f"Flux Kustomization {kustomization}"
+    helm_release = flux_ref(_FLUX_HELMRELEASE_NAME, _FLUX_HELMRELEASE_NAMESPACE)
+    if helm_release:
+        return f"Flux HelmRelease {helm_release}"
+    if app.labels.get(_HELM_MANAGED_BY) == "Helm":
+        release = app.annotations.get(_HELM_RELEASE_ANNOTATION)
+        return f"Helm release {release}" if release else "Helm"
+    return None

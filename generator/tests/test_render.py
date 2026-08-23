@@ -169,3 +169,23 @@ def test_namespace_index_has_no_warnings_section_without_events():
     index = render_namespace_index(namespace, "homelab")
 
     assert "Recent Warnings" not in index
+
+
+def test_app_page_shows_the_gitops_owner_when_labeled(sample_app):
+    from dataclasses import replace
+
+    app = replace(sample_app, labels={"kustomize.toolkit.fluxcd.io/name": "homelab-autodoc-deploy"})
+    namespace = NamespaceInventory(name="demo", apps=[app])
+
+    page = render_app_page(app, namespace, "homelab")
+
+    assert '<span class="kind-badge">Flux Kustomization homelab-autodoc-deploy</span>' in page
+
+
+def test_app_page_has_no_owner_badge_without_markers(bare_app):
+    namespace = NamespaceInventory(name="demo", apps=[bare_app])
+
+    page = render_app_page(bare_app, namespace, "homelab")
+
+    assert "Flux" not in page
+    assert "Helm" not in page
