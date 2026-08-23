@@ -19,6 +19,15 @@ class EnvVar:
 
 
 @dataclass(frozen=True, slots=True)
+class ProbeInfo:
+    kind: str  # "liveness" | "readiness" | "startup"
+    # Human-readable description of what the probe checks, e.g.
+    # "HTTP :8080/healthz", "TCP :5432", "exec: pg_isready", "gRPC :9090".
+    check: str
+    period_seconds: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Container:
     name: str
     image: str
@@ -26,6 +35,8 @@ class Container:
     resource_requests: dict[str, str] = field(default_factory=dict)
     resource_limits: dict[str, str] = field(default_factory=dict)
     env: list[EnvVar] = field(default_factory=list)
+    is_init: bool = False
+    probes: list[ProbeInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,6 +126,29 @@ class RolloutStrategyInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class RoleBindingInfo:
+    name: str
+    role_kind: str  # "Role" | "ClusterRole" - what the binding grants
+    role_name: str
+
+
+@dataclass(frozen=True, slots=True)
+class ServiceAccountInfo:
+    name: str
+    role_bindings: list[RoleBindingInfo] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
+class PodDisruptionBudgetInfo:
+    name: str
+    # Exactly one of these is normally set (Kubernetes defaults maxUnavailable
+    # to 1 only when neither is specified) - kept as raw IntOrString strings
+    # (e.g. "1", "50%"), never parsed here.
+    min_available: str | None = None
+    max_unavailable: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class App:
     name: str
     kind: str
@@ -132,6 +166,13 @@ class App:
     autoscaler: Autoscaler | None = None
     nodes: list[str] = field(default_factory=list)  # names of nodes running this app's pods
     network_policies: list[NetworkPolicyInfo] = field(default_factory=list)
+    service_account: ServiceAccountInfo | None = None
+    pod_disruption_budgets: list[PodDisruptionBudgetInfo] = field(default_factory=list)
+    node_selector: dict[str, str] = field(default_factory=dict)
+    # Human-readable node affinity terms, e.g. "required: kubernetes.io/arch In (arm64)".
+    node_affinity: list[str] = field(default_factory=list)
+    # Human-readable toleration summaries, e.g. "node-role.kubernetes.io/master:NoSchedule".
+    tolerations: list[str] = field(default_factory=list)
     rollout_strategy: RolloutStrategyInfo | None = None
 
 
@@ -142,7 +183,34 @@ class NamespaceInventory:
 
 
 @dataclass(frozen=True, slots=True)
+class StorageClassInfo:
+    name: str
+    provisioner: str
+    reclaim_policy: str | None = None
+    volume_binding_mode: str | None = None
+    allow_volume_expansion: bool | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class NodeInfo:
+    name: str
+    architecture: str
+    kubelet_version: str
+    os_image: str
+    # Raw Kubernetes quantity strings (e.g. "4", "8065700Ki") - shown as-is,
+    # never parsed/summed here. Capacity is the node's total; allocatable is
+    # what's actually schedulable after the node's own system reservations.
+    capacity_cpu: str
+    capacity_memory: str
+    allocatable_cpu: str
+    allocatable_memory: str
+    ready: bool
+
+
+@dataclass(frozen=True, slots=True)
 class ClusterInventory:
     cluster_name: str
     collected_at: str
     namespaces: list[NamespaceInventory] = field(default_factory=list)
+    storage_classes: list[StorageClassInfo] = field(default_factory=list)
+    nodes: list[NodeInfo] = field(default_factory=list)

@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from autodoc_core.models import App, NetworkPolicyInfo, NetworkPolicyRule
+from autodoc_core.models import (
+    App,
+    NetworkPolicyInfo,
+    NetworkPolicyRule,
+    NodeInfo,
+    ServiceAccountInfo,
+    StorageClassInfo,
+)
 
 from autodoc_generator.facts import (
     autoscaler_table,
@@ -10,10 +17,16 @@ from autodoc_generator.facts import (
     ingresses_table,
     metadata_table,
     network_policies_table,
+    node_specs_table,
     nodes_table,
+    pod_disruption_budgets_table,
+    probes_table,
     resources_table,
     rollout_strategy_table,
+    scheduling_table,
+    service_account_table,
     services_table,
+    storage_classes_table,
     volumes_table,
 )
 
@@ -21,7 +34,16 @@ from autodoc_generator.facts import (
 def test_containers_table_lists_image_and_ports(sample_app):
     table = containers_table(sample_app)
 
-    assert "| web | `nginx:1.25.3` | 8080 |" in table
+    assert "| web | - | `nginx:1.25.3` | 8080 |" in table
+
+
+def test_containers_table_marks_init_containers_and_lists_them_first(sample_app):
+    table = containers_table(sample_app)
+
+    assert "| init-migrate | Yes | `migrate:1.0` | - |" in table
+    init_line = table.index("init-migrate")
+    web_line = table.index("| web |")
+    assert init_line < web_line
 
 
 def test_services_table_lists_port_mapping(sample_app):
@@ -46,6 +68,16 @@ def test_resources_table_lists_requests_and_limits(sample_app):
     table = resources_table(sample_app)
 
     assert "| web | 100m | 500m | 128Mi | 256Mi |" in table
+
+
+def test_probes_table_lists_type_check_and_period(sample_app):
+    table = probes_table(sample_app)
+
+    assert "| web | liveness | HTTP :8080/healthz | 10s |" in table
+
+
+def test_probes_table_empty_when_no_container_has_probes(bare_app):
+    assert probes_table(bare_app) == ""
 
 
 def test_env_table_never_shows_a_literal_value(sample_app):
@@ -100,6 +132,18 @@ def test_nodes_table_empty_when_app_has_no_nodes(bare_app):
     assert nodes_table(bare_app) == ""
 
 
+def test_scheduling_table_lists_selector_affinity_and_tolerations(sample_app):
+    table = scheduling_table(sample_app)
+
+    assert "| Node Selector | kubernetes.io/arch=arm64 |" in table
+    assert "| Node Affinity | required: kubernetes.io/arch In (arm64) |" in table
+    assert "| Toleration | node-role.kubernetes.io/master Exists:NoSchedule |" in table
+
+
+def test_scheduling_table_empty_when_app_has_no_constraints(bare_app):
+    assert scheduling_table(bare_app) == ""
+
+
 def test_network_policies_table_describes_ingress_peers_and_unrestricted_egress(sample_app):
     table = network_policies_table(sample_app)
 
@@ -144,6 +188,42 @@ def test_network_policies_table_empty_when_app_has_no_policies(bare_app):
     assert network_policies_table(bare_app) == ""
 
 
+def test_service_account_table_lists_name_and_roles(sample_app):
+    table = service_account_table(sample_app)
+
+    assert "| ServiceAccount | web-sa |" in table
+    assert "| Roles | ClusterRole/view |" in table
+
+
+def test_service_account_table_omits_roles_row_when_no_bindings():
+    app = App(
+        name="worker",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        service_account=ServiceAccountInfo(name="worker-sa"),
+    )
+
+    table = service_account_table(app)
+
+    assert "| ServiceAccount | worker-sa |" in table
+    assert "Roles" not in table
+
+
+def test_service_account_table_empty_when_app_has_no_service_account(bare_app):
+    assert service_account_table(bare_app) == ""
+
+
+def test_pod_disruption_budgets_table_lists_min_available(sample_app):
+    table = pod_disruption_budgets_table(sample_app)
+
+    assert "| web-pdb | 1 | - |" in table
+
+
+def test_pod_disruption_budgets_table_empty_when_app_has_no_pdbs(bare_app):
+    assert pod_disruption_budgets_table(bare_app) == ""
+
+
 def test_metadata_table_lists_created_owners_and_annotations(sample_app):
     table = metadata_table(sample_app)
 
@@ -168,6 +248,7 @@ def test_metadata_table_drops_noisy_last_applied_configuration_annotation():
 
 def test_all_tables_empty_for_bare_app(bare_app):
     assert containers_table(bare_app) == ""
+    assert probes_table(bare_app) == ""
     assert services_table(bare_app) == ""
     assert ingresses_table(bare_app) == ""
     assert volumes_table(bare_app) == ""
@@ -175,7 +256,77 @@ def test_all_tables_empty_for_bare_app(bare_app):
     assert autoscaler_table(bare_app) == ""
     assert rollout_strategy_table(bare_app) == ""
     assert nodes_table(bare_app) == ""
+    assert scheduling_table(bare_app) == ""
     assert network_policies_table(bare_app) == ""
+    assert service_account_table(bare_app) == ""
+    assert pod_disruption_budgets_table(bare_app) == ""
     assert env_table(bare_app) == ""
     assert dependencies_table(bare_app) == ""
     assert metadata_table(bare_app) == ""
+
+
+def test_storage_classes_table_lists_provisioner_and_policy():
+    storage_classes = [
+        StorageClassInfo(
+            name="local-path",
+            provisioner="rancher.io/local-path",
+            reclaim_policy="Delete",
+            volume_binding_mode="WaitForFirstConsumer",
+            allow_volume_expansion=False,
+        )
+    ]
+
+    table = storage_classes_table(storage_classes)
+
+    assert "| local-path | rancher.io/local-path | Delete | WaitForFirstConsumer | False |" in table
+
+
+def test_storage_classes_table_empty_for_no_storage_classes():
+    assert storage_classes_table([]) == ""
+
+
+def test_node_specs_table_lists_capacity_and_allocatable():
+    nodes = [
+        NodeInfo(
+            name="pi-node-1",
+            architecture="arm64",
+            kubelet_version="v1.31.2+k3s1",
+            os_image="Debian GNU/Linux 12 (bookworm)",
+            capacity_cpu="4",
+            capacity_memory="8065700Ki",
+            allocatable_cpu="3900m",
+            allocatable_memory="7500000Ki",
+            ready=True,
+        )
+    ]
+
+    table = node_specs_table(nodes)
+
+    assert (
+        "| pi-node-1 | Ready | arm64 | Debian GNU/Linux 12 (bookworm) | v1.31.2+k3s1 "
+        "| 4 | 3900m | 8065700Ki | 7500000Ki |" in table
+    )
+
+
+def test_node_specs_table_shows_not_ready_status():
+    nodes = [
+        NodeInfo(
+            name="pi-node-2",
+            architecture="arm64",
+            kubelet_version="v1.31.2+k3s1",
+            os_image="Debian GNU/Linux 12 (bookworm)",
+            capacity_cpu="4",
+            capacity_memory="8065700Ki",
+            allocatable_cpu="3900m",
+            allocatable_memory="7500000Ki",
+            ready=False,
+        )
+    ]
+
+    table = node_specs_table(nodes)
+
+    assert "| pi-node-2 | NotReady |" in table
+
+
+def test_node_specs_table_empty_for_no_nodes():
+    assert node_specs_table([]) == ""

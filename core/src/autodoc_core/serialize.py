@@ -20,9 +20,15 @@ from .models import (
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    NodeInfo,
+    PodDisruptionBudgetInfo,
+    ProbeInfo,
+    RoleBindingInfo,
     RolloutStrategyInfo,
+    ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
+    StorageClassInfo,
     Volume,
 )
 
@@ -50,6 +56,10 @@ def _config_reference_from_dict(d: dict) -> ConfigReference:
     return ConfigReference(kind=d["kind"], name=d["name"], via=d["via"])
 
 
+def _probe_from_dict(d: dict) -> ProbeInfo:
+    return ProbeInfo(kind=d["kind"], check=d["check"], period_seconds=d.get("period_seconds"))
+
+
 def _container_from_dict(d: dict) -> Container:
     return Container(
         name=d["name"],
@@ -58,6 +68,8 @@ def _container_from_dict(d: dict) -> Container:
         resource_requests=dict(d.get("resource_requests", {})),
         resource_limits=dict(d.get("resource_limits", {})),
         env=[_env_var_from_dict(e) for e in d.get("env", [])],
+        is_init=d.get("is_init", False),
+        probes=[_probe_from_dict(p) for p in d.get("probes", [])],
     )
 
 
@@ -124,6 +136,25 @@ def _network_policy_from_dict(d: dict) -> NetworkPolicyInfo:
     )
 
 
+def _role_binding_from_dict(d: dict) -> RoleBindingInfo:
+    return RoleBindingInfo(name=d["name"], role_kind=d["role_kind"], role_name=d["role_name"])
+
+
+def _service_account_from_dict(d: dict) -> ServiceAccountInfo:
+    return ServiceAccountInfo(
+        name=d["name"],
+        role_bindings=[_role_binding_from_dict(rb) for rb in d.get("role_bindings", [])],
+    )
+
+
+def _pdb_from_dict(d: dict) -> PodDisruptionBudgetInfo:
+    return PodDisruptionBudgetInfo(
+        name=d["name"],
+        min_available=d.get("min_available"),
+        max_unavailable=d.get("max_unavailable"),
+    )
+
+
 def _rollout_strategy_from_dict(d: dict) -> RolloutStrategyInfo:
     return RolloutStrategyInfo(
         strategy_type=d["strategy_type"],
@@ -135,6 +166,7 @@ def _rollout_strategy_from_dict(d: dict) -> RolloutStrategyInfo:
 
 def _app_from_dict(d: dict) -> App:
     autoscaler = d.get("autoscaler")
+    service_account = d.get("service_account")
     rollout_strategy = d.get("rollout_strategy")
     return App(
         name=d["name"],
@@ -153,6 +185,11 @@ def _app_from_dict(d: dict) -> App:
         autoscaler=_autoscaler_from_dict(autoscaler) if autoscaler else None,
         nodes=list(d.get("nodes", [])),
         network_policies=[_network_policy_from_dict(np) for np in d.get("network_policies", [])],
+        service_account=_service_account_from_dict(service_account) if service_account else None,
+        pod_disruption_budgets=[_pdb_from_dict(p) for p in d.get("pod_disruption_budgets", [])],
+        node_selector=dict(d.get("node_selector", {})),
+        node_affinity=list(d.get("node_affinity", [])),
+        tolerations=list(d.get("tolerations", [])),
         rollout_strategy=_rollout_strategy_from_dict(rollout_strategy)
         if rollout_strategy
         else None,
@@ -163,11 +200,37 @@ def _namespace_from_dict(d: dict) -> NamespaceInventory:
     return NamespaceInventory(name=d["name"], apps=[_app_from_dict(a) for a in d.get("apps", [])])
 
 
+def _storage_class_from_dict(d: dict) -> StorageClassInfo:
+    return StorageClassInfo(
+        name=d["name"],
+        provisioner=d["provisioner"],
+        reclaim_policy=d.get("reclaim_policy"),
+        volume_binding_mode=d.get("volume_binding_mode"),
+        allow_volume_expansion=d.get("allow_volume_expansion"),
+    )
+
+
+def _node_info_from_dict(d: dict) -> NodeInfo:
+    return NodeInfo(
+        name=d["name"],
+        architecture=d["architecture"],
+        kubelet_version=d["kubelet_version"],
+        os_image=d["os_image"],
+        capacity_cpu=d["capacity_cpu"],
+        capacity_memory=d["capacity_memory"],
+        allocatable_cpu=d["allocatable_cpu"],
+        allocatable_memory=d["allocatable_memory"],
+        ready=d["ready"],
+    )
+
+
 def from_dict(data: dict) -> ClusterInventory:
     return ClusterInventory(
         cluster_name=data["cluster_name"],
         collected_at=data["collected_at"],
         namespaces=[_namespace_from_dict(ns) for ns in data.get("namespaces", [])],
+        storage_classes=[_storage_class_from_dict(sc) for sc in data.get("storage_classes", [])],
+        nodes=[_node_info_from_dict(n) for n in data.get("nodes", [])],
     )
 
 
