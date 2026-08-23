@@ -11,6 +11,7 @@ from autodoc_core.models import (
     IngressRule,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    RolloutStrategyInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -83,6 +84,9 @@ def sample_app() -> App:
                 ],
             )
         ],
+        rollout_strategy=RolloutStrategyInfo(
+            strategy_type="RollingUpdate", max_surge="25%", max_unavailable="0"
+        ),
     )
 
 

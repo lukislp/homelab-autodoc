@@ -20,6 +20,7 @@ from .models import (
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    RolloutStrategyInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -123,8 +124,18 @@ def _network_policy_from_dict(d: dict) -> NetworkPolicyInfo:
     )
 
 
+def _rollout_strategy_from_dict(d: dict) -> RolloutStrategyInfo:
+    return RolloutStrategyInfo(
+        strategy_type=d["strategy_type"],
+        max_surge=d.get("max_surge"),
+        max_unavailable=d.get("max_unavailable"),
+        partition=d.get("partition"),
+    )
+
+
 def _app_from_dict(d: dict) -> App:
     autoscaler = d.get("autoscaler")
+    rollout_strategy = d.get("rollout_strategy")
     return App(
         name=d["name"],
         kind=d["kind"],
@@ -142,6 +153,9 @@ def _app_from_dict(d: dict) -> App:
         autoscaler=_autoscaler_from_dict(autoscaler) if autoscaler else None,
         nodes=list(d.get("nodes", [])),
         network_policies=[_network_policy_from_dict(np) for np in d.get("network_policies", [])],
+        rollout_strategy=_rollout_strategy_from_dict(rollout_strategy)
+        if rollout_strategy
+        else None,
     )
 
 

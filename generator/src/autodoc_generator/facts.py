@@ -84,6 +84,21 @@ def autoscaler_table(app: App) -> str:
     return "\n".join(rows)
 
 
+def rollout_strategy_table(app: App) -> str:
+    if app.rollout_strategy is None:
+        return ""
+    s = app.rollout_strategy
+    rows = [
+        "| Field | Value |",
+        "|---|---|",
+        f"| Strategy | {s.strategy_type} |",
+        f"| Max Surge | {s.max_surge or '-'} |",
+        f"| Max Unavailable | {s.max_unavailable or '-'} |",
+        f"| Partition | {s.partition if s.partition is not None else '-'} |",
+    ]
+    return "\n".join(rows)
+
+
 def nodes_table(app: App) -> str:
     if not app.nodes:
         return ""

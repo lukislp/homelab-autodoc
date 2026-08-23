@@ -103,6 +103,18 @@ class NetworkPolicyInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class RolloutStrategyInfo:
+    strategy_type: str  # "RollingUpdate" | "Recreate" | "OnDelete"
+    # Raw IntOrString strings (e.g. "25%", "1"), never parsed here. Deployment/
+    # DaemonSet use max_surge+max_unavailable; StatefulSet uses max_unavailable
+    # (only on newer clusters) and partition instead - a workload kind only
+    # ever populates the fields its own update strategy actually has.
+    max_surge: str | None = None
+    max_unavailable: str | None = None
+    partition: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class App:
     name: str
     kind: str
@@ -120,6 +132,7 @@ class App:
     autoscaler: Autoscaler | None = None
     nodes: list[str] = field(default_factory=list)  # names of nodes running this app's pods
     network_policies: list[NetworkPolicyInfo] = field(default_factory=list)
+    rollout_strategy: RolloutStrategyInfo | None = None
 
 
 @dataclass(frozen=True, slots=True)

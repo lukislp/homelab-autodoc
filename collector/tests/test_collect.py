@@ -6,7 +6,7 @@ itself is covered in test_workloads.py.
 from __future__ import annotations
 
 import pytest
-from autodoc_core.models import ConfigReference, Container
+from autodoc_core.models import ConfigReference, Container, RolloutStrategyInfo
 from kubernetes import client
 from kubernetes.client.exceptions import ApiException
 
@@ -34,6 +34,7 @@ def _workload(
     created_at: str | None = None,
     owners: list[str] | None = None,
     config_refs: frozenset[ConfigReference] = frozenset(),
+    rollout_strategy: RolloutStrategyInfo | None = None,
 ) -> NormalizedWorkload:
     return NormalizedWorkload(
         kind=kind,
@@ -48,6 +49,7 @@ def _workload(
         created_at=created_at,
         owners=owners or [],
         config_refs=config_refs,
+        rollout_strategy=rollout_strategy,
     )
 
 
@@ -552,6 +554,23 @@ def test_build_app_without_network_policies_leaves_list_empty():
     app = build_app(workload, [], [], [])
 
     assert app.network_policies == []
+
+
+def test_build_app_copies_rollout_strategy_from_workload():
+    strategy = RolloutStrategyInfo(strategy_type="RollingUpdate", max_surge="25%")
+    workload = _workload(rollout_strategy=strategy)
+
+    app = build_app(workload, [], [], [])
+
+    assert app.rollout_strategy == strategy
+
+
+def test_build_app_without_rollout_strategy_leaves_it_none():
+    workload = _workload()
+
+    app = build_app(workload, [], [], [])
+
+    assert app.rollout_strategy is None
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

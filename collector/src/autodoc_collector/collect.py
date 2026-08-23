@@ -283,6 +283,7 @@ def build_app(
             for np in (network_policies or [])
             if _network_policy_matches_workload(np, workload)
         ],
+        rollout_strategy=workload.rollout_strategy,
     )
 
 
