@@ -20,6 +20,7 @@ from autodoc_core.models import (
 from autodoc_generator.facts import (
     app_is_fully_ready,
     autoscaler_table,
+    cluster_card_facts,
     cluster_images_table,
     cluster_stat_chips,
     collection_freshness,
@@ -665,3 +666,68 @@ def test_cluster_images_table_empty_without_containers():
     inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-23T00:00:00+00:00")
 
     assert cluster_images_table(inventory) == ""
+
+
+def test_cluster_card_facts_lists_scale_versions_and_health():
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-23T00:00:00+00:00",
+        namespaces=[
+            NamespaceInventory(
+                name="demo",
+                apps=[App(name="web", kind="Deployment", replicas=1, ready_replicas=1)],
+            )
+        ],
+        nodes=[
+            NodeInfo(
+                name="pi-node-1",
+                architecture="arm64",
+                kubelet_version="v1.31.2+k3s1",
+                os_image="Debian",
+                capacity_cpu="4",
+                capacity_memory="8Gi",
+                allocatable_cpu="3900m",
+                allocatable_memory="7Gi",
+                ready=True,
+            )
+        ],
+    )
+
+    card = cluster_card_facts(inventory, drift_count=0, findings_count=3)
+
+    assert "1 namespace · 1 app · 1 node · v1.31.2+k3s1" in card
+    assert "3 findings · 0 drift last run" in card
+    assert "card-facts--warn" not in card
+
+
+def test_cluster_card_facts_warn_tints_nonzero_drift_only():
+    inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-23T00:00:00+00:00")
+
+    card = cluster_card_facts(inventory, drift_count=2, findings_count=0)
+
+    assert '<span class="card-facts card-facts--warn">0 findings · 2 drift last run</span>' in card
+
+
+def test_cluster_card_facts_shows_disagreeing_kubelet_versions():
+    def node(name: str, version: str) -> NodeInfo:
+        return NodeInfo(
+            name=name,
+            architecture="arm64",
+            kubelet_version=version,
+            os_image="Debian",
+            capacity_cpu="4",
+            capacity_memory="8Gi",
+            allocatable_cpu="4",
+            allocatable_memory="8Gi",
+            ready=True,
+        )
+
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-23T00:00:00+00:00",
+        nodes=[node("a", "v1.31.2+k3s1"), node("b", "v1.30.4+k3s1")],
+    )
+
+    card = cluster_card_facts(inventory, drift_count=0, findings_count=0)
+
+    assert "v1.30.4+k3s1 / v1.31.2+k3s1" in card

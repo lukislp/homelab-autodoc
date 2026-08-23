@@ -243,3 +243,17 @@
 .freshness--stale::after {
   content: " - collector has not pushed in over a day";
 }
+
+/* Compact fact lines on the root-index cluster cards (see
+   facts.cluster_card_facts) - scale on one line, health on the next. */
+
+.card-facts {
+  display: inline-block;
+  font-size: 0.66rem;
+  color: var(--md-default-fg-color--light);
+  margin-bottom: 0.15rem;
+}
+
+.card-facts--warn {
+  color: #e3ac4c;
+}

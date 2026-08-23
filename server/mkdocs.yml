@@ -42,4 +42,4 @@ extra_javascript:
 extra_css:
   - stylesheets/mermaid-pan-zoom.css?v=5
   - stylesheets/theme.css?v=1
-  - stylesheets/hub-nav.css?v=6
+  - stylesheets/hub-nav.css?v=7

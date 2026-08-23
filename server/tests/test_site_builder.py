@@ -84,6 +84,10 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     assert "[homelab-autodoc](../index.md) · [homelab](index.md) · **Nodes**" in nodes_page
     assert "[Open Admin →](/admin/)" in root_index
     assert "[Browse →](homelab/index.md)" in root_index
+    # The sample cluster: one namespace, one app, one node - shown as fleet
+    # facts on the card, with the findings count computed live.
+    assert "1 namespace · 1 app · 1 node · v1.31.2+k3s1" in root_index
+    assert "drift last run" in root_index
     assert 'data-collected-at="2026-08-22T00:00:00+00:00"' in root_index
     assert '<div class="grid cards" markdown>' in root_index
 

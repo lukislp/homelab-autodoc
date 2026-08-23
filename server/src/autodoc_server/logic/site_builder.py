@@ -364,14 +364,17 @@ def _write_root_index(storage: Storage) -> None:
     ]
     for cluster_name in storage.list_clusters():
         # list_clusters only names clusters whose inventory.json exists, so
-        # this load can't 404; collected_at feeds the card's freshness stamp.
+        # this load can't 404; the inventory feeds the card's fleet facts and
+        # freshness stamp - the card is a dashboard tile, not just a link.
         inventory = storage.load_inventory(cluster_name)
+        drift_count = len(_last_run_changes(storage, cluster_name))
+        findings_count = len(findings.evaluate_cluster(inventory))
         lines += [
             f"-   __{cluster_name}__",
             "",
             "    ---",
             "",
-            f"    Living documentation for the `{cluster_name}` cluster.",
+            f"    {facts.cluster_card_facts(inventory, drift_count, findings_count)}",
             "",
             f"    {facts.collection_freshness(inventory.collected_at)}",
             "",
