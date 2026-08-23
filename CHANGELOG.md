@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/lukislp/homelab-autodoc/compare/v1.41.8...v1.42.0) (2026-08-23)
+
+
+### Features
+
+* **server:** touch gestures for diagram pan/zoom ([3a87b08](https://github.com/lukislp/homelab-autodoc/commit/3a87b080fd6bfa4389d6031c36522acfe41b6b08))
+
 ## [1.41.8](https://github.com/lukislp/homelab-autodoc/compare/v1.41.7...v1.41.8) (2026-08-23)
 
 
