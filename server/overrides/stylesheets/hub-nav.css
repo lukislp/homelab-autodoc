@@ -13,6 +13,14 @@
   font-size: 0.7rem;
   color: var(--md-default-fg-color--light);
   margin-bottom: 1.2rem;
+  /* Pinned right under Material's sticky header, so you always see where
+     you are while the content scrolls beneath. The opaque background is
+     load-bearing: without it the content shows through as it passes. */
+  position: sticky;
+  top: 2.4rem;
+  z-index: 3;
+  background: var(--md-default-bg-color);
+  padding: 0.4rem 0;
 }
 
 .ns-breadcrumb a {
