@@ -14,6 +14,7 @@ from autodoc_core.models import (
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    NodeInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -106,6 +107,19 @@ def _sample_inventory() -> ClusterInventory:
                 ],
             )
         ],
+        nodes=[
+            NodeInfo(
+                name="pi-node-1",
+                architecture="arm64",
+                kubelet_version="v1.31.2+k3s1",
+                os_image="Debian GNU/Linux 12 (bookworm)",
+                capacity_cpu="4",
+                capacity_memory="8065700Ki",
+                allocatable_cpu="3900m",
+                allocatable_memory="7500000Ki",
+                ready=True,
+            )
+        ],
     )
 
 
@@ -192,3 +206,11 @@ def test_app_without_scheduling_constraints_round_trips_to_empty_defaults():
     assert app.node_selector == {}
     assert app.node_affinity == []
     assert app.tolerations == []
+
+
+def test_cluster_inventory_without_nodes_round_trips_as_empty_list():
+    inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-22T00:00:00+00:00")
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.nodes == []

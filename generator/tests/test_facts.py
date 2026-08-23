@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from autodoc_core.models import App, NetworkPolicyInfo, NetworkPolicyRule
+from autodoc_core.models import App, NetworkPolicyInfo, NetworkPolicyRule, NodeInfo
 
 from autodoc_generator.facts import (
     autoscaler_table,
@@ -10,6 +10,7 @@ from autodoc_generator.facts import (
     ingresses_table,
     metadata_table,
     network_policies_table,
+    node_specs_table,
     nodes_table,
     resources_table,
     scheduling_table,
@@ -178,3 +179,50 @@ def test_all_tables_empty_for_bare_app(bare_app):
     assert env_table(bare_app) == ""
     assert dependencies_table(bare_app) == ""
     assert metadata_table(bare_app) == ""
+
+
+def test_node_specs_table_lists_capacity_and_allocatable():
+    nodes = [
+        NodeInfo(
+            name="pi-node-1",
+            architecture="arm64",
+            kubelet_version="v1.31.2+k3s1",
+            os_image="Debian GNU/Linux 12 (bookworm)",
+            capacity_cpu="4",
+            capacity_memory="8065700Ki",
+            allocatable_cpu="3900m",
+            allocatable_memory="7500000Ki",
+            ready=True,
+        )
+    ]
+
+    table = node_specs_table(nodes)
+
+    assert (
+        "| pi-node-1 | Ready | arm64 | Debian GNU/Linux 12 (bookworm) | v1.31.2+k3s1 "
+        "| 4 | 3900m | 8065700Ki | 7500000Ki |" in table
+    )
+
+
+def test_node_specs_table_shows_not_ready_status():
+    nodes = [
+        NodeInfo(
+            name="pi-node-2",
+            architecture="arm64",
+            kubelet_version="v1.31.2+k3s1",
+            os_image="Debian GNU/Linux 12 (bookworm)",
+            capacity_cpu="4",
+            capacity_memory="8065700Ki",
+            allocatable_cpu="3900m",
+            allocatable_memory="7500000Ki",
+            ready=False,
+        )
+    ]
+
+    table = node_specs_table(nodes)
+
+    assert "| pi-node-2 | NotReady |" in table
+
+
+def test_node_specs_table_empty_for_no_nodes():
+    assert node_specs_table([]) == ""

@@ -134,7 +134,24 @@ class NamespaceInventory:
 
 
 @dataclass(frozen=True, slots=True)
+class NodeInfo:
+    name: str
+    architecture: str
+    kubelet_version: str
+    os_image: str
+    # Raw Kubernetes quantity strings (e.g. "4", "8065700Ki") - shown as-is,
+    # never parsed/summed here. Capacity is the node's total; allocatable is
+    # what's actually schedulable after the node's own system reservations.
+    capacity_cpu: str
+    capacity_memory: str
+    allocatable_cpu: str
+    allocatable_memory: str
+    ready: bool
+
+
+@dataclass(frozen=True, slots=True)
 class ClusterInventory:
     cluster_name: str
     collected_at: str
     namespaces: list[NamespaceInventory] = field(default_factory=list)
+    nodes: list[NodeInfo] = field(default_factory=list)

@@ -14,6 +14,7 @@ from autodoc_collector.collect import (
     _autoscaler_for_workload,
     _build_autoscaler,
     _build_network_policy,
+    _build_node,
     _list_hpas,
     _list_httproutes,
     _network_policy_matches_workload,
@@ -582,6 +583,61 @@ def test_build_app_without_scheduling_constraints_leaves_empty_defaults():
     assert app.node_selector == {}
     assert app.node_affinity == []
     assert app.tolerations == []
+
+
+def _node(
+    name: str = "pi-node-1",
+    architecture: str = "arm64",
+    kubelet_version: str = "v1.31.2+k3s1",
+    os_image: str = "Debian GNU/Linux 12 (bookworm)",
+    capacity: dict[str, str] | None = None,
+    allocatable: dict[str, str] | None = None,
+    ready: bool = True,
+) -> client.V1Node:
+    return client.V1Node(
+        metadata=client.V1ObjectMeta(name=name),
+        status=client.V1NodeStatus(
+            node_info=client.V1NodeSystemInfo(
+                architecture=architecture,
+                boot_id="boot-1",
+                container_runtime_version="containerd://1.7.0",
+                kernel_version="6.6.0",
+                kube_proxy_version=kubelet_version,
+                kubelet_version=kubelet_version,
+                machine_id="machine-1",
+                operating_system="linux",
+                os_image=os_image,
+                system_uuid="uuid-1",
+            ),
+            capacity=capacity or {"cpu": "4", "memory": "8065700Ki"},
+            allocatable=allocatable or {"cpu": "3900m", "memory": "7500000Ki"},
+            conditions=[client.V1NodeCondition(type="Ready", status="True" if ready else "False")],
+        ),
+    )
+
+
+def test_build_node_extracts_spec_and_capacity():
+    node = _node(name="pi-node-1", ready=True)
+
+    info = _build_node(node)
+
+    assert info.name == "pi-node-1"
+    assert info.architecture == "arm64"
+    assert info.kubelet_version == "v1.31.2+k3s1"
+    assert info.os_image == "Debian GNU/Linux 12 (bookworm)"
+    assert info.capacity_cpu == "4"
+    assert info.capacity_memory == "8065700Ki"
+    assert info.allocatable_cpu == "3900m"
+    assert info.allocatable_memory == "7500000Ki"
+    assert info.ready is True
+
+
+def test_build_node_not_ready_when_ready_condition_is_false():
+    node = _node(ready=False)
+
+    info = _build_node(node)
+
+    assert info.ready is False
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

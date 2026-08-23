@@ -18,6 +18,7 @@ from autodoc_core.models import (
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    NodeInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -342,6 +343,21 @@ def _list_hpas(apis: K8sApis, namespace: str) -> list[client.V2HorizontalPodAuto
         raise
 
 
+def _build_node(raw: client.V1Node) -> NodeInfo:
+    ready = any(c.type == "Ready" and c.status == "True" for c in (raw.status.conditions or []))
+    return NodeInfo(
+        name=raw.metadata.name,
+        architecture=raw.status.node_info.architecture,
+        kubelet_version=raw.status.node_info.kubelet_version,
+        os_image=raw.status.node_info.os_image,
+        capacity_cpu=raw.status.capacity.get("cpu", ""),
+        capacity_memory=raw.status.capacity.get("memory", ""),
+        allocatable_cpu=raw.status.allocatable.get("cpu", ""),
+        allocatable_memory=raw.status.allocatable.get("memory", ""),
+        ready=ready,
+    )
+
+
 def collect_cluster_inventory(
     cluster_name: str,
     namespaces: list[str] | None = None,
@@ -388,8 +404,11 @@ def collect_cluster_inventory(
             )
         )
 
+    nodes = [_build_node(n) for n in apis.core_v1.list_node().items]
+
     return ClusterInventory(
         cluster_name=cluster_name,
         collected_at=datetime.now(UTC).isoformat(),
         namespaces=namespace_inventories,
+        nodes=nodes,
     )
