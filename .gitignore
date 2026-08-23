@@ -14,8 +14,9 @@ node_modules/
 dist/
 .vite/
 
-# MkDocs
+# MkDocs (both fully regenerated - docs_src by the server from /data, site by mkdocs build)
 site/
+server/docs_src/
 
 # Secrets / local config
 .env
