@@ -10,7 +10,7 @@ from autodoc_core.models import App, ClusterInventory, NamespaceInventory
 from autodoc_generator import changelog as changelog_render
 from autodoc_generator import diagrams, facts, findings, navigation, render
 from autodoc_generator.llm import LLMClient
-from autodoc_generator.prose import generate_summary
+from autodoc_generator.prose import generate_drift_summary, generate_summary
 
 from .storage import Storage
 
@@ -67,7 +67,7 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
     _write_images_page(storage, cluster_name, inventory)
     _write_storage_classes_page(storage, cluster_name, inventory)
     _write_nodes_page(storage, cluster_name, inventory)
-    _write_changelog_page(storage, cluster_name)
+    _write_changelog_page(storage, cluster_name, llm)
     _write_root_index(storage)
 
 
@@ -288,7 +288,28 @@ def _write_nodes_page(storage: Storage, cluster_name: str, inventory: ClusterInv
     (storage.docs_dir / cluster_name / "nodes.md").write_text(page, encoding="utf-8")
 
 
-def _write_changelog_page(storage: Storage, cluster_name: str) -> None:
+# How many of the most recent collector runs feed the changelog's LLM
+# summary - enough for a "what happened lately" paragraph, small enough that
+# one prompt never grows with the changelog's full history.
+_DRIFT_SUMMARY_RECENT_RUNS = 5
+
+
+def _safe_generate_drift_summary(
+    cluster_name: str, recent: list[tuple[str, list[Change]]], llm: LLMClient
+) -> str | None:
+    """Same degradation contract as _safe_generate_summary: the deterministic
+    changelog entries always render regardless, prose is optional.
+    """
+    try:
+        return generate_drift_summary(recent, llm)
+    except Exception:
+        logger.warning(
+            "LLM drift summary failed for cluster %r, continuing without it", cluster_name
+        )
+        return None
+
+
+def _write_changelog_page(storage: Storage, cluster_name: str, llm: LLMClient | None) -> None:
     entries = storage.load_changelog_entries(cluster_name)
     rendered = [
         changelog_render.render_changelog_entry(
@@ -296,6 +317,14 @@ def _write_changelog_page(storage: Storage, cluster_name: str) -> None:
         )
         for entry in reversed(entries)
     ]
+    summary = None
+    recent = [
+        (entry["collected_at"], [Change(**c) for c in entry["changes"]])
+        for entry in entries[-_DRIFT_SUMMARY_RECENT_RUNS:]
+        if entry["changes"]
+    ]
+    if llm and recent:
+        summary = _safe_generate_drift_summary(cluster_name, recent, llm)
     # render_changelog_page already builds its own "# {cluster} - Changelog"
     # heading, so this only prepends front matter + breadcrumb rather than
     # going through _cluster_content_page (which would add a second heading).
@@ -306,7 +335,7 @@ def _write_changelog_page(storage: Storage, cluster_name: str) -> None:
             f'<p class="ns-breadcrumb" markdown>'
             f"{navigation.breadcrumb(cluster_name, current='changelog')}</p>",
             "",
-            changelog_render.render_changelog_page(cluster_name, rendered),
+            changelog_render.render_changelog_page(cluster_name, rendered, summary),
             "",
             navigation.cluster_page_links("changelog"),
         ]

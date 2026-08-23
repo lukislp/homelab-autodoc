@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from autodoc_generator.prose import build_prompt, generate_summary
+from autodoc_core.diff import Change
+
+from autodoc_generator.prose import (
+    build_drift_prompt,
+    build_prompt,
+    generate_drift_summary,
+    generate_summary,
+)
 
 
 class _FakeLLM:
@@ -41,3 +48,39 @@ def test_generate_summary_sends_the_built_prompt_and_returns_the_llm_response(sa
 
     assert summary == "Runs nginx behind an Ingress with persistent storage."
     assert llm.received_prompt == build_prompt(sample_app)
+
+
+def test_build_drift_prompt_lists_changes_with_shared_labels():
+    entries = [
+        (
+            "2026-08-22T02:00:00+00:00",
+            [
+                Change(
+                    kind="app_changed",
+                    namespace="demo",
+                    app_name="web",
+                    details=["replicas: 2 -> 3"],
+                )
+            ],
+        ),
+        ("2026-08-23T02:00:00+00:00", [Change(kind="app_added", namespace="demo", app_name="api")]),
+    ]
+
+    prompt = build_drift_prompt(entries)
+
+    assert "2026-08-22T02:00:00+00:00: demo/web changed" in prompt
+    assert "  - replicas: 2 -> 3" in prompt
+    assert "2026-08-23T02:00:00+00:00: demo/api added" in prompt
+    assert "Use ONLY the changes listed below" in prompt
+
+
+def test_generate_drift_summary_sends_the_drift_prompt():
+    llm = _FakeLLM("Two apps changed.")
+    entries = [
+        ("2026-08-23T02:00:00+00:00", [Change(kind="app_added", namespace="d", app_name="a")])
+    ]
+
+    summary = generate_drift_summary(entries, llm)
+
+    assert summary == "Two apps changed."
+    assert llm.received_prompt == build_drift_prompt(entries)

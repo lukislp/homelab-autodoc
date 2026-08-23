@@ -179,6 +179,52 @@ def test_regenerate_cluster_docs_writes_images_page(tmp_path, sample_inventory):
     assert "| `nginx:1.25.3` | docker.io | demo/web |" in images_page
 
 
+class _FakeLLM:
+    """regenerate_cluster_docs drives every LLM prompt through one client -
+    the drift-summary prompt is recognized by its own instruction text."""
+
+    def generate(self, prompt: str) -> str:
+        if "configuration drift" in prompt:
+            assert "demo/web" in prompt  # the drift facts actually reach the LLM
+            return "The web app scaled up."
+        return "App summary prose."
+
+
+def test_changelog_page_gets_an_llm_summary_over_recent_drift(tmp_path, sample_inventory):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", sample_inventory)
+    storage.append_changelog_entry(
+        "homelab",
+        "2026-08-22T02:00:00+00:00",
+        [
+            {
+                "kind": "app_changed",
+                "namespace": "demo",
+                "app_name": "web",
+                "details": ["replicas: 2 -> 3"],
+            }
+        ],
+    )
+
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=_FakeLLM())
+
+    changelog_page = (storage.docs_dir / "homelab" / "changelog.md").read_text(encoding="utf-8")
+    assert "## Summary (AI-generated)" in changelog_page
+    assert "The web app scaled up." in changelog_page
+    # The deterministic entry still renders in full below the prose.
+    assert "replicas: 2 -> 3" in changelog_page
+
+
+def test_changelog_page_without_drift_entries_skips_the_llm_summary(tmp_path, sample_inventory):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", sample_inventory)
+
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=_FakeLLM())
+
+    changelog_page = (storage.docs_dir / "homelab" / "changelog.md").read_text(encoding="utf-8")
+    assert "Summary (AI-generated)" not in changelog_page
+
+
 def test_regenerate_cluster_docs_writes_changelog_page(tmp_path, sample_inventory):
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
     storage.save_inventory("homelab", sample_inventory)

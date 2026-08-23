@@ -1,11 +1,13 @@
-"""The only module allowed to talk to an LLM. build_prompt is pure and testable
-on its own; generate_summary is the thin call on top of it.
+"""The only module allowed to talk to an LLM. The build_*_prompt functions are
+pure and testable on their own; the generate_* functions are thin calls on top.
 """
 
 from __future__ import annotations
 
+from autodoc_core.diff import Change
 from autodoc_core.models import App
 
+from .changelog import KIND_LABELS
 from .llm import LLMClient
 
 _INSTRUCTIONS = (
@@ -38,3 +40,30 @@ def build_prompt(app: App) -> str:
 
 def generate_summary(app: App, llm: LLMClient) -> str:
     return llm.generate(build_prompt(app))
+
+
+_DRIFT_INSTRUCTIONS = (
+    "You are summarizing recent configuration drift in a Kubernetes cluster for "
+    "its documentation changelog. Use ONLY the changes listed below - never invent "
+    "resources, causes, or effects not explicitly given. Group related changes "
+    "rather than repeating each line. Write 2-4 plain sentences, no headings, no lists."
+)
+
+
+def build_drift_prompt(entries: list[tuple[str, list[Change]]]) -> str:
+    """`entries` is (collected_at, changes) per collector run, oldest first -
+    the caller decides how many recent runs are worth summarizing. The lines
+    use the same labels the rendered changelog shows (KIND_LABELS), so the
+    prose and the facts below it speak the same language.
+    """
+    lines = []
+    for collected_at, changes in entries:
+        for change in changes:
+            label = KIND_LABELS.get(change.kind, change.kind)
+            lines.append(f"{collected_at}: {change.namespace}/{change.app_name} {label}")
+            lines.extend(f"  - {detail}" for detail in change.details)
+    return _DRIFT_INSTRUCTIONS + "\n\n" + "\n".join(lines)
+
+
+def generate_drift_summary(entries: list[tuple[str, list[Change]]], llm: LLMClient) -> str:
+    return llm.generate(build_drift_prompt(entries))
