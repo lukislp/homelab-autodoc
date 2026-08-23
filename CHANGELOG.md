@@ -1,3 +1,10 @@
+## [1.15.1](https://github.com/lukislp/homelab-autodoc/compare/v1.15.0...v1.15.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **docs:** explicitly bound the sidebar nav to its own scroll area ([a8d3a8f](https://github.com/lukislp/homelab-autodoc/commit/a8d3a8fbd2a8f74599b12f59cc4f4b035fb91a33))
+
 # [1.15.0](https://github.com/lukislp/homelab-autodoc/compare/v1.14.3...v1.15.0) (2026-08-22)
 
 
