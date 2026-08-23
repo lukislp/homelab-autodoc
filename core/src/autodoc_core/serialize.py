@@ -20,6 +20,7 @@ from .models import (
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    PodDisruptionBudgetInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -123,6 +124,14 @@ def _network_policy_from_dict(d: dict) -> NetworkPolicyInfo:
     )
 
 
+def _pdb_from_dict(d: dict) -> PodDisruptionBudgetInfo:
+    return PodDisruptionBudgetInfo(
+        name=d["name"],
+        min_available=d.get("min_available"),
+        max_unavailable=d.get("max_unavailable"),
+    )
+
+
 def _app_from_dict(d: dict) -> App:
     autoscaler = d.get("autoscaler")
     return App(
@@ -142,6 +151,7 @@ def _app_from_dict(d: dict) -> App:
         autoscaler=_autoscaler_from_dict(autoscaler) if autoscaler else None,
         nodes=list(d.get("nodes", [])),
         network_policies=[_network_policy_from_dict(np) for np in d.get("network_policies", [])],
+        pod_disruption_budgets=[_pdb_from_dict(p) for p in d.get("pod_disruption_budgets", [])],
     )
 
 
