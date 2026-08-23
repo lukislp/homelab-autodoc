@@ -29,6 +29,7 @@ from autodoc_core.models import (
     ServicePort,
     StorageClassInfo,
     Volume,
+    WarningEventInfo,
 )
 from kubernetes import client
 from kubernetes.client.exceptions import ApiException
@@ -339,6 +340,47 @@ def _build_limit_range(raw: client.V1LimitRange) -> LimitRangeInfo:
     )
 
 
+# Enough to show what's currently unhealthy without turning the inventory into
+# an event log - events are transient by nature (the API server prunes them
+# after ~1h anyway) and only the most recent ones carry signal.
+_MAX_WARNING_EVENTS_PER_NAMESPACE = 20
+
+
+def _build_warning_event(raw: client.CoreV1Event) -> WarningEventInfo:
+    # An event carries up to three timestamps depending on how it was emitted
+    # (series-compressed events use last_timestamp, one-shots event_time);
+    # creation_timestamp is the always-present fallback.
+    timestamp = raw.last_timestamp or raw.event_time
+    if timestamp is None and raw.metadata is not None:
+        timestamp = raw.metadata.creation_timestamp
+    involved = raw.involved_object
+    object_ref = f"{involved.kind}/{involved.name}" if involved else "unknown"
+    return WarningEventInfo(
+        reason=raw.reason or "Unknown",
+        object_ref=object_ref,
+        message=(raw.message or "").strip(),
+        count=raw.count or 1,
+        last_seen=timestamp.isoformat() if timestamp else None,
+    )
+
+
+def _list_warning_events(apis: K8sApis, namespace: str) -> list[WarningEventInfo] | None:
+    """Same None-on-403 semantics as _list_configmap_names: the ClusterRole
+    may predate the events grant, and "unknown" must stay distinguishable
+    from "no warnings".
+    """
+    try:
+        raw = apis.core_v1.list_namespaced_event(namespace, field_selector="type=Warning").items
+    except ApiException as e:
+        if e.status == 403:
+            return None
+        raise
+    events = sorted(
+        (_build_warning_event(ev) for ev in raw), key=lambda ev: ev.last_seen or "", reverse=True
+    )
+    return events[:_MAX_WARNING_EVENTS_PER_NAMESPACE]
+
+
 def _list_configmap_names(apis: K8sApis, namespace: str) -> list[str] | None:
     """Existence only - the names feed the dangling-reference check, contents
     are never read past this call and never persisted. Secrets are
@@ -442,6 +484,7 @@ def build_namespace_inventory(
     resource_quotas: list[client.V1ResourceQuota] | None = None,
     limit_ranges: list[client.V1LimitRange] | None = None,
     configmap_names: list[str] | None = None,
+    warning_events: list[WarningEventInfo] | None = None,
 ) -> NamespaceInventory:
     apps = [
         build_app(
@@ -466,6 +509,7 @@ def build_namespace_inventory(
         # None stays None here ("not collected"), unlike the or-[] fields
         # above - see the model's own comment on the distinction.
         configmap_names=configmap_names,
+        warning_events=warning_events,
     )
 
 
@@ -574,6 +618,7 @@ def collect_cluster_inventory(
         resource_quotas = apis.core_v1.list_namespaced_resource_quota(namespace).items
         limit_ranges = apis.core_v1.list_namespaced_limit_range(namespace).items
         configmap_names = _list_configmap_names(apis, namespace)
+        warning_events = _list_warning_events(apis, namespace)
         namespace_inventories.append(
             build_namespace_inventory(
                 namespace,
@@ -590,6 +635,7 @@ def collect_cluster_inventory(
                 resource_quotas,
                 limit_ranges,
                 configmap_names,
+                warning_events,
             )
         )
 

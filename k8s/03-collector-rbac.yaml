@@ -25,7 +25,8 @@ rules:
   # inventory, never contents). "secrets" is deliberately ABSENT even though
   # the same check would apply there: listing secrets returns their full
   # values at the API level, and this collector's no-secret-access guarantee
-  # is worth more than flagging a dangling Secret reference.
+  # is worth more than flagging a dangling Secret reference. "events" feeds
+  # the per-namespace Recent Warnings table.
   - apiGroups: [""]
     resources:
       [
@@ -37,6 +38,7 @@ rules:
         "resourcequotas",
         "limitranges",
         "configmaps",
+        "events",
       ]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]

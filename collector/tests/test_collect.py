@@ -20,9 +20,11 @@ from autodoc_collector.collect import (
     _build_pdb,
     _build_resource_quota,
     _build_storage_class,
+    _build_warning_event,
     _list_configmap_names,
     _list_hpas,
     _list_httproutes,
+    _list_warning_events,
     _network_policy_matches_workload,
     _node_names_for_workload,
     _pdb_matches_workload,
@@ -1097,3 +1099,110 @@ def test_build_namespace_inventory_keeps_uncollected_configmap_names_none():
     inventory = build_namespace_inventory("demo", [_workload()], [], [], [])
 
     assert inventory.configmap_names is None
+
+
+def _event(
+    reason: str = "BackOff",
+    last_timestamp=None,
+    event_time=None,
+    creation=None,
+    count: int | None = 3,
+) -> client.CoreV1Event:
+    return client.CoreV1Event(
+        metadata=client.V1ObjectMeta(name="evt", creation_timestamp=creation),
+        involved_object=client.V1ObjectReference(kind="Pod", name="web-abc"),
+        reason=reason,
+        message="Back-off restarting failed container",
+        count=count,
+        last_timestamp=last_timestamp,
+        event_time=event_time,
+    )
+
+
+class _FakeCoreV1Events:
+    def __init__(self, events=None, exception: ApiException | None = None):
+        self._events = events or []
+        self._exception = exception
+        self.received_field_selector: str | None = None
+
+    def list_namespaced_event(self, namespace: str, field_selector: str | None = None):
+        if self._exception:
+            raise self._exception
+        self.received_field_selector = field_selector
+        return client.CoreV1EventList(items=self._events)
+
+
+def test_build_warning_event_prefers_last_timestamp():
+    from datetime import UTC, datetime
+
+    event = _event(
+        last_timestamp=datetime(2026, 8, 23, 1, 0, tzinfo=UTC),
+        event_time=datetime(2026, 8, 23, 2, 0, tzinfo=UTC),
+    )
+
+    info = _build_warning_event(event)
+
+    assert info.last_seen == "2026-08-23T01:00:00+00:00"
+    assert info.reason == "BackOff"
+    assert info.object_ref == "Pod/web-abc"
+    assert info.count == 3
+
+
+def test_build_warning_event_falls_back_to_creation_timestamp():
+    from datetime import UTC, datetime
+
+    event = _event(creation=datetime(2026, 8, 23, 3, 0, tzinfo=UTC))
+
+    info = _build_warning_event(event)
+
+    assert info.last_seen == "2026-08-23T03:00:00+00:00"
+
+
+def test_build_warning_event_defaults_count_to_one():
+    info = _build_warning_event(_event(count=None))
+
+    assert info.count == 1
+
+
+def test_list_warning_events_filters_sorts_and_caps():
+    from datetime import UTC, datetime
+
+    events = [
+        _event(last_timestamp=datetime(2026, 8, 23, hour, 0, tzinfo=UTC)) for hour in range(23)
+    ]
+    core_v1 = _FakeCoreV1Events(events=events)
+
+    result = _list_warning_events(_FakeApisWithCoreV1(core_v1), "demo")
+
+    assert core_v1.received_field_selector == "type=Warning"
+    assert len(result) == 20  # capped
+    assert result[0].last_seen == "2026-08-23T22:00:00+00:00"  # newest first
+
+
+def test_list_warning_events_returns_none_when_rbac_denies():
+    apis = _FakeApisWithCoreV1(_FakeCoreV1Events(exception=ApiException(status=403)))
+
+    assert _list_warning_events(apis, "demo") is None
+
+
+def test_list_warning_events_reraises_non_403_errors():
+    apis = _FakeApisWithCoreV1(_FakeCoreV1Events(exception=ApiException(status=500)))
+
+    with pytest.raises(ApiException):
+        _list_warning_events(apis, "demo")
+
+
+def test_build_namespace_inventory_wires_warning_events():
+    from autodoc_core.models import WarningEventInfo
+
+    event = WarningEventInfo(reason="BackOff", object_ref="Pod/x", message="m", count=1)
+
+    inventory = build_namespace_inventory("demo", [_workload()], [], [], [], warning_events=[event])
+
+    assert inventory.warning_events == [event]
+
+
+def test_build_namespace_inventory_keeps_uncollected_warning_events_none():
+    inventory = build_namespace_inventory("demo", [_workload()], [], [], [])
+
+    assert inventory.warning_events is None

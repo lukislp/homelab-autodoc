@@ -332,6 +332,30 @@ def dependency_usage_table(namespace: NamespaceInventory) -> str:
     return "\n".join(["| Kind | Name | Used By |", "|---|---|---|", *rows])
 
 
+_MAX_EVENT_MESSAGE_LENGTH = 160
+
+
+def warning_events_table(namespace: NamespaceInventory) -> str:
+    """Recent Warning-type events, newest first (the collector already caps
+    and orders them). Empty for both "collected, none present" and "not
+    collected" - a namespace hub has no room for an unknown-vs-clean
+    distinction, and rendering nothing is the honest default for both.
+    """
+    if not namespace.warning_events:
+        return ""
+    rows = []
+    for event in namespace.warning_events:
+        last_seen = format_timestamp(event.last_seen) if event.last_seen else "-"
+        message = event.message
+        if len(message) > _MAX_EVENT_MESSAGE_LENGTH:
+            message = message[:_MAX_EVENT_MESSAGE_LENGTH] + "…"
+        rows.append(
+            f"| {last_seen} | {event.object_ref} | {event.reason} | {event.count} | {message} |"
+        )
+    header = "| Last Seen | Object | Reason | Count | Message |"
+    return "\n".join([header, "|---|---|---|---|---|", *rows])
+
+
 def resource_quotas_table(namespace: NamespaceInventory) -> str:
     if not namespace.resource_quotas:
         return ""

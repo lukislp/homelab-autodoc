@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from autodoc_core.models import App, NamespaceInventory
+from autodoc_core.models import App, NamespaceInventory, WarningEventInfo
 
 from autodoc_generator.render import render_app_page, render_namespace_index
 
@@ -137,3 +137,35 @@ def test_render_namespace_index_hides_global_navigation_and_shows_breadcrumb(sam
 
     assert index.startswith("---\nhide:\n  - navigation\n---")
     assert "[homelab-autodoc](../../index.md) · [homelab](../index.md) · **demo**" in index
+
+
+def test_namespace_index_shows_recent_warnings_section_when_present():
+    namespace = NamespaceInventory(
+        name="demo",
+        apps=[App(name="web", kind="Deployment", replicas=1, ready_replicas=1)],
+        warning_events=[
+            WarningEventInfo(
+                reason="BackOff",
+                object_ref="Pod/web-abc",
+                message="restarting",
+                count=2,
+                last_seen="2026-08-23T01:00:00+00:00",
+            )
+        ],
+    )
+
+    index = render_namespace_index(namespace, "homelab")
+
+    assert '<p class="section-label">Recent Warnings</p>' in index
+    assert "| 2026-08-23 01:00 UTC | Pod/web-abc | BackOff | 2 | restarting |" in index
+
+
+def test_namespace_index_has_no_warnings_section_without_events():
+    namespace = NamespaceInventory(
+        name="demo",
+        apps=[App(name="web", kind="Deployment", replicas=1, ready_replicas=1)],
+    )
+
+    index = render_namespace_index(namespace, "homelab")
+
+    assert "Recent Warnings" not in index
