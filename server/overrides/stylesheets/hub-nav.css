@@ -48,6 +48,11 @@
   font-size: 0.7rem;
   position: sticky;
   top: 4.8rem;
+  /* The sidenav never moves once stuck - a namespace with more apps than
+     fit the viewport scrolls inside the box instead of forcing the page
+     taller (the page's own scrolling stays reserved for the content). */
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
 }
 
 .ns-sidenav p:first-child {
@@ -102,6 +107,8 @@
 
   .ns-sidenav {
     position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 

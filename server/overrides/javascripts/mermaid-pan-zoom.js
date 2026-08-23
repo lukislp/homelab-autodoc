@@ -46,7 +46,7 @@
 // reset button returns to that fit, not to 1:1.
 (function () {
   // Low enough that even a very tall multi-namespace topology can be fitted
-  // whole into an 80vh box (fit-to-view is clamped to this floor too).
+  // whole into the viewport-sized box (fit-to-view is clamped to this floor too).
   var MIN_SCALE = 0.05;
   var MAX_SCALE = 20;
   // The initial fit may upscale small diagrams to fill the box, but only up
