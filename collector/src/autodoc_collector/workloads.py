@@ -29,6 +29,7 @@ class NormalizedWorkload:
     created_at: str | None = None
     owners: list[str] = field(default_factory=list)
     config_refs: frozenset[ConfigReference] = frozenset()
+    service_account_name: str | None = None
     node_selector: dict[str, str] = field(default_factory=dict)
     node_affinity: list[str] = field(default_factory=list)
     tolerations: list[str] = field(default_factory=list)
@@ -184,6 +185,7 @@ class DeploymentCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            service_account_name=pod_spec.service_account_name,
             node_selector=dict(pod_spec.node_selector or {}),
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),
@@ -215,6 +217,7 @@ class StatefulSetCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            service_account_name=pod_spec.service_account_name,
             node_selector=dict(pod_spec.node_selector or {}),
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),
@@ -246,6 +249,7 @@ class DaemonSetCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            service_account_name=pod_spec.service_account_name,
             node_selector=dict(pod_spec.node_selector or {}),
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),
@@ -280,6 +284,7 @@ class CronJobCollector:
             created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
             owners=_owners_from_metadata(meta),
             config_refs=_config_refs_from_pod_spec(pod_spec),
+            service_account_name=pod_spec.service_account_name,
             node_selector=dict(pod_spec.node_selector or {}),
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),

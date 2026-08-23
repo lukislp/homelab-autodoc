@@ -11,6 +11,9 @@ from autodoc_core.models import (
     IngressRule,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    PodDisruptionBudgetInfo,
+    RoleBindingInfo,
+    ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -83,6 +86,13 @@ def sample_app() -> App:
                 ],
             )
         ],
+        service_account=ServiceAccountInfo(
+            name="web-sa",
+            role_bindings=[
+                RoleBindingInfo(name="web-sa-view", role_kind="ClusterRole", role_name="view")
+            ],
+        ),
+        pod_disruption_budgets=[PodDisruptionBudgetInfo(name="web-pdb", min_available="1")],
         node_selector={"kubernetes.io/arch": "arm64"},
         node_affinity=["required: kubernetes.io/arch In (arm64)"],
         tolerations=["node-role.kubernetes.io/master Exists:NoSchedule"],

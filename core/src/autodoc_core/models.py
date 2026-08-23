@@ -103,6 +103,29 @@ class NetworkPolicyInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class RoleBindingInfo:
+    name: str
+    role_kind: str  # "Role" | "ClusterRole" - what the binding grants
+    role_name: str
+
+
+@dataclass(frozen=True, slots=True)
+class ServiceAccountInfo:
+    name: str
+    role_bindings: list[RoleBindingInfo] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
+class PodDisruptionBudgetInfo:
+    name: str
+    # Exactly one of these is normally set (Kubernetes defaults maxUnavailable
+    # to 1 only when neither is specified) - kept as raw IntOrString strings
+    # (e.g. "1", "50%"), never parsed here.
+    min_available: str | None = None
+    max_unavailable: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class App:
     name: str
     kind: str
@@ -120,6 +143,8 @@ class App:
     autoscaler: Autoscaler | None = None
     nodes: list[str] = field(default_factory=list)  # names of nodes running this app's pods
     network_policies: list[NetworkPolicyInfo] = field(default_factory=list)
+    service_account: ServiceAccountInfo | None = None
+    pod_disruption_budgets: list[PodDisruptionBudgetInfo] = field(default_factory=list)
     node_selector: dict[str, str] = field(default_factory=dict)
     # Human-readable node affinity terms, e.g. "required: kubernetes.io/arch In (arm64)".
     node_affinity: list[str] = field(default_factory=list)
