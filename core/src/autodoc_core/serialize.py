@@ -14,6 +14,7 @@ from .models import (
     ClusterInventory,
     ConfigReference,
     Container,
+    ContainerSecurityInfo,
     EnvVar,
     IngressInfo,
     IngressRule,
@@ -60,7 +61,19 @@ def _probe_from_dict(d: dict) -> ProbeInfo:
     return ProbeInfo(kind=d["kind"], check=d["check"], period_seconds=d.get("period_seconds"))
 
 
+def _container_security_from_dict(d: dict) -> ContainerSecurityInfo:
+    return ContainerSecurityInfo(
+        run_as_non_root=d.get("run_as_non_root"),
+        read_only_root_filesystem=d.get("read_only_root_filesystem"),
+        allow_privilege_escalation=d.get("allow_privilege_escalation"),
+        added_capabilities=list(d.get("added_capabilities", [])),
+        dropped_capabilities=list(d.get("dropped_capabilities", [])),
+        seccomp_profile=d.get("seccomp_profile"),
+    )
+
+
 def _container_from_dict(d: dict) -> Container:
+    security = d.get("security")
     return Container(
         name=d["name"],
         image=d["image"],
@@ -70,6 +83,7 @@ def _container_from_dict(d: dict) -> Container:
         env=[_env_var_from_dict(e) for e in d.get("env", [])],
         is_init=d.get("is_init", False),
         probes=[_probe_from_dict(p) for p in d.get("probes", [])],
+        security=_container_security_from_dict(security) if security else None,
     )
 
 

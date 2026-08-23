@@ -8,6 +8,7 @@ from autodoc_core.models import (
     ClusterInventory,
     ConfigReference,
     Container,
+    ContainerSecurityInfo,
     EnvVar,
     IngressInfo,
     IngressRule,
@@ -67,6 +68,13 @@ def _sample_inventory() -> ClusterInventory:
                                         period_seconds=10,
                                     )
                                 ],
+                                security=ContainerSecurityInfo(
+                                    run_as_non_root=True,
+                                    read_only_root_filesystem=True,
+                                    allow_privilege_escalation=False,
+                                    dropped_capabilities=["ALL"],
+                                    seccomp_profile="RuntimeDefault",
+                                ),
                             ),
                         ],
                         volumes=[
@@ -305,6 +313,25 @@ def test_cluster_inventory_without_storage_classes_round_trips_as_empty_list():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.storage_classes == []
+
+
+def test_container_without_security_round_trips_as_none():
+    bare_app = App(
+        name="worker",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        containers=[Container(name="worker", image="worker:1.0")],
+    )
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].containers[0].security is None
 
 
 def test_cluster_inventory_without_nodes_round_trips_as_empty_list():

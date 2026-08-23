@@ -9,7 +9,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from autodoc_core.models import ConfigReference, Container, EnvVar, ProbeInfo, RolloutStrategyInfo
+from autodoc_core.models import (
+    ConfigReference,
+    Container,
+    ContainerSecurityInfo,
+    EnvVar,
+    ProbeInfo,
+    RolloutStrategyInfo,
+)
 from kubernetes import client
 
 from .k8s_apis import K8sApis
@@ -92,7 +99,57 @@ def _probes_from_container(c: client.V1Container) -> list[ProbeInfo]:
     return probes
 
 
-def _build_container(c: client.V1Container, is_init: bool) -> Container:
+def _describe_seccomp_profile(profile: client.V1SeccompProfile | None) -> str | None:
+    if profile is None:
+        return None
+    if profile.type == "Localhost":
+        return f"Localhost:{profile.localhost_profile}"
+    return profile.type
+
+
+def _container_security_from_container(
+    c: client.V1Container, pod_security: client.V1PodSecurityContext | None
+) -> ContainerSecurityInfo | None:
+    """Only the *effective* value matters for a docs page - a container-level
+    securityContext setting wins, falling back to the pod-level
+    podSecurityContext for the two fields that support one there
+    (run_as_non_root, seccomp_profile). read_only_root_filesystem,
+    allow_privilege_escalation, and capabilities have no pod-level equivalent.
+    """
+    sc = c.security_context
+    run_as_non_root = sc.run_as_non_root if sc else None
+    if run_as_non_root is None and pod_security is not None:
+        run_as_non_root = pod_security.run_as_non_root
+    seccomp_profile = _describe_seccomp_profile(sc.seccomp_profile if sc else None)
+    if seccomp_profile is None and pod_security is not None:
+        seccomp_profile = _describe_seccomp_profile(pod_security.seccomp_profile)
+    capabilities = sc.capabilities if sc else None
+    added_capabilities = sorted(capabilities.add or []) if capabilities else []
+    dropped_capabilities = sorted(capabilities.drop or []) if capabilities else []
+    read_only_root_filesystem = sc.read_only_root_filesystem if sc else None
+    allow_privilege_escalation = sc.allow_privilege_escalation if sc else None
+    if not (
+        run_as_non_root is not None
+        or read_only_root_filesystem is not None
+        or allow_privilege_escalation is not None
+        or added_capabilities
+        or dropped_capabilities
+        or seccomp_profile is not None
+    ):
+        return None
+    return ContainerSecurityInfo(
+        run_as_non_root=run_as_non_root,
+        read_only_root_filesystem=read_only_root_filesystem,
+        allow_privilege_escalation=allow_privilege_escalation,
+        added_capabilities=added_capabilities,
+        dropped_capabilities=dropped_capabilities,
+        seccomp_profile=seccomp_profile,
+    )
+
+
+def _build_container(
+    c: client.V1Container, is_init: bool, pod_security: client.V1PodSecurityContext | None
+) -> Container:
     return Container(
         name=c.name,
         image=c.image,
@@ -102,13 +159,16 @@ def _build_container(c: client.V1Container, is_init: bool) -> Container:
         env=_env_vars_from_container(c),
         is_init=is_init,
         probes=_probes_from_container(c),
+        security=_container_security_from_container(c, pod_security),
     )
 
 
 def _containers_from_pod_spec(pod_spec: client.V1PodSpec) -> list[Container]:
-    return [_build_container(c, is_init=True) for c in (pod_spec.init_containers or [])] + [
-        _build_container(c, is_init=False) for c in pod_spec.containers
-    ]
+    pod_security = pod_spec.security_context
+    return [
+        _build_container(c, is_init=True, pod_security=pod_security)
+        for c in (pod_spec.init_containers or [])
+    ] + [_build_container(c, is_init=False, pod_security=pod_security) for c in pod_spec.containers]
 
 
 def _claim_names_from_pod_spec(pod_spec: client.V1PodSpec) -> frozenset[str]:

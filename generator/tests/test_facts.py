@@ -4,6 +4,7 @@ from autodoc_core.models import (
     App,
     ConfigReference,
     Container,
+    ContainerSecurityInfo,
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
@@ -30,6 +31,7 @@ from autodoc_generator.facts import (
     resources_table,
     rollout_strategy_table,
     scheduling_table,
+    security_table,
     service_account_table,
     services_table,
     storage_classes_table,
@@ -84,6 +86,33 @@ def test_probes_table_lists_type_check_and_period(sample_app):
 
 def test_probes_table_empty_when_no_container_has_probes(bare_app):
     assert probes_table(bare_app) == ""
+
+
+def test_security_table_lists_effective_flags_and_capabilities(sample_app):
+    table = security_table(sample_app)
+
+    assert "| web | yes | yes | no | -ALL | RuntimeDefault |" in table
+
+
+def test_security_table_shows_dashes_for_container_without_security_context():
+    app = App(
+        name="worker",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        containers=[
+            Container(name="secured", image="a:1.0", security=ContainerSecurityInfo()),
+            Container(name="plain", image="b:1.0"),
+        ],
+    )
+
+    table = security_table(app)
+
+    assert "| plain | - | - | - | - | - |" in table
+
+
+def test_security_table_empty_when_no_container_has_security_context(bare_app):
+    assert security_table(bare_app) == ""
 
 
 def test_env_table_never_shows_a_literal_value(sample_app):
@@ -322,6 +351,7 @@ def test_metadata_table_drops_noisy_last_applied_configuration_annotation():
 def test_all_tables_empty_for_bare_app(bare_app):
     assert containers_table(bare_app) == ""
     assert probes_table(bare_app) == ""
+    assert security_table(bare_app) == ""
     assert registries_table(bare_app) == ""
     assert image_pull_secrets_table(bare_app) == ""
     assert services_table(bare_app) == ""
