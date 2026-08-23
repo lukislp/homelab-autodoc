@@ -30,6 +30,16 @@
   align-items: start;
 }
 
+.ns-content {
+  /* A grid's 1fr track never shrinks below its content's min-content size
+     (implicit min-width: auto), so a single wide facts table used to blow
+     the whole column out to the right, underneath Material's ToC sidebar.
+     min-width: 0 lets the column shrink to the space that's actually there;
+     Material's own table rule (max-width: 100%, overflow: auto) then
+     scrolls the table in place instead. */
+  min-width: 0;
+}
+
 .ns-sidenav {
   background: var(--md-code-bg-color);
   border: 0.05rem solid var(--md-default-fg-color--lightest);
