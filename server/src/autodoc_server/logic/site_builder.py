@@ -329,10 +329,22 @@ def rebuild_all_sites(storage: Storage, llm: LLMClient | None, mkdocs_config_pat
     the container's ephemeral filesystem, not a persistent volume, so a pod
     restart wipes them - this makes recovery instant instead of waiting for the
     next inventory push.
+
+    The root index is always rewritten, even with zero clusters (a fresh
+    install, or the last cluster having just been deleted) - cheap and always
+    correct, no mkdocs_config_path dependency. build_static_site is still
+    skipped in that case: this function runs eagerly at server startup
+    (app.py module import), where mkdocs_config_path may not point at a real
+    file yet in some environments, and there is nothing to build anyway.
+    Callers that need the static site guaranteed rebuilt after dropping to
+    zero clusters (routes_clusters.py's delete endpoint) call
+    build_static_site themselves afterward, the same way push_inventory
+    already does.
     """
     clusters = storage.list_clusters()
     for cluster_name in clusters:
         regenerate_cluster_docs(storage, cluster_name, llm)
+    _write_root_index(storage)
     if clusters:
         build_static_site(mkdocs_config_path)
 

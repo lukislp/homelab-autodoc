@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -47,6 +48,18 @@ class Storage:
             return []
         lines = path.read_text(encoding="utf-8").splitlines()
         return [json.loads(line) for line in lines if line.strip()]
+
+    def delete_cluster(self, cluster_name: str) -> bool:
+        """Removes a cluster's data (inventory, changelog, push token)
+        entirely. Returns False for a cluster that was never registered,
+        rather than silently no-opping - the caller (routes_clusters.py)
+        turns that into a 404.
+        """
+        cluster_dir = self.data_dir / cluster_name
+        if not cluster_dir.exists():
+            return False
+        shutil.rmtree(cluster_dir)
+        return True
 
     def list_clusters(self) -> list[str]:
         if not self.data_dir.exists():

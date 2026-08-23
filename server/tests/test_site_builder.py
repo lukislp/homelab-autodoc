@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shutil
+
 from autodoc_core.models import ClusterInventory
 
 from autodoc_server.logic import site_builder
@@ -212,12 +214,49 @@ def test_rebuild_all_sites_regenerates_docs_and_builds_site(tmp_path, sample_inv
     assert (site_dir / "homelab" / "demo" / "web" / "index.html").exists()
 
 
-def test_rebuild_all_sites_no_clusters_is_a_noop(tmp_path):
+def test_deleting_the_last_cluster_and_rebuilding_drops_it_from_the_built_site(
+    tmp_path, sample_inventory
+):
+    # Exercises the exact sequence routes_clusters.py's delete endpoint runs:
+    # remove the data + generated docs, rebuild_all_sites (which on its own
+    # would skip the actual build with zero clusters left), then an explicit
+    # build_static_site call to guarantee the served site catches up.
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", sample_inventory)
+    site_dir = tmp_path / "site"
+    config_path = tmp_path / "mkdocs.yml"
+    config_path.write_text(
+        f"site_name: test\ndocs_dir: {storage.docs_dir}\nsite_dir: {site_dir}\n",
+        encoding="utf-8",
+    )
+    site_builder.rebuild_all_sites(storage, llm=None, mkdocs_config_path=config_path)
+    assert (site_dir / "homelab" / "demo" / "web" / "index.html").exists()
+
+    storage.delete_cluster("homelab")
+    shutil.rmtree(storage.docs_dir / "homelab", ignore_errors=True)
+    site_builder.rebuild_all_sites(storage, llm=None, mkdocs_config_path=config_path)
+    site_builder.build_static_site(config_path)
+
+    assert not (storage.docs_dir / "homelab").exists()
+    assert not (site_dir / "homelab").exists()
+    root_index_html = (site_dir / "index.html").read_text(encoding="utf-8")
+    assert "homelab/index.md" not in root_index_html
+
+
+def test_rebuild_all_sites_with_no_clusters_still_writes_a_root_index(tmp_path):
+    # A fresh install (nothing registered yet) still needs a working root
+    # index rather than a missing one. The actual mkdocs build is skipped in
+    # this case (see the function's own docstring - it also runs eagerly at
+    # server startup, where mkdocs_config_path may not point at a real file
+    # yet in some environments) - a nonexistent config_path here proves the
+    # build never even attempts to touch it.
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
     config_path = tmp_path / "mkdocs.yml"
 
     site_builder.rebuild_all_sites(storage, llm=None, mkdocs_config_path=config_path)
 
+    root_index = (storage.docs_dir / "index.md").read_text(encoding="utf-8")
+    assert "[Open Admin →](/admin/)" in root_index
     assert not config_path.exists()
 
 

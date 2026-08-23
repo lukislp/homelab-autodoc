@@ -43,3 +43,7 @@ export function postJson<T>(path: string, body: unknown): Promise<T> {
 export function post<T>(path: string): Promise<T> {
   return request<T>(path, { method: "POST" });
 }
+
+export function del<T>(path: string): Promise<T> {
+  return request<T>(path, { method: "DELETE" });
+}

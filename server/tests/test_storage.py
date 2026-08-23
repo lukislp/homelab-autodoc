@@ -35,6 +35,34 @@ def test_has_inventory(tmp_path, sample_inventory):
     assert storage.has_inventory("homelab") is True
 
 
+def test_delete_cluster_removes_its_data(tmp_path, sample_inventory):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", sample_inventory)
+    storage.save_push_token("homelab", "secret-token")
+
+    assert storage.delete_cluster("homelab") is True
+
+    assert storage.has_inventory("homelab") is False
+    assert storage.verify_push_token("homelab", "secret-token") is False
+    assert not (storage.data_dir / "homelab").exists()
+
+
+def test_delete_cluster_returns_false_for_unknown_cluster(tmp_path):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+
+    assert storage.delete_cluster("does-not-exist") is False
+
+
+def test_delete_cluster_leaves_other_clusters_untouched(tmp_path, sample_inventory):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("cluster-a", sample_inventory)
+    storage.save_inventory("cluster-b", sample_inventory)
+
+    storage.delete_cluster("cluster-a")
+
+    assert storage.list_clusters() == ["cluster-b"]
+
+
 def test_append_and_load_changelog_entries(tmp_path):
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
 
