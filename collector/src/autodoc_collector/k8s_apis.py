@@ -12,6 +12,7 @@ class K8sApis:
     core_v1: client.CoreV1Api
     apps_v1: client.AppsV1Api
     networking_v1: client.NetworkingV1Api
+    batch_v1: client.BatchV1Api
 
     @classmethod
     def build(cls) -> K8sApis:
@@ -19,4 +20,5 @@ class K8sApis:
             core_v1=client.CoreV1Api(),
             apps_v1=client.AppsV1Api(),
             networking_v1=client.NetworkingV1Api(),
+            batch_v1=client.BatchV1Api(),
         )

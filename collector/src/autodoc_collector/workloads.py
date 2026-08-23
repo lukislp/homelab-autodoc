@@ -170,7 +170,68 @@ class StatefulSetCollector:
         )
 
 
+class DaemonSetCollector:
+    kind = "DaemonSet"
+
+    def list(self, apis: K8sApis, namespace: str) -> list[NormalizedWorkload]:
+        items = apis.apps_v1.list_namespaced_daemon_set(namespace).items
+        return [self.normalize(item) for item in items]
+
+    def normalize(self, daemon_set: client.V1DaemonSet) -> NormalizedWorkload:
+        pod_spec = daemon_set.spec.template.spec
+        meta = daemon_set.metadata
+        status = daemon_set.status
+        return NormalizedWorkload(
+            kind=self.kind,
+            name=meta.name,
+            # DaemonSet has no .spec.replicas - one pod per matching node instead.
+            replicas=(status.desired_number_scheduled or 0) if status else 0,
+            ready_replicas=(status.number_ready or 0) if status else 0,
+            pod_labels=daemon_set.spec.template.metadata.labels or {},
+            containers=_containers_from_pod_spec(pod_spec),
+            claim_names=_claim_names_from_pod_spec(pod_spec),
+            labels=dict(meta.labels or {}),
+            annotations=dict(meta.annotations or {}),
+            created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
+            owners=_owners_from_metadata(meta),
+            config_refs=_config_refs_from_pod_spec(pod_spec),
+        )
+
+
+class CronJobCollector:
+    kind = "CronJob"
+
+    def list(self, apis: K8sApis, namespace: str) -> list[NormalizedWorkload]:
+        items = apis.batch_v1.list_namespaced_cron_job(namespace).items
+        return [self.normalize(item) for item in items]
+
+    def normalize(self, cron_job: client.V1CronJob) -> NormalizedWorkload:
+        pod_spec = cron_job.spec.job_template.spec.template.spec
+        meta = cron_job.metadata
+        status = cron_job.status
+        return NormalizedWorkload(
+            kind=self.kind,
+            name=meta.name,
+            # A CronJob isn't a long-running workload - "replicas" doesn't apply the
+            # way it does for Deployment/StatefulSet/DaemonSet. Modeled as a single
+            # job template that's either currently running (an active Job exists)
+            # or not, so it still renders sensibly as an "N/1 ready" fact.
+            replicas=1,
+            ready_replicas=1 if status and status.active else 0,
+            pod_labels=cron_job.spec.job_template.spec.template.metadata.labels or {},
+            containers=_containers_from_pod_spec(pod_spec),
+            claim_names=_claim_names_from_pod_spec(pod_spec),
+            labels=dict(meta.labels or {}),
+            annotations=dict(meta.annotations or {}),
+            created_at=meta.creation_timestamp.isoformat() if meta.creation_timestamp else None,
+            owners=_owners_from_metadata(meta),
+            config_refs=_config_refs_from_pod_spec(pod_spec),
+        )
+
+
 DEFAULT_WORKLOAD_COLLECTORS: tuple[WorkloadCollector, ...] = (
     DeploymentCollector(),
     StatefulSetCollector(),
+    DaemonSetCollector(),
+    CronJobCollector(),
 )
