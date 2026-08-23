@@ -25,6 +25,7 @@ from autodoc_generator.facts import (
     pod_disruption_budgets_table,
     probes_table,
     resources_table,
+    rollout_strategy_table,
     scheduling_table,
     service_account_table,
     services_table,
@@ -139,6 +140,19 @@ def test_autoscaler_table_lists_replica_bounds_and_cpu_target(sample_app):
 
 def test_autoscaler_table_empty_when_app_has_no_autoscaler(bare_app):
     assert autoscaler_table(bare_app) == ""
+
+
+def test_rollout_strategy_table_lists_strategy_and_surge_settings(sample_app):
+    table = rollout_strategy_table(sample_app)
+
+    assert "| Strategy | RollingUpdate |" in table
+    assert "| Max Surge | 25% |" in table
+    assert "| Max Unavailable | 0 |" in table
+    assert "| Partition | - |" in table
+
+
+def test_rollout_strategy_table_empty_when_app_has_no_rollout_strategy(bare_app):
+    assert rollout_strategy_table(bare_app) == ""
 
 
 def test_nodes_table_lists_sorted_node_names(sample_app):
@@ -274,6 +288,7 @@ def test_all_tables_empty_for_bare_app(bare_app):
     assert volumes_table(bare_app) == ""
     assert resources_table(bare_app) == ""
     assert autoscaler_table(bare_app) == ""
+    assert rollout_strategy_table(bare_app) == ""
     assert nodes_table(bare_app) == ""
     assert scheduling_table(bare_app) == ""
     assert network_policies_table(bare_app) == ""

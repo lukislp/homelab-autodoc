@@ -6,7 +6,7 @@ itself is covered in test_workloads.py.
 from __future__ import annotations
 
 import pytest
-from autodoc_core.models import ConfigReference, Container
+from autodoc_core.models import ConfigReference, Container, RolloutStrategyInfo
 from kubernetes import client
 from kubernetes.client.exceptions import ApiException
 
@@ -43,6 +43,7 @@ def _workload(
     node_selector: dict[str, str] | None = None,
     node_affinity: list[str] | None = None,
     tolerations: list[str] | None = None,
+    rollout_strategy: RolloutStrategyInfo | None = None,
 ) -> NormalizedWorkload:
     return NormalizedWorkload(
         kind=kind,
@@ -61,6 +62,7 @@ def _workload(
         node_selector=node_selector or {},
         node_affinity=node_affinity or [],
         tolerations=tolerations or [],
+        rollout_strategy=rollout_strategy,
     )
 
 
@@ -880,6 +882,23 @@ def test_build_node_not_ready_when_ready_condition_is_false():
     info = _build_node(node)
 
     assert info.ready is False
+
+
+def test_build_app_copies_rollout_strategy_from_workload():
+    strategy = RolloutStrategyInfo(strategy_type="RollingUpdate", max_surge="25%")
+    workload = _workload(rollout_strategy=strategy)
+
+    app = build_app(workload, [], [], [])
+
+    assert app.rollout_strategy == strategy
+
+
+def test_build_app_without_rollout_strategy_leaves_it_none():
+    workload = _workload()
+
+    app = build_app(workload, [], [], [])
+
+    assert app.rollout_strategy is None
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

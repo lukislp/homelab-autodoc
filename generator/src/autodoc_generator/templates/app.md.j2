@@ -70,6 +70,12 @@
 {{ autoscaler_table }}
 
 {% endif %}
+{% if rollout_strategy_table %}
+### Rollout Strategy
+
+{{ rollout_strategy_table }}
+
+{% endif %}
 {% if pod_disruption_budgets_table %}
 ### Disruption Budget
 

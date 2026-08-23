@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from autodoc_core.models import ConfigReference, Container, EnvVar
+from autodoc_core.models import ConfigReference, Container, EnvVar, RolloutStrategyInfo
 from kubernetes import client
 
 from autodoc_collector.workloads import (
@@ -83,6 +83,36 @@ def test_statefulset_collector_normalizes_pod_template():
     assert workload.replicas == 1
     assert workload.ready_replicas == 1
     assert workload.pod_labels == {"app": "postgres"}
+
+
+def test_statefulset_collector_normalizes_partitioned_rolling_update():
+    stateful_set = client.V1StatefulSet(
+        metadata=client.V1ObjectMeta(name="postgres", labels={}),
+        spec=client.V1StatefulSetSpec(
+            replicas=3,
+            service_name="postgres",
+            selector=client.V1LabelSelector(match_labels={"app": "postgres"}),
+            update_strategy=client.V1StatefulSetUpdateStrategy(
+                type="RollingUpdate",
+                rolling_update=client.V1RollingUpdateStatefulSetStrategy(
+                    max_unavailable="1", partition=2
+                ),
+            ),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "postgres"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="postgres", image="postgres:16")]
+                ),
+            ),
+        ),
+        status=client.V1StatefulSetStatus(replicas=3, ready_replicas=3),
+    )
+
+    workload = StatefulSetCollector().normalize(stateful_set)
+
+    assert workload.rollout_strategy == RolloutStrategyInfo(
+        strategy_type="RollingUpdate", max_unavailable="1", partition=2
+    )
 
 
 def test_deployment_collector_normalizes_resources_env_and_config_refs():
@@ -167,6 +197,56 @@ def test_deployment_collector_normalizes_resources_env_and_config_refs():
             ConfigReference(kind="Secret", name="web-tls", via="volume"),
         }
     )
+
+
+def test_deployment_collector_normalizes_rolling_update_strategy():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            strategy=client.V1DeploymentStrategy(
+                type="RollingUpdate",
+                rolling_update=client.V1RollingUpdateDeployment(
+                    max_surge="25%", max_unavailable="0"
+                ),
+            ),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")]
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.rollout_strategy == RolloutStrategyInfo(
+        strategy_type="RollingUpdate", max_surge="25%", max_unavailable="0"
+    )
+
+
+def test_deployment_collector_without_strategy_has_no_rollout_strategy():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")]
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.rollout_strategy is None
 
 
 def test_deployment_collector_normalizes_node_selector():
@@ -412,6 +492,37 @@ def test_daemonset_collector_normalizes_pod_template():
     assert workload.replicas == 2
     assert workload.ready_replicas == 2
     assert workload.pod_labels == {"app": "node-exporter"}
+
+
+def test_daemonset_collector_normalizes_rolling_update_strategy():
+    daemon_set = client.V1DaemonSet(
+        metadata=client.V1ObjectMeta(name="node-exporter", labels={}),
+        spec=client.V1DaemonSetSpec(
+            selector=client.V1LabelSelector(match_labels={"app": "node-exporter"}),
+            update_strategy=client.V1DaemonSetUpdateStrategy(
+                type="RollingUpdate",
+                rolling_update=client.V1RollingUpdateDaemonSet(max_surge="0", max_unavailable="1"),
+            ),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "node-exporter"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="node-exporter", image="node-exporter:1.0")]
+                ),
+            ),
+        ),
+        status=client.V1DaemonSetStatus(
+            current_number_scheduled=2,
+            desired_number_scheduled=2,
+            number_misscheduled=0,
+            number_ready=2,
+        ),
+    )
+
+    workload = DaemonSetCollector().normalize(daemon_set)
+
+    assert workload.rollout_strategy == RolloutStrategyInfo(
+        strategy_type="RollingUpdate", max_surge="0", max_unavailable="1"
+    )
 
 
 def test_daemonset_collector_without_status_defaults_to_zero():

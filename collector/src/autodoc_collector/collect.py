@@ -377,6 +377,7 @@ def build_app(
         node_selector=workload.node_selector,
         node_affinity=workload.node_affinity,
         tolerations=workload.tolerations,
+        rollout_strategy=workload.rollout_strategy,
     )
 
 

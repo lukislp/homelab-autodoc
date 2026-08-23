@@ -14,6 +14,7 @@ from autodoc_core.models import (
     PodDisruptionBudgetInfo,
     ProbeInfo,
     RoleBindingInfo,
+    RolloutStrategyInfo,
     ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
@@ -99,6 +100,9 @@ def sample_app() -> App:
         node_selector={"kubernetes.io/arch": "arm64"},
         node_affinity=["required: kubernetes.io/arch In (arm64)"],
         tolerations=["node-role.kubernetes.io/master Exists:NoSchedule"],
+        rollout_strategy=RolloutStrategyInfo(
+            strategy_type="RollingUpdate", max_surge="25%", max_unavailable="0"
+        ),
     )
 
 

@@ -24,6 +24,7 @@ from .models import (
     PodDisruptionBudgetInfo,
     ProbeInfo,
     RoleBindingInfo,
+    RolloutStrategyInfo,
     ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
@@ -154,9 +155,19 @@ def _pdb_from_dict(d: dict) -> PodDisruptionBudgetInfo:
     )
 
 
+def _rollout_strategy_from_dict(d: dict) -> RolloutStrategyInfo:
+    return RolloutStrategyInfo(
+        strategy_type=d["strategy_type"],
+        max_surge=d.get("max_surge"),
+        max_unavailable=d.get("max_unavailable"),
+        partition=d.get("partition"),
+    )
+
+
 def _app_from_dict(d: dict) -> App:
     autoscaler = d.get("autoscaler")
     service_account = d.get("service_account")
+    rollout_strategy = d.get("rollout_strategy")
     return App(
         name=d["name"],
         kind=d["kind"],
@@ -179,6 +190,9 @@ def _app_from_dict(d: dict) -> App:
         node_selector=dict(d.get("node_selector", {})),
         node_affinity=list(d.get("node_affinity", [])),
         tolerations=list(d.get("tolerations", [])),
+        rollout_strategy=_rollout_strategy_from_dict(rollout_strategy)
+        if rollout_strategy
+        else None,
     )
 
 

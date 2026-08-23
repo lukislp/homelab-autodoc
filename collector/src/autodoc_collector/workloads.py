@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from autodoc_core.models import ConfigReference, Container, EnvVar, ProbeInfo
+from autodoc_core.models import ConfigReference, Container, EnvVar, ProbeInfo, RolloutStrategyInfo
 from kubernetes import client
 
 from .k8s_apis import K8sApis
@@ -33,6 +33,7 @@ class NormalizedWorkload:
     node_selector: dict[str, str] = field(default_factory=dict)
     node_affinity: list[str] = field(default_factory=list)
     tolerations: list[str] = field(default_factory=list)
+    rollout_strategy: RolloutStrategyInfo | None = None
 
 
 class WorkloadCollector(Protocol):
@@ -197,6 +198,55 @@ def _owners_from_metadata(meta: client.V1ObjectMeta) -> list[str]:
     return [f"{o.kind}/{o.name}" for o in (meta.owner_references or [])]
 
 
+def _rollout_strategy_from_deployment(
+    strategy: client.V1DeploymentStrategy | None,
+) -> RolloutStrategyInfo | None:
+    if strategy is None or not strategy.type:
+        return None
+    rolling_update = strategy.rolling_update
+    return RolloutStrategyInfo(
+        strategy_type=strategy.type,
+        max_surge=str(rolling_update.max_surge)
+        if rolling_update and rolling_update.max_surge is not None
+        else None,
+        max_unavailable=str(rolling_update.max_unavailable)
+        if rolling_update and rolling_update.max_unavailable is not None
+        else None,
+    )
+
+
+def _rollout_strategy_from_daemon_set(
+    strategy: client.V1DaemonSetUpdateStrategy | None,
+) -> RolloutStrategyInfo | None:
+    if strategy is None or not strategy.type:
+        return None
+    rolling_update = strategy.rolling_update
+    return RolloutStrategyInfo(
+        strategy_type=strategy.type,
+        max_surge=str(rolling_update.max_surge)
+        if rolling_update and rolling_update.max_surge is not None
+        else None,
+        max_unavailable=str(rolling_update.max_unavailable)
+        if rolling_update and rolling_update.max_unavailable is not None
+        else None,
+    )
+
+
+def _rollout_strategy_from_stateful_set(
+    strategy: client.V1StatefulSetUpdateStrategy | None,
+) -> RolloutStrategyInfo | None:
+    if strategy is None or not strategy.type:
+        return None
+    rolling_update = strategy.rolling_update
+    return RolloutStrategyInfo(
+        strategy_type=strategy.type,
+        max_unavailable=str(rolling_update.max_unavailable)
+        if rolling_update and rolling_update.max_unavailable is not None
+        else None,
+        partition=rolling_update.partition if rolling_update else None,
+    )
+
+
 class DeploymentCollector:
     kind = "Deployment"
 
@@ -224,6 +274,7 @@ class DeploymentCollector:
             node_selector=dict(pod_spec.node_selector or {}),
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),
+            rollout_strategy=_rollout_strategy_from_deployment(deployment.spec.strategy),
         )
 
 
@@ -256,6 +307,7 @@ class StatefulSetCollector:
             node_selector=dict(pod_spec.node_selector or {}),
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),
+            rollout_strategy=_rollout_strategy_from_stateful_set(stateful_set.spec.update_strategy),
         )
 
 
@@ -288,6 +340,7 @@ class DaemonSetCollector:
             node_selector=dict(pod_spec.node_selector or {}),
             node_affinity=_node_affinity_from_pod_spec(pod_spec),
             tolerations=_tolerations_from_pod_spec(pod_spec),
+            rollout_strategy=_rollout_strategy_from_daemon_set(daemon_set.spec.update_strategy),
         )
 
 

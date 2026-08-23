@@ -18,6 +18,7 @@ from autodoc_core.models import (
     PodDisruptionBudgetInfo,
     ProbeInfo,
     RoleBindingInfo,
+    RolloutStrategyInfo,
     ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
@@ -131,6 +132,11 @@ def _sample_inventory() -> ClusterInventory:
                         node_selector={"kubernetes.io/arch": "arm64"},
                         node_affinity=["required: kubernetes.io/arch In (arm64)"],
                         tolerations=["node-role.kubernetes.io/master:NoSchedule"],
+                        rollout_strategy=RolloutStrategyInfo(
+                            strategy_type="RollingUpdate",
+                            max_surge="25%",
+                            max_unavailable="0",
+                        ),
                     )
                 ],
             )
@@ -306,3 +312,16 @@ def test_cluster_inventory_without_nodes_round_trips_as_empty_list():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.nodes == []
+
+
+def test_app_without_rollout_strategy_round_trips_as_none():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].rollout_strategy is None
