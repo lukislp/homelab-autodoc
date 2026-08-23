@@ -5,10 +5,13 @@ itself is covered in test_workloads.py.
 
 from __future__ import annotations
 
+import pytest
 from autodoc_core.models import ConfigReference, Container
 from kubernetes import client
+from kubernetes.client.exceptions import ApiException
 
-from autodoc_collector.collect import build_app, build_namespace_inventory
+from autodoc_collector.collect import _list_httproutes, build_app, build_namespace_inventory
+from autodoc_collector.k8s_apis import K8sApis
 from autodoc_collector.workloads import NormalizedWorkload
 
 
@@ -78,6 +81,21 @@ def _ingress(name: str, service_name: str, host: str = "app.example.com") -> cli
     )
 
 
+def _httproute(name: str, service_name: str, hostnames: list[str], port: int = 8080) -> dict:
+    return {
+        "metadata": {"name": name},
+        "spec": {
+            "hostnames": hostnames,
+            "rules": [
+                {
+                    "matches": [{"path": {"value": "/"}}],
+                    "backendRefs": [{"name": service_name, "port": port}],
+                }
+            ],
+        },
+    }
+
+
 def _pvc(name: str, size: str = "1Gi") -> client.V1PersistentVolumeClaim:
     return client.V1PersistentVolumeClaim(
         metadata=client.V1ObjectMeta(name=name),
@@ -126,6 +144,80 @@ def test_ingress_not_targeting_app_service_is_excluded():
     app = build_app(workload, [service], [unrelated_ingress], [])
 
     assert app.ingresses == []
+
+
+def test_builds_app_with_matching_httproute():
+    workload = _workload()
+    service = _service("web-svc", selector={"app": "web"})
+    route = _httproute(
+        "web-route", service_name="web-svc", hostnames=["web.heim.lan", "web.example.com"]
+    )
+
+    app = build_app(workload, [service], [], [], httproutes=[route])
+
+    assert [i.name for i in app.ingresses] == ["web-route"]
+    hosts = sorted({rule.host for rule in app.ingresses[0].rules})
+    assert hosts == ["web.example.com", "web.heim.lan"]
+    assert all(rule.service_name == "web-svc" for rule in app.ingresses[0].rules)
+    assert all(rule.service_port == "8080" for rule in app.ingresses[0].rules)
+    # HTTPRoute doesn't declare TLS itself - that's on the Gateway's listeners.
+    assert app.ingresses[0].tls_hosts == []
+
+
+def test_httproute_and_classic_ingress_can_coexist_on_the_same_app():
+    workload = _workload()
+    service = _service("web-svc", selector={"app": "web"})
+    ingress = _ingress("web-ingress", service_name="web-svc")
+    route = _httproute("web-route", service_name="web-svc", hostnames=["web.heim.lan"])
+
+    app = build_app(workload, [service], [ingress], [], httproutes=[route])
+
+    assert sorted(i.name for i in app.ingresses) == ["web-ingress", "web-route"]
+
+
+def test_httproute_not_targeting_app_service_is_excluded():
+    workload = _workload()
+    service = _service("web-svc", selector={"app": "web"})
+    unrelated_route = _httproute(
+        "other-route", service_name="some-other-svc", hostnames=["other.heim.lan"]
+    )
+
+    app = build_app(workload, [service], [], [], httproutes=[unrelated_route])
+
+    assert app.ingresses == []
+
+
+def test_list_httproutes_returns_empty_when_gateway_api_crd_is_missing():
+    class FakeCustomObjects:
+        def list_namespaced_custom_object(self, **kwargs):
+            raise ApiException(status=404)
+
+    apis = K8sApis(
+        core_v1=None,
+        apps_v1=None,
+        networking_v1=None,
+        batch_v1=None,
+        custom_objects=FakeCustomObjects(),
+    )
+
+    assert _list_httproutes(apis, "demo") == []
+
+
+def test_list_httproutes_reraises_non_404_errors():
+    class FakeCustomObjects:
+        def list_namespaced_custom_object(self, **kwargs):
+            raise ApiException(status=403)
+
+    apis = K8sApis(
+        core_v1=None,
+        apps_v1=None,
+        networking_v1=None,
+        batch_v1=None,
+        custom_objects=FakeCustomObjects(),
+    )
+
+    with pytest.raises(ApiException):
+        _list_httproutes(apis, "demo")
 
 
 def test_builds_app_with_metadata_and_config_refs():
