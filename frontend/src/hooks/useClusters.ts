@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { deleteCluster, listClusters } from "../api/clusters";
+import { POLL_INTERVAL_MS } from "./usePendingDevices";
 
 export interface UseClustersResult {
   clusters: string[];
@@ -12,16 +13,29 @@ export function useClusters(): UseClustersResult {
   const [clusters, setClusters] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadedOnce = useRef(false);
 
   const fetchClusters = useCallback(() => {
     return listClusters()
-      .then(setClusters)
-      .catch((err: Error) => setError(err.message))
+      .then((result) => {
+        loadedOnce.current = true;
+        setClusters(result);
+        setError(null);
+      })
+      .catch((err: Error) => {
+        // Same stale-over-error trade-off as usePendingDevices: background
+        // polls that fail retry silently, only the initial load surfaces.
+        if (!loadedOnce.current) setError(err.message);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     fetchClusters();
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") fetchClusters();
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
   }, [fetchClusters]);
 
   const refresh = useCallback(() => {
