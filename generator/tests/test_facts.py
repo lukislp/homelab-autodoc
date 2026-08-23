@@ -3,6 +3,7 @@ from __future__ import annotations
 from autodoc_core.models import App
 
 from autodoc_generator.facts import (
+    autoscaler_table,
     containers_table,
     dependencies_table,
     env_table,
@@ -59,6 +60,19 @@ def test_dependencies_table_lists_config_refs(sample_app):
     assert "| ConfigMap | web-config | volume |" in table
 
 
+def test_autoscaler_table_lists_replica_bounds_and_cpu_target(sample_app):
+    table = autoscaler_table(sample_app)
+
+    assert "| Min Replicas | 2 |" in table
+    assert "| Max Replicas | 5 |" in table
+    assert "| Target CPU | 70% |" in table
+    assert "| Target Memory | - |" in table
+
+
+def test_autoscaler_table_empty_when_app_has_no_autoscaler(bare_app):
+    assert autoscaler_table(bare_app) == ""
+
+
 def test_metadata_table_lists_created_owners_and_annotations(sample_app):
     table = metadata_table(sample_app)
 
@@ -87,6 +101,7 @@ def test_all_tables_empty_for_bare_app(bare_app):
     assert ingresses_table(bare_app) == ""
     assert volumes_table(bare_app) == ""
     assert resources_table(bare_app) == ""
+    assert autoscaler_table(bare_app) == ""
     assert env_table(bare_app) == ""
     assert dependencies_table(bare_app) == ""
     assert metadata_table(bare_app) == ""

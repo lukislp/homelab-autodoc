@@ -35,6 +35,7 @@ def render_app_page(app: App, namespace: str, summary: str | None = None) -> str
         ingresses_table=facts.ingresses_table(app),
         volumes_table=facts.volumes_table(app),
         resources_table=facts.resources_table(app),
+        autoscaler_table=facts.autoscaler_table(app),
         env_table=facts.env_table(app),
         dependencies_table=facts.dependencies_table(app),
         metadata_table=facts.metadata_table(app),

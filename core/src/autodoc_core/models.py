@@ -75,6 +75,17 @@ class ConfigReference:
 
 
 @dataclass(frozen=True, slots=True)
+class Autoscaler:
+    min_replicas: int
+    max_replicas: int
+    # Resource-metric utilization targets only (the vast majority of real HPA
+    # usage) - custom/external/object metrics aren't modeled, there's no
+    # generic deterministic way to describe an arbitrary metric's meaning.
+    target_cpu_percent: int | None = None
+    target_memory_percent: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class App:
     name: str
     kind: str
@@ -89,6 +100,7 @@ class App:
     created_at: str | None = None
     owners: list[str] = field(default_factory=list)  # ["Kind/Name", ...]
     config_refs: list[ConfigReference] = field(default_factory=list)
+    autoscaler: Autoscaler | None = None
 
 
 @dataclass(frozen=True, slots=True)

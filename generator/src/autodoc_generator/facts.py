@@ -67,6 +67,23 @@ def resources_table(app: App) -> str:
     return "\n".join([header, "|---|---|---|---|---|", *rows])
 
 
+def autoscaler_table(app: App) -> str:
+    if app.autoscaler is None:
+        return ""
+    a = app.autoscaler
+    cpu_target = f"{a.target_cpu_percent}%" if a.target_cpu_percent is not None else "-"
+    memory_target = f"{a.target_memory_percent}%" if a.target_memory_percent is not None else "-"
+    rows = [
+        "| Field | Value |",
+        "|---|---|",
+        f"| Min Replicas | {a.min_replicas} |",
+        f"| Max Replicas | {a.max_replicas} |",
+        f"| Target CPU | {cpu_target} |",
+        f"| Target Memory | {memory_target} |",
+    ]
+    return "\n".join(rows)
+
+
 def env_table(app: App) -> str:
     """Never shows a literal env var's actual value - only its name and, for a
     valueFrom reference, which ConfigMap/Secret key it points at. The docs site
