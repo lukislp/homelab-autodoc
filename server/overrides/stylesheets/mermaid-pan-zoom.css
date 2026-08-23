@@ -2,12 +2,25 @@
    host (see mermaid-pan-zoom.js) - never unconditionally. If that JS never
    gets the chance to run, the diagram falls back to its plain, always-fully-
    visible static size instead of ever being clipped with no way to recover
-   the rest. */
+   the rest.
+
+   Sized to the diagram's own rendered box (width AND height), not to the
+   full reading column - the host inside is already width: fit-content, but
+   as a plain block element this wrapper used to stretch to 100% of the
+   column regardless, leaving a large empty area to the right of (and, with
+   an earlier min-height, below) any diagram narrower/shorter than the
+   column. max-width/max-height still cap it for diagrams bigger than the
+   available space, where overflow:hidden + pan/zoom take over.
+   padding-bottom reserves room for the zoom controls below the diagram -
+   without it, a small diagram's tightly-hugged box makes the
+   absolutely-positioned controls overlap its own content. */
 .mermaid-zoom-viewport {
   position: relative;
   overflow: hidden;
-  min-height: 480px;
+  width: fit-content;
+  max-width: 100%;
   max-height: 80vh;
+  padding-bottom: 40px;
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 4px;
 }
