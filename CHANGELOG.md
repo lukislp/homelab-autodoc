@@ -1,3 +1,10 @@
+## [1.20.1](https://github.com/lukislp/homelab-autodoc/compare/v1.20.0...v1.20.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **server:** scale mermaid diagrams to fill their viewport, not shrink it to fit them ([b2183ff](https://github.com/lukislp/homelab-autodoc/commit/b2183ff1cda502e8288b87821590d737a051ad72)), closes [#34](https://github.com/lukislp/homelab-autodoc/issues/34)
+
 # [1.20.0](https://github.com/lukislp/homelab-autodoc/compare/v1.19.0...v1.20.0) (2026-08-23)
 
 
