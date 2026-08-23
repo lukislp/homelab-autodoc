@@ -33,8 +33,16 @@ extra_javascript:
   # a homelab network's egress to external CDNs isn't guaranteed, and this
   # script failing to load must never be a silent, hard-to-diagnose reason
   # pan-zoom just doesn't work.
-  - javascripts/svg-pan-zoom.min.js
-  - javascripts/mermaid-pan-zoom.js
+  #
+  # Unlike Material's own bundled assets (content-hashed filenames, e.g.
+  # main.ec1eaa64.min.js - the hash changes automatically whenever the
+  # content does, which forces browsers/proxies to fetch fresh), these files
+  # keep the exact same filename across every release. A ?v= query string is
+  # a manual stand-in for that: bump it whenever one of these files changes,
+  # so a stale cached copy under a proxy or browser cache can never look like
+  # this feature is broken when it's actually just serving old JS.
+  - javascripts/svg-pan-zoom.min.js?v=2
+  - javascripts/mermaid-pan-zoom.js?v=2
 extra_css:
-  - stylesheets/mermaid-pan-zoom.css
-  - stylesheets/sidebar-scroll.css
+  - stylesheets/mermaid-pan-zoom.css?v=2
+  - stylesheets/sidebar-scroll.css?v=2
