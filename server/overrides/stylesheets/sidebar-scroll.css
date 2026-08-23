@@ -1,0 +1,11 @@
+/* With 14+ namespaces, the primary sidebar's content (every namespace as its
+   own collapsed row, plus the active one's full expanded subtree) can be
+   taller than the viewport. Material's own nav scroll wrapper should already
+   handle this on its own (position: sticky + its own overflow-y), but
+   reinforce it explicitly rather than rely on it staying that way across
+   theme updates - a nav that's taller than the screen must always scroll
+   within itself, never spill into the footer. */
+.md-sidebar--primary .md-sidebar__scrollwrap {
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
