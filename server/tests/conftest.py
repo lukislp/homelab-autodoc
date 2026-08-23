@@ -1,7 +1,14 @@
 from __future__ import annotations
 
 import pytest
-from autodoc_core.models import App, ClusterInventory, Container, NamespaceInventory, NodeInfo
+from autodoc_core.models import (
+    App,
+    ClusterInventory,
+    Container,
+    NamespaceInventory,
+    NodeInfo,
+    StorageClassInfo,
+)
 
 
 @pytest.fixture
@@ -23,6 +30,7 @@ def sample_inventory() -> ClusterInventory:
                 ],
             )
         ],
+        storage_classes=[StorageClassInfo(name="local-path", provisioner="rancher.io/local-path")],
         nodes=[
             NodeInfo(
                 name="pi-node-1",

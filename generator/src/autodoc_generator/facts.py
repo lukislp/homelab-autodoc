@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from autodoc_core.models import App, NodeInfo
+from autodoc_core.models import App, NodeInfo, StorageClassInfo
 
 from .formatting import format_timestamp
 
@@ -223,6 +223,23 @@ def metadata_table(app: App) -> str:
             value = value[:_MAX_ANNOTATION_VALUE_LENGTH] + "…"
         rows.append(f"| `{key}` | {value} |")
     return "\n".join(rows)
+
+
+def storage_classes_table(storage_classes: list[StorageClassInfo]) -> str:
+    """Cluster-wide, unlike every other table in this module - StorageClasses
+    aren't scoped to an app.
+    """
+    if not storage_classes:
+        return ""
+    rows = []
+    for sc in sorted(storage_classes, key=lambda s: s.name):
+        expansion = "-" if sc.allow_volume_expansion is None else str(sc.allow_volume_expansion)
+        rows.append(
+            f"| {sc.name} | {sc.provisioner} | {sc.reclaim_policy or '-'} | "
+            f"{sc.volume_binding_mode or '-'} | {expansion} |"
+        )
+    header = "| StorageClass | Provisioner | Reclaim Policy | Binding Mode | Volume Expansion |"
+    return "\n".join([header, "|---|---|---|---|---|", *rows])
 
 
 def node_specs_table(nodes: list[NodeInfo]) -> str:

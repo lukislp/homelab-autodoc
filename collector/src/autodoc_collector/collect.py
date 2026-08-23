@@ -24,6 +24,7 @@ from autodoc_core.models import (
     ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
+    StorageClassInfo,
     Volume,
 )
 from kubernetes import client
@@ -445,6 +446,16 @@ def _list_hpas(apis: K8sApis, namespace: str) -> list[client.V2HorizontalPodAuto
         raise
 
 
+def _build_storage_class(raw: client.V1StorageClass) -> StorageClassInfo:
+    return StorageClassInfo(
+        name=raw.metadata.name,
+        provisioner=raw.provisioner,
+        reclaim_policy=raw.reclaim_policy,
+        volume_binding_mode=raw.volume_binding_mode,
+        allow_volume_expansion=raw.allow_volume_expansion,
+    )
+
+
 def _build_node(raw: client.V1Node) -> NodeInfo:
     ready = any(c.type == "Ready" and c.status == "True" for c in (raw.status.conditions or []))
     return NodeInfo(
@@ -518,11 +529,16 @@ def collect_cluster_inventory(
             )
         )
 
+    # Cluster-scoped, so fetched once for the whole run rather than per namespace.
+    storage_classes = [
+        _build_storage_class(sc) for sc in apis.storage_v1.list_storage_class().items
+    ]
     nodes = [_build_node(n) for n in apis.core_v1.list_node().items]
 
     return ClusterInventory(
         cluster_name=cluster_name,
         collected_at=datetime.now(UTC).isoformat(),
         namespaces=namespace_inventories,
+        storage_classes=storage_classes,
         nodes=nodes,
     )
