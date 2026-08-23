@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/lukislp/homelab-autodoc/compare/v1.27.0...v1.28.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document each container's image registry and pull secrets ([479feaf](https://github.com/lukislp/homelab-autodoc/commit/479feaf94efe3779810cbcbb32bd14daaf5db256))
+
 # [1.27.0](https://github.com/lukislp/homelab-autodoc/compare/v1.26.0...v1.27.0) (2026-08-23)
 
 
