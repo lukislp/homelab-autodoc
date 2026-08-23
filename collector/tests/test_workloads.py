@@ -577,6 +577,9 @@ def test_deployment_collector_normalizes_probes():
                             readiness_probe=client.V1Probe(
                                 tcp_socket=client.V1TCPSocketAction(port=8080)
                             ),
+                            startup_probe=client.V1Probe(
+                                _exec=client.V1ExecAction(command=["pg_isready"])
+                            ),
                         ),
                     ],
                 ),
@@ -591,6 +594,7 @@ def test_deployment_collector_normalizes_probes():
     assert {(p.kind, p.check, p.period_seconds) for p in probes} == {
         ("liveness", "HTTP :8080/healthz", 10),
         ("readiness", "TCP :8080", None),
+        ("startup", "exec: pg_isready", None),
     }
 
 
