@@ -64,6 +64,7 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
     _write_cluster_index(storage, cluster_name, inventory, _drift_count(last_changes))
     _write_cluster_diagram(storage, cluster_name, inventory)
     _write_findings_page(storage, cluster_name, inventory)
+    _write_images_page(storage, cluster_name, inventory)
     _write_storage_classes_page(storage, cluster_name, inventory)
     _write_nodes_page(storage, cluster_name, inventory)
     _write_changelog_page(storage, cluster_name)
@@ -260,6 +261,13 @@ def _write_findings_page(storage: Storage, cluster_name: str, inventory: Cluster
     )
     page = _cluster_content_page(cluster_name, "findings", f"{cluster_name} - Findings", body)
     (storage.docs_dir / cluster_name / "findings.md").write_text(page, encoding="utf-8")
+
+
+def _write_images_page(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:
+    table = facts.cluster_images_table(inventory)
+    body = table if table else "No container images collected yet."
+    page = _cluster_content_page(cluster_name, "images", f"{cluster_name} - Images", body)
+    (storage.docs_dir / cluster_name / "images.md").write_text(page, encoding="utf-8")
 
 
 def _write_storage_classes_page(

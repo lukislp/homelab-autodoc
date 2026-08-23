@@ -167,6 +167,18 @@ def test_regenerate_cluster_docs_writes_findings_page(tmp_path, sample_inventory
     assert "no liveness or readiness probe configured" in findings_page
 
 
+def test_regenerate_cluster_docs_writes_images_page(tmp_path, sample_inventory):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", sample_inventory)
+
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=None)
+
+    images_page = (storage.docs_dir / "homelab" / "images.md").read_text(encoding="utf-8")
+    assert "# homelab - Images" in images_page
+    assert '<span class="chip-link chip-link--active">Images</span>' in images_page
+    assert "| `nginx:1.25.3` | docker.io | demo/web |" in images_page
+
+
 def test_regenerate_cluster_docs_writes_changelog_page(tmp_path, sample_inventory):
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
     storage.save_inventory("homelab", sample_inventory)

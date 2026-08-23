@@ -20,6 +20,7 @@ from autodoc_core.models import (
 from autodoc_generator.facts import (
     app_is_fully_ready,
     autoscaler_table,
+    cluster_images_table,
     cluster_stat_chips,
     collection_freshness,
     containers_table,
@@ -603,3 +604,64 @@ def test_collection_freshness_carries_iso_stamp_and_absolute_fallback():
     assert 'data-collected-at="2026-08-23T02:00:00+00:00"' in stamp
     assert "collected 2026-08-23 02:00 UTC" in stamp
     assert stamp.startswith('<span class="freshness"')
+
+
+def test_cluster_images_table_dedupes_across_namespaces_and_lists_users():
+    def app_with_image(name: str, image: str) -> App:
+        return App(
+            name=name,
+            kind="Deployment",
+            replicas=1,
+            ready_replicas=1,
+            containers=[Container(name=name, image=image)],
+        )
+
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-23T00:00:00+00:00",
+        namespaces=[
+            NamespaceInventory(
+                name="demo",
+                apps=[
+                    app_with_image("web", "ghcr.io/acme/web:1.2.0"),
+                    app_with_image("db", "postgres:16.3"),
+                ],
+            ),
+            NamespaceInventory(name="other", apps=[app_with_image("api", "postgres:16.3")]),
+        ],
+    )
+
+    table = cluster_images_table(inventory)
+
+    assert table.splitlines()[0] == "| Image | Registry | Used By |"
+    assert "| `postgres:16.3` | docker.io | demo/db, other/api |" in table
+    assert "| `ghcr.io/acme/web:1.2.0` | ghcr.io | demo/web |" in table
+
+
+def test_cluster_images_table_includes_init_containers():
+    app = App(
+        name="web",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        containers=[
+            Container(name="init-migrate", image="migrate:1.0", is_init=True),
+            Container(name="web", image="nginx:1.25.3"),
+        ],
+    )
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-23T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[app])],
+    )
+
+    table = cluster_images_table(inventory)
+
+    assert "`migrate:1.0`" in table
+    assert "`nginx:1.25.3`" in table
+
+
+def test_cluster_images_table_empty_without_containers():
+    inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-23T00:00:00+00:00")
+
+    assert cluster_images_table(inventory) == ""
