@@ -32,7 +32,7 @@
      the namespace variant below carries H1 and sidenav header instead.
      Both offsets validated with a real browser against the deployed pages,
      not estimated. */
-  height: calc(100vh - 15.5rem);
+  height: calc(100vh - 16.5rem);
   min-height: 480px;
   padding-bottom: 40px;
   border: 1px solid var(--md-default-fg-color--lightest);
