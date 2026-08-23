@@ -27,13 +27,16 @@
   /* Sized so the WHOLE page fits one viewport: 100vh minus the chrome
      above the box. A flat 80vh always overshot that budget and forced the
      topology pages to scroll. min-height keeps the box usable on short
-     windows - there the page scrolls, by design. The default budget is the
+     windows - there the page scrolls, by design; 360px is plenty for a
+     box whose pan/zoom controls make any size navigable (measured: the
+     480px floor reintroduced scrolling on common ~720-810px-high windows,
+     e.g. 1080p displays at 125% Windows scaling). The default budget is the
      cluster topology's (header + breadcrumb + chip row, no visible H1);
      the namespace variant below carries H1 and sidenav header instead.
      Both offsets validated with a real browser against the deployed pages,
      not estimated. */
   height: calc(100vh - 16.5rem);
-  min-height: 480px;
+  min-height: 360px;
   padding-bottom: 40px;
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 4px;
