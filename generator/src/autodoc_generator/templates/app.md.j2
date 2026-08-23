@@ -13,7 +13,7 @@ hide:
 </div>
 <div class="ns-content" markdown>
 
-# {{ app.name }} <span class="kind-badge">{{ app.kind }}</span> <span class="pill{{ '' if app.ready_replicas == app.replicas else ' pill--warn' }}">{{ app.ready_replicas }}/{{ app.replicas }} ready</span>
+# {{ app.name }} <span class="kind-badge">{{ app.kind }}</span> <span class="pill{{ '' if app.ready_replicas == app.replicas else ' pill--warn' }}">{{ app.ready_replicas }}/{{ app.replicas }} ready</span>{% if managed_by %} <span class="kind-badge">{{ managed_by }}</span>{% endif %}
 
 {{ namespace.name }}
 

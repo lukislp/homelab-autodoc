@@ -32,6 +32,7 @@ from autodoc_generator.facts import (
     image_pull_secrets_table,
     ingresses_table,
     limit_ranges_table,
+    managed_by,
     metadata_table,
     namespace_stat_chips,
     network_policies_table,
@@ -764,3 +765,61 @@ def test_warning_events_table_renders_rows_and_truncates_messages():
 def test_warning_events_table_empty_for_none_and_for_no_events():
     assert warning_events_table(NamespaceInventory(name="demo")) == ""
     assert warning_events_table(NamespaceInventory(name="demo", warning_events=[])) == ""
+
+
+def _app_with_markers(
+    labels: dict[str, str] | None = None, annotations: dict[str, str] | None = None
+) -> App:
+    return App(
+        name="web",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        labels=labels or {},
+        annotations=annotations or {},
+    )
+
+
+def test_managed_by_recognizes_a_flux_kustomization():
+    app = _app_with_markers(
+        labels={
+            "kustomize.toolkit.fluxcd.io/name": "homelab-autodoc-deploy",
+            "kustomize.toolkit.fluxcd.io/namespace": "flux-system",
+        }
+    )
+
+    assert managed_by(app) == "Flux Kustomization flux-system/homelab-autodoc-deploy"
+
+
+def test_managed_by_recognizes_a_flux_helmrelease():
+    app = _app_with_markers(labels={"helm.toolkit.fluxcd.io/name": "grafana"})
+
+    assert managed_by(app) == "Flux HelmRelease grafana"
+
+
+def test_managed_by_recognizes_a_plain_helm_release():
+    app = _app_with_markers(
+        labels={"app.kubernetes.io/managed-by": "Helm"},
+        annotations={"meta.helm.sh/release-name": "loki"},
+    )
+
+    assert managed_by(app) == "Helm release loki"
+
+
+def test_managed_by_prefers_flux_over_the_helm_managed_by_label():
+    # Flux's helm-controller sets both its own labels and Helm's managed-by -
+    # the Flux HelmRelease is the actual owner and must win.
+    app = _app_with_markers(
+        labels={
+            "helm.toolkit.fluxcd.io/name": "grafana",
+            "app.kubernetes.io/managed-by": "Helm",
+        }
+    )
+
+    assert managed_by(app) == "Flux HelmRelease grafana"
+
+
+def test_managed_by_is_none_without_any_marker():
+    # No marker means unknown, never a guessed "manual" - other tooling could
+    # own the manifest without labeling it.
+    assert managed_by(_app_with_markers()) is None
