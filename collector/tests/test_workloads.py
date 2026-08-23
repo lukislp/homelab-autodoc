@@ -169,6 +169,28 @@ def test_deployment_collector_normalizes_resources_env_and_config_refs():
     )
 
 
+def test_deployment_collector_normalizes_service_account_name():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    service_account_name="web-sa",
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.service_account_name == "web-sa"
+
+
 def test_normalize_without_status_defaults_ready_replicas_to_zero():
     deployment = client.V1Deployment(
         metadata=client.V1ObjectMeta(name="web", labels={}),

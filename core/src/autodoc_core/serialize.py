@@ -22,6 +22,8 @@ from .models import (
     NetworkPolicyRule,
     NodeInfo,
     PodDisruptionBudgetInfo,
+    RoleBindingInfo,
+    ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -125,6 +127,17 @@ def _network_policy_from_dict(d: dict) -> NetworkPolicyInfo:
     )
 
 
+def _role_binding_from_dict(d: dict) -> RoleBindingInfo:
+    return RoleBindingInfo(name=d["name"], role_kind=d["role_kind"], role_name=d["role_name"])
+
+
+def _service_account_from_dict(d: dict) -> ServiceAccountInfo:
+    return ServiceAccountInfo(
+        name=d["name"],
+        role_bindings=[_role_binding_from_dict(rb) for rb in d.get("role_bindings", [])],
+    )
+
+
 def _pdb_from_dict(d: dict) -> PodDisruptionBudgetInfo:
     return PodDisruptionBudgetInfo(
         name=d["name"],
@@ -135,6 +148,7 @@ def _pdb_from_dict(d: dict) -> PodDisruptionBudgetInfo:
 
 def _app_from_dict(d: dict) -> App:
     autoscaler = d.get("autoscaler")
+    service_account = d.get("service_account")
     return App(
         name=d["name"],
         kind=d["kind"],
@@ -152,6 +166,7 @@ def _app_from_dict(d: dict) -> App:
         autoscaler=_autoscaler_from_dict(autoscaler) if autoscaler else None,
         nodes=list(d.get("nodes", [])),
         network_policies=[_network_policy_from_dict(np) for np in d.get("network_policies", [])],
+        service_account=_service_account_from_dict(service_account) if service_account else None,
         pod_disruption_budgets=[_pdb_from_dict(p) for p in d.get("pod_disruption_budgets", [])],
     )
 

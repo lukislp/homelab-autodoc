@@ -166,6 +166,21 @@ _NOISY_ANNOTATIONS = frozenset({"kubectl.kubernetes.io/last-applied-configuratio
 _MAX_ANNOTATION_VALUE_LENGTH = 200
 
 
+def service_account_table(app: App) -> str:
+    if app.service_account is None:
+        return ""
+    rows = ["| Field | Value |", "|---|---|", f"| ServiceAccount | {app.service_account.name} |"]
+    if app.service_account.role_bindings:
+        roles = ", ".join(
+            f"{rb.role_kind}/{rb.role_name}"
+            for rb in sorted(
+                app.service_account.role_bindings, key=lambda rb: (rb.role_kind, rb.role_name)
+            )
+        )
+        rows.append(f"| Roles | {roles} |")
+    return "\n".join(rows)
+
+
 def metadata_table(app: App) -> str:
     annotations = {k: v for k, v in app.annotations.items() if k not in _NOISY_ANNOTATIONS}
     if not (app.created_at or app.owners or annotations):

@@ -103,6 +103,19 @@ class NetworkPolicyInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class RoleBindingInfo:
+    name: str
+    role_kind: str  # "Role" | "ClusterRole" - what the binding grants
+    role_name: str
+
+
+@dataclass(frozen=True, slots=True)
+class ServiceAccountInfo:
+    name: str
+    role_bindings: list[RoleBindingInfo] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
 class PodDisruptionBudgetInfo:
     name: str
     # Exactly one of these is normally set (Kubernetes defaults maxUnavailable
@@ -130,6 +143,7 @@ class App:
     autoscaler: Autoscaler | None = None
     nodes: list[str] = field(default_factory=list)  # names of nodes running this app's pods
     network_policies: list[NetworkPolicyInfo] = field(default_factory=list)
+    service_account: ServiceAccountInfo | None = None
     pod_disruption_budgets: list[PodDisruptionBudgetInfo] = field(default_factory=list)
 
 

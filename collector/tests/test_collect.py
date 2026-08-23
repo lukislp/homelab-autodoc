@@ -21,6 +21,7 @@ from autodoc_collector.collect import (
     _network_policy_matches_workload,
     _node_names_for_workload,
     _pdb_matches_workload,
+    _service_account_role_bindings,
     build_app,
     build_namespace_inventory,
 )
@@ -37,6 +38,7 @@ def _workload(
     created_at: str | None = None,
     owners: list[str] | None = None,
     config_refs: frozenset[ConfigReference] = frozenset(),
+    service_account_name: str | None = None,
 ) -> NormalizedWorkload:
     return NormalizedWorkload(
         kind=kind,
@@ -51,6 +53,7 @@ def _workload(
         created_at=created_at,
         owners=owners or [],
         config_refs=config_refs,
+        service_account_name=service_account_name,
     )
 
 
@@ -219,6 +222,7 @@ def test_list_httproutes_returns_empty_when_gateway_api_crd_is_missing():
         batch_v1=None,
         custom_objects=FakeCustomObjects(),
         autoscaling_v2=None,
+        rbac_v1=None,
         policy_v1=None,
     )
 
@@ -237,6 +241,7 @@ def test_list_httproutes_reraises_non_404_errors():
         batch_v1=None,
         custom_objects=FakeCustomObjects(),
         autoscaling_v2=None,
+        rbac_v1=None,
         policy_v1=None,
     )
 
@@ -557,6 +562,120 @@ def test_build_app_without_network_policies_leaves_list_empty():
     app = build_app(workload, [], [], [])
 
     assert app.network_policies == []
+
+
+def _sa_subject(name: str, namespace: str | None = None) -> client.RbacV1Subject:
+    return client.RbacV1Subject(kind="ServiceAccount", name=name, namespace=namespace)
+
+
+def _role_binding(
+    name: str, role_kind: str, role_name: str, subjects: list[client.RbacV1Subject]
+) -> client.V1RoleBinding:
+    return client.V1RoleBinding(
+        metadata=client.V1ObjectMeta(name=name),
+        role_ref=client.V1RoleRef(
+            api_group="rbac.authorization.k8s.io", kind=role_kind, name=role_name
+        ),
+        subjects=subjects,
+    )
+
+
+def _cluster_role_binding(
+    name: str, role_name: str, subjects: list[client.RbacV1Subject]
+) -> client.V1ClusterRoleBinding:
+    return client.V1ClusterRoleBinding(
+        metadata=client.V1ObjectMeta(name=name),
+        role_ref=client.V1RoleRef(
+            api_group="rbac.authorization.k8s.io", kind="ClusterRole", name=role_name
+        ),
+        subjects=subjects,
+    )
+
+
+def test_service_account_role_bindings_matches_role_binding_with_explicit_namespace():
+    rb = _role_binding("web-view", "Role", "view", [_sa_subject("web-sa", namespace="demo")])
+
+    result = _service_account_role_bindings([rb], [], "demo")
+
+    assert [b.name for b in result["web-sa"]] == ["web-view"]
+    assert result["web-sa"][0].role_kind == "Role"
+    assert result["web-sa"][0].role_name == "view"
+
+
+def test_service_account_role_bindings_matches_role_binding_without_namespace():
+    rb = _role_binding("web-view", "Role", "view", [_sa_subject("web-sa", namespace=None)])
+
+    result = _service_account_role_bindings([rb], [], "demo")
+
+    assert "web-sa" in result
+
+
+def test_service_account_role_bindings_ignores_role_binding_subject_in_other_namespace():
+    rb = _role_binding("web-view", "Role", "view", [_sa_subject("web-sa", namespace="other")])
+
+    result = _service_account_role_bindings([rb], [], "demo")
+
+    assert result == {}
+
+
+def test_service_account_role_bindings_matches_cluster_role_binding_with_explicit_namespace():
+    crb = _cluster_role_binding(
+        "web-admin", "cluster-admin", [_sa_subject("web-sa", namespace="demo")]
+    )
+
+    result = _service_account_role_bindings([], [crb], "demo")
+
+    assert [b.name for b in result["web-sa"]] == ["web-admin"]
+    assert result["web-sa"][0].role_kind == "ClusterRole"
+
+
+def test_service_account_role_bindings_ignores_cluster_role_binding_without_namespace():
+    crb = _cluster_role_binding(
+        "web-admin", "cluster-admin", [_sa_subject("web-sa", namespace=None)]
+    )
+
+    result = _service_account_role_bindings([], [crb], "demo")
+
+    assert result == {}
+
+
+def test_service_account_role_bindings_ignores_non_service_account_subjects():
+    user_subject = client.RbacV1Subject(kind="User", name="alice")
+    rb = _role_binding("alice-view", "Role", "view", [user_subject])
+
+    result = _service_account_role_bindings([rb], [], "demo")
+
+    assert result == {}
+
+
+def test_build_app_wires_matching_service_account():
+    workload = _workload(name="web", service_account_name="web-sa")
+    rb = _role_binding("web-view", "Role", "view", [_sa_subject("web-sa", namespace="demo")])
+    bindings_by_sa = _service_account_role_bindings([rb], [], "demo")
+
+    app = build_app(workload, [], [], [], service_account_role_bindings=bindings_by_sa)
+
+    assert app.service_account is not None
+    assert app.service_account.name == "web-sa"
+    assert [b.name for b in app.service_account.role_bindings] == ["web-view"]
+
+
+def test_build_app_without_service_account_name_leaves_service_account_none():
+    workload = _workload()
+
+    app = build_app(workload, [], [], [])
+
+    assert app.service_account is None
+
+
+def test_build_app_service_account_with_no_matching_bindings_has_empty_list():
+    workload = _workload(name="web", service_account_name="web-sa")
+
+    app = build_app(workload, [], [], [])
+
+    assert app.service_account is not None
+    assert app.service_account.name == "web-sa"
+    assert app.service_account.role_bindings == []
 
 
 def _pdb(

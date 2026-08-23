@@ -18,6 +18,7 @@ class K8sApis:
     # the generic (untyped, dict-based) way to read any CRD.
     custom_objects: client.CustomObjectsApi
     autoscaling_v2: client.AutoscalingV2Api
+    rbac_v1: client.RbacAuthorizationV1Api
     policy_v1: client.PolicyV1Api
 
     @classmethod
@@ -29,5 +30,6 @@ class K8sApis:
             batch_v1=client.BatchV1Api(),
             custom_objects=client.CustomObjectsApi(),
             autoscaling_v2=client.AutoscalingV2Api(),
+            rbac_v1=client.RbacAuthorizationV1Api(),
             policy_v1=client.PolicyV1Api(),
         )
