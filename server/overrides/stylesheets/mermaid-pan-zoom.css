@@ -28,12 +28,21 @@
      and below the box (Material header, breadcrumb, H1, and the cluster
      pages' chip row underneath). A flat 80vh always overshot that budget
      and forced the topology pages to scroll. min-height keeps the box
-     usable on short windows - there the page scrolls, by design. */
-  height: calc(100vh - 21rem);
+     usable on short windows - there the page scrolls, by design.
+     Offsets measured with a real browser against the deployed pages, not
+     estimated; the namespace variant below reclaims the space the chip
+     row (cluster pages only) doesn't occupy there. */
+  height: calc(100vh - 25.5rem);
   min-height: 480px;
   padding-bottom: 40px;
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 4px;
+}
+
+/* Namespace topology sits in the two-column layout and has no chip row
+   below the box, so it gets the taller budget. */
+.ns-content .mermaid-zoom-viewport {
+  height: calc(100vh - 22.5rem);
 }
 
 /* Width is set inline by the JS to the diagram's measured natural width -
