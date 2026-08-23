@@ -28,6 +28,12 @@
 {{ ingresses_table }}
 
 {% endif %}
+{% if network_policies_table %}
+### Network Policies
+
+{{ network_policies_table }}
+
+{% endif %}
 {% if volumes_table %}
 ### Volumes
 

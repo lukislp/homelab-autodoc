@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from autodoc_core.models import App
+from autodoc_core.models import App, NetworkPolicyInfo, NetworkPolicyRule
 
 from autodoc_generator.facts import (
     autoscaler_table,
@@ -9,6 +9,7 @@ from autodoc_generator.facts import (
     env_table,
     ingresses_table,
     metadata_table,
+    network_policies_table,
     nodes_table,
     resources_table,
     services_table,
@@ -85,6 +86,50 @@ def test_nodes_table_empty_when_app_has_no_nodes(bare_app):
     assert nodes_table(bare_app) == ""
 
 
+def test_network_policies_table_describes_ingress_peers_and_unrestricted_egress(sample_app):
+    table = network_policies_table(sample_app)
+
+    assert "| web-allow-ingress | Ingress | pods:app=traefik | not restricted |" in table
+
+
+def test_network_policies_table_shows_deny_all_when_direction_has_no_rules():
+    app = App(
+        name="worker",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        network_policies=[NetworkPolicyInfo(name="deny-ingress", policy_types=["Ingress"])],
+    )
+
+    table = network_policies_table(app)
+
+    assert "| deny-ingress | Ingress | deny all | not restricted |" in table
+
+
+def test_network_policies_table_shows_all_sources_for_rule_with_no_peers():
+    app = App(
+        name="worker",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        network_policies=[
+            NetworkPolicyInfo(
+                name="allow-all-ingress",
+                policy_types=["Ingress"],
+                ingress=[NetworkPolicyRule()],
+            )
+        ],
+    )
+
+    table = network_policies_table(app)
+
+    assert "| allow-all-ingress | Ingress | all sources | not restricted |" in table
+
+
+def test_network_policies_table_empty_when_app_has_no_policies(bare_app):
+    assert network_policies_table(bare_app) == ""
+
+
 def test_metadata_table_lists_created_owners_and_annotations(sample_app):
     table = metadata_table(sample_app)
 
@@ -115,6 +160,7 @@ def test_all_tables_empty_for_bare_app(bare_app):
     assert resources_table(bare_app) == ""
     assert autoscaler_table(bare_app) == ""
     assert nodes_table(bare_app) == ""
+    assert network_policies_table(bare_app) == ""
     assert env_table(bare_app) == ""
     assert dependencies_table(bare_app) == ""
     assert metadata_table(bare_app) == ""

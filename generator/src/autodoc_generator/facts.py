@@ -91,6 +91,38 @@ def nodes_table(app: App) -> str:
     return "\n".join(["| Node |", "|---|", *rows])
 
 
+def _describe_traffic(rules: list, policy_types: list[str], direction: str) -> str:
+    """Mirrors real NetworkPolicy semantics: a direction not listed in
+    policyTypes is unrestricted by this policy; listed but with no rules
+    means deny all; a rule with no peers means allow from/to everything
+    (ports aside) - the union of all the policy's rules is permissive, so
+    that overrides any other, more specific rule in the same direction.
+    """
+    if direction not in policy_types:
+        return "not restricted"
+    if not rules:
+        return "deny all"
+    peers: list[str] = []
+    for rule in rules:
+        if not rule.peers:
+            return "all sources" if direction == "Ingress" else "all destinations"
+        peers.extend(rule.peers)
+    return ", ".join(sorted(set(peers)))
+
+
+def network_policies_table(app: App) -> str:
+    if not app.network_policies:
+        return ""
+    rows = []
+    for policy in sorted(app.network_policies, key=lambda p: p.name):
+        ingress = _describe_traffic(policy.ingress, policy.policy_types, "Ingress")
+        egress = _describe_traffic(policy.egress, policy.policy_types, "Egress")
+        types = ", ".join(policy.policy_types) or "-"
+        rows.append(f"| {policy.name} | {types} | {ingress} | {egress} |")
+    header = "| Policy | Types | Ingress From | Egress To |"
+    return "\n".join([header, "|---|---|---|---|", *rows])
+
+
 def env_table(app: App) -> str:
     """Never shows a literal env var's actual value - only its name and, for a
     valueFrom reference, which ConfigMap/Secret key it points at. The docs site

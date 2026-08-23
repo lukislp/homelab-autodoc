@@ -9,6 +9,8 @@ from autodoc_core.models import (
     EnvVar,
     IngressInfo,
     IngressRule,
+    NetworkPolicyInfo,
+    NetworkPolicyRule,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -72,6 +74,15 @@ def sample_app() -> App:
         ],
         autoscaler=Autoscaler(min_replicas=2, max_replicas=5, target_cpu_percent=70),
         nodes=["pi-node-1", "pi-node-2"],
+        network_policies=[
+            NetworkPolicyInfo(
+                name="web-allow-ingress",
+                policy_types=["Ingress"],
+                ingress=[
+                    NetworkPolicyRule(peers=["pods:app=traefik"], ports=["TCP/8080"]),
+                ],
+            )
+        ],
     )
 
 

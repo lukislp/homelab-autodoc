@@ -40,6 +40,7 @@ def render_app_page(app: App, namespace: str, summary: str | None = None) -> str
         dependencies_table=facts.dependencies_table(app),
         metadata_table=facts.metadata_table(app),
         nodes_table=facts.nodes_table(app),
+        network_policies_table=facts.network_policies_table(app),
     )
 
 

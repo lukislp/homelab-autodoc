@@ -31,7 +31,7 @@ rules:
     resources: ["cronjobs"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["networking.k8s.io"]
-    resources: ["ingresses"]
+    resources: ["ingresses", "networkpolicies"]
     verbs: ["get", "list", "watch"]
   # Gateway API - safe to grant even on a cluster that doesn't have this CRD
   # installed at all: RBAC rules for a resource type the API server doesn't
