@@ -1,3 +1,15 @@
+# [1.37.0](https://github.com/lukislp/homelab-autodoc/compare/v1.36.0...v1.37.0) (2026-08-23)
+
+
+### Bug Fixes
+
+* **generator:** sort the findings test imports ([02df756](https://github.com/lukislp/homelab-autodoc/commit/02df7560a0ae4b7d73a71c393aa7b8a3748ab9e4))
+
+
+### Features
+
+* **collector:** flag dangling and orphaned ConfigMap references ([68af6db](https://github.com/lukislp/homelab-autodoc/commit/68af6dbc93f3f460b9d9112e3d0161ffc335f0d0))
+
 # [1.36.0](https://github.com/lukislp/homelab-autodoc/compare/v1.35.0...v1.36.0) (2026-08-23)
 
 
