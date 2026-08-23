@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/lukislp/homelab-autodoc/compare/v1.18.1...v1.19.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document which node(s) an app's pods run on ([0a87a3f](https://github.com/lukislp/homelab-autodoc/commit/0a87a3fd5fd3cddd4931ed59089d2b2f66a2e236))
+
 ## [1.18.1](https://github.com/lukislp/homelab-autodoc/compare/v1.18.0...v1.18.1) (2026-08-23)
 
 
