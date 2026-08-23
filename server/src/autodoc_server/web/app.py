@@ -14,6 +14,7 @@ from ..logic import site_builder
 from .deps import get_llm, get_mkdocs_config_path, get_session_secret, get_storage
 from .routes import router as inventory_router
 from .routes_auth import router as auth_router
+from .routes_clusters import router as clusters_router
 from .routes_device import router as device_router
 from .routes_setup import router as setup_router
 
@@ -24,6 +25,7 @@ def create_app() -> FastAPI:
 
     app.include_router(inventory_router)
     app.include_router(device_router)
+    app.include_router(clusters_router)
     app.include_router(auth_router)
     app.include_router(setup_router)
 

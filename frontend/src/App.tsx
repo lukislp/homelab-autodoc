@@ -2,9 +2,11 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { loginUrl, logoutUrl, submitSetup } from "./api/auth";
 import { ApiError } from "./api/client";
+import { ClusterList } from "./components/ClusterList";
 import { DeviceList } from "./components/DeviceList";
 import { SetupForm } from "./components/SetupForm";
 import { useAuthStatus } from "./hooks/useAuthStatus";
+import { useClusters } from "./hooks/useClusters";
 import { usePendingDevices } from "./hooks/usePendingDevices";
 import type { SetupPayload } from "./types";
 
@@ -54,6 +56,7 @@ function LoginPromptView() {
 
 function DevicesView({ identity }: { identity: string }) {
   const { devices, loading, error, approve, deny } = usePendingDevices();
+  const { clusters, loading: clustersLoading, error: clustersError, remove } = useClusters();
 
   return (
     <>
@@ -64,6 +67,11 @@ function DevicesView({ identity }: { identity: string }) {
       {loading && <p className="empty">Loading…</p>}
       {error && <p className="error">{error}</p>}
       {!loading && !error && <DeviceList devices={devices} onApprove={approve} onDeny={deny} />}
+      {clustersLoading && <p className="empty">Loading…</p>}
+      {clustersError && <p className="error">{clustersError}</p>}
+      {!clustersLoading && !clustersError && (
+        <ClusterList clusters={clusters} onDelete={remove} />
+      )}
     </>
   );
 }
