@@ -1,3 +1,10 @@
+## [1.41.4](https://github.com/lukislp/homelab-autodoc/compare/v1.41.3...v1.41.4) (2026-08-23)
+
+
+### Bug Fixes
+
+* **server:** hide the Material footer ([857c6b3](https://github.com/lukislp/homelab-autodoc/commit/857c6b3127c189162e9fa2799d1f4b8926db82d4))
+
 ## [1.41.3](https://github.com/lukislp/homelab-autodoc/compare/v1.41.2...v1.41.3) (2026-08-23)
 
 
