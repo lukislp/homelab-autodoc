@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/lukislp/homelab-autodoc/compare/v1.16.0...v1.16.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **docs:** rewrite Mermaid pan-zoom to work around Material's closed shadow DOM ([5f76f8f](https://github.com/lukislp/homelab-autodoc/commit/5f76f8f3e3e0c624a05c2ee5a3845f5e42c98990))
+
 # [1.16.0](https://github.com/lukislp/homelab-autodoc/compare/v1.15.2...v1.16.0) (2026-08-23)
 
 
