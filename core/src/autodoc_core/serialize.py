@@ -175,6 +175,9 @@ def _app_from_dict(d: dict) -> App:
         network_policies=[_network_policy_from_dict(np) for np in d.get("network_policies", [])],
         service_account=_service_account_from_dict(service_account) if service_account else None,
         pod_disruption_budgets=[_pdb_from_dict(p) for p in d.get("pod_disruption_budgets", [])],
+        node_selector=dict(d.get("node_selector", {})),
+        node_affinity=list(d.get("node_affinity", [])),
+        tolerations=list(d.get("tolerations", [])),
     )
 
 

@@ -156,6 +156,11 @@ class App:
     network_policies: list[NetworkPolicyInfo] = field(default_factory=list)
     service_account: ServiceAccountInfo | None = None
     pod_disruption_budgets: list[PodDisruptionBudgetInfo] = field(default_factory=list)
+    node_selector: dict[str, str] = field(default_factory=dict)
+    # Human-readable node affinity terms, e.g. "required: kubernetes.io/arch In (arm64)".
+    node_affinity: list[str] = field(default_factory=list)
+    # Human-readable toleration summaries, e.g. "node-role.kubernetes.io/master:NoSchedule".
+    tolerations: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)

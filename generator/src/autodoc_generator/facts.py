@@ -195,6 +195,20 @@ def service_account_table(app: App) -> str:
     return "\n".join(rows)
 
 
+def scheduling_table(app: App) -> str:
+    if not (app.node_selector or app.node_affinity or app.tolerations):
+        return ""
+    rows = ["| Field | Value |", "|---|---|"]
+    if app.node_selector:
+        selector = ", ".join(f"{k}={v}" for k, v in sorted(app.node_selector.items()))
+        rows.append(f"| Node Selector | {selector} |")
+    for term in app.node_affinity:
+        rows.append(f"| Node Affinity | {term} |")
+    for toleration in sorted(app.tolerations):
+        rows.append(f"| Toleration | {toleration} |")
+    return "\n".join(rows)
+
+
 def metadata_table(app: App) -> str:
     annotations = {k: v for k, v in app.annotations.items() if k not in _NOISY_ANNOTATIONS}
     if not (app.created_at or app.owners or annotations):

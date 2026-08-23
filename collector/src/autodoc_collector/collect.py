@@ -373,6 +373,9 @@ def build_app(
         pod_disruption_budgets=[
             _build_pdb(pdb) for pdb in (pdbs or []) if _pdb_matches_workload(pdb, workload)
         ],
+        node_selector=workload.node_selector,
+        node_affinity=workload.node_affinity,
+        tolerations=workload.tolerations,
     )
 
 
