@@ -1,3 +1,10 @@
+## [1.15.2](https://github.com/lukislp/homelab-autodoc/compare/v1.15.1...v1.15.2) (2026-08-23)
+
+
+### Bug Fixes
+
+* **docs:** cache-bust the vendored pan-zoom/sidebar JS and CSS assets ([1576927](https://github.com/lukislp/homelab-autodoc/commit/1576927397ca0f09ecfa5db2d4464ac445238546)), closes [#27](https://github.com/lukislp/homelab-autodoc/issues/27) [#27](https://github.com/lukislp/homelab-autodoc/issues/27) [#28](https://github.com/lukislp/homelab-autodoc/issues/28)
+
 ## [1.15.1](https://github.com/lukislp/homelab-autodoc/compare/v1.15.0...v1.15.1) (2026-08-23)
 
 
