@@ -192,11 +192,12 @@
     var panX = 0;
     var panY = 0;
     var userAdjusted = false;
-    var dragging = false;
-    var startX = 0;
-    var startY = 0;
-    var startPanX = 0;
-    var startPanY = 0;
+    // Active pointers by pointerId - Pointer Events unify mouse, touch and
+    // pen, so one code path handles desktop drag AND touch gestures: one
+    // active pointer pans, two pinch-zoom about their midpoint. The
+    // viewport's touch-action: none (mermaid-pan-zoom.css) is what actually
+    // frees these gestures from the browser's own scroll/zoom handling.
+    var pointers = new Map();
 
     function apply() {
       host.style.transform = "translate(" + panX + "px, " + panY + "px) scale(" + scale + ")";
@@ -258,26 +259,58 @@
       { passive: false }
     );
 
-    viewport.addEventListener("mousedown", function (e) {
+    function pinchState() {
+      var pts = Array.from(pointers.values());
+      return {
+        midX: (pts[0].x + pts[1].x) / 2,
+        midY: (pts[0].y + pts[1].y) / 2,
+        dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
+      };
+    }
+
+    viewport.addEventListener("pointerdown", function (e) {
       if (e.target.closest(".mermaid-zoom-controls")) return;
-      dragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      startPanX = panX;
-      startPanY = panY;
+      // Capture keeps the moves coming once a finger drifts outside the
+      // viewport mid-gesture - and keeps every listener local to the
+      // viewport, so Material's instant navigation can garbage-collect the
+      // whole thing (the old window-level mouse listeners leaked one set
+      // per visited page).
+      viewport.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       viewport.classList.add("mermaid-zoom-dragging");
     });
-    window.addEventListener("mousemove", function (e) {
-      if (!dragging) return;
-      panX = startPanX + (e.clientX - startX);
-      panY = startPanY + (e.clientY - startY);
-      userAdjusted = true;
-      apply();
+
+    viewport.addEventListener("pointermove", function (e) {
+      if (!pointers.has(e.pointerId)) return;
+      if (pointers.size === 2) {
+        // Frame-to-frame pinch: compare midpoint/distance before and after
+        // this pointer's update - zoom about the midpoint, then follow its
+        // travel so a two-finger drag also pans. Three or more pointers are
+        // deliberately inert.
+        var before = pinchState();
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        var after = pinchState();
+        if (before.dist > 0) zoomBy(after.dist / before.dist, before.midX, before.midY);
+        panX += after.midX - before.midX;
+        panY += after.midY - before.midY;
+        userAdjusted = true;
+        apply();
+      } else if (pointers.size === 1) {
+        var prev = pointers.get(e.pointerId);
+        panX += e.clientX - prev.x;
+        panY += e.clientY - prev.y;
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        userAdjusted = true;
+        apply();
+      }
     });
-    window.addEventListener("mouseup", function () {
-      dragging = false;
-      viewport.classList.remove("mermaid-zoom-dragging");
-    });
+
+    function releasePointer(e) {
+      pointers.delete(e.pointerId);
+      if (pointers.size === 0) viewport.classList.remove("mermaid-zoom-dragging");
+    }
+    viewport.addEventListener("pointerup", releasePointer);
+    viewport.addEventListener("pointercancel", releasePointer);
 
     controls.addEventListener("click", function (e) {
       var action = e.target.dataset.zoom;
