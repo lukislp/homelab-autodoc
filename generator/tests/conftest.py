@@ -11,6 +11,7 @@ from autodoc_core.models import (
     IngressRule,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    ProbeInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -25,6 +26,7 @@ def sample_app() -> App:
         replicas=2,
         ready_replicas=2,
         containers=[
+            Container(name="init-migrate", image="migrate:1.0", is_init=True),
             Container(
                 name="web",
                 image="nginx:1.25.3",
@@ -35,7 +37,8 @@ def sample_app() -> App:
                     EnvVar(name="LOG_LEVEL", value="info"),
                     EnvVar(name="API_KEY", value_from="Secret:web-secrets/API_KEY"),
                 ],
-            )
+                probes=[ProbeInfo(kind="liveness", check="HTTP :8080/healthz", period_seconds=10)],
+            ),
         ],
         volumes=[
             Volume(

@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from autodoc_core.models import ConfigReference, Container, EnvVar
+from autodoc_core.models import ConfigReference, Container, EnvVar, ProbeInfo
 from kubernetes import client
 
 from .k8s_apis import K8sApis
@@ -56,17 +56,52 @@ def _env_vars_from_container(c: client.V1Container) -> list[EnvVar]:
     return result
 
 
-def _containers_from_pod_spec(pod_spec: client.V1PodSpec) -> list[Container]:
-    return [
-        Container(
-            name=c.name,
-            image=c.image,
-            ports=[p.container_port for p in (c.ports or [])],
-            resource_requests=dict((c.resources.requests or {}) if c.resources else {}),
-            resource_limits=dict((c.resources.limits or {}) if c.resources else {}),
-            env=_env_vars_from_container(c),
+def _describe_probe_check(probe: client.V1Probe) -> str:
+    if probe.http_get:
+        g = probe.http_get
+        return f"{g.scheme or 'HTTP'} :{g.port}{g.path or '/'}"
+    if probe.tcp_socket:
+        return f"TCP :{probe.tcp_socket.port}"
+    if probe.grpc:
+        return f"gRPC :{probe.grpc.port}"
+    if probe.exec:
+        return f"exec: {' '.join(probe.exec.command or [])}"
+    return "unknown"
+
+
+def _probes_from_container(c: client.V1Container) -> list[ProbeInfo]:
+    probes = []
+    for kind, probe in (
+        ("liveness", c.liveness_probe),
+        ("readiness", c.readiness_probe),
+        ("startup", c.startup_probe),
+    ):
+        if probe is None:
+            continue
+        probes.append(
+            ProbeInfo(
+                kind=kind, check=_describe_probe_check(probe), period_seconds=probe.period_seconds
+            )
         )
-        for c in pod_spec.containers
+    return probes
+
+
+def _build_container(c: client.V1Container, is_init: bool) -> Container:
+    return Container(
+        name=c.name,
+        image=c.image,
+        ports=[p.container_port for p in (c.ports or [])],
+        resource_requests=dict((c.resources.requests or {}) if c.resources else {}),
+        resource_limits=dict((c.resources.limits or {}) if c.resources else {}),
+        env=_env_vars_from_container(c),
+        is_init=is_init,
+        probes=_probes_from_container(c),
+    )
+
+
+def _containers_from_pod_spec(pod_spec: client.V1PodSpec) -> list[Container]:
+    return [_build_container(c, is_init=True) for c in (pod_spec.init_containers or [])] + [
+        _build_container(c, is_init=False) for c in pod_spec.containers
     ]
 
 
@@ -80,7 +115,7 @@ def _claim_names_from_pod_spec(pod_spec: client.V1PodSpec) -> frozenset[str]:
 
 def _config_refs_from_pod_spec(pod_spec: client.V1PodSpec) -> frozenset[ConfigReference]:
     refs: set[ConfigReference] = set()
-    for c in pod_spec.containers:
+    for c in [*(pod_spec.init_containers or []), *pod_spec.containers]:
         for e in c.env or []:
             value_from = e.value_from
             if value_from and value_from.config_map_key_ref:

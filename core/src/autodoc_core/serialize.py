@@ -20,6 +20,7 @@ from .models import (
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    ProbeInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -49,6 +50,10 @@ def _config_reference_from_dict(d: dict) -> ConfigReference:
     return ConfigReference(kind=d["kind"], name=d["name"], via=d["via"])
 
 
+def _probe_from_dict(d: dict) -> ProbeInfo:
+    return ProbeInfo(kind=d["kind"], check=d["check"], period_seconds=d.get("period_seconds"))
+
+
 def _container_from_dict(d: dict) -> Container:
     return Container(
         name=d["name"],
@@ -57,6 +62,8 @@ def _container_from_dict(d: dict) -> Container:
         resource_requests=dict(d.get("resource_requests", {})),
         resource_limits=dict(d.get("resource_limits", {})),
         env=[_env_var_from_dict(e) for e in d.get("env", [])],
+        is_init=d.get("is_init", False),
+        probes=[_probe_from_dict(p) for p in d.get("probes", [])],
     )
 
 

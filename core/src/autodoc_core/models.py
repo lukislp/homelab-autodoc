@@ -19,6 +19,15 @@ class EnvVar:
 
 
 @dataclass(frozen=True, slots=True)
+class ProbeInfo:
+    kind: str  # "liveness" | "readiness" | "startup"
+    # Human-readable description of what the probe checks, e.g.
+    # "HTTP :8080/healthz", "TCP :5432", "exec: pg_isready", "gRPC :9090".
+    check: str
+    period_seconds: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Container:
     name: str
     image: str
@@ -26,6 +35,8 @@ class Container:
     resource_requests: dict[str, str] = field(default_factory=dict)
     resource_limits: dict[str, str] = field(default_factory=dict)
     env: list[EnvVar] = field(default_factory=list)
+    is_init: bool = False
+    probes: list[ProbeInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)

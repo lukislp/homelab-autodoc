@@ -11,6 +11,7 @@ from autodoc_generator.facts import (
     metadata_table,
     network_policies_table,
     nodes_table,
+    probes_table,
     resources_table,
     services_table,
     volumes_table,
@@ -20,7 +21,16 @@ from autodoc_generator.facts import (
 def test_containers_table_lists_image_and_ports(sample_app):
     table = containers_table(sample_app)
 
-    assert "| web | `nginx:1.25.3` | 8080 |" in table
+    assert "| web | - | `nginx:1.25.3` | 8080 |" in table
+
+
+def test_containers_table_marks_init_containers_and_lists_them_first(sample_app):
+    table = containers_table(sample_app)
+
+    assert "| init-migrate | Yes | `migrate:1.0` | - |" in table
+    init_line = table.index("init-migrate")
+    web_line = table.index("| web |")
+    assert init_line < web_line
 
 
 def test_services_table_lists_port_mapping(sample_app):
@@ -45,6 +55,16 @@ def test_resources_table_lists_requests_and_limits(sample_app):
     table = resources_table(sample_app)
 
     assert "| web | 100m | 500m | 128Mi | 256Mi |" in table
+
+
+def test_probes_table_lists_type_check_and_period(sample_app):
+    table = probes_table(sample_app)
+
+    assert "| web | liveness | HTTP :8080/healthz | 10s |" in table
+
+
+def test_probes_table_empty_when_no_container_has_probes(bare_app):
+    assert probes_table(bare_app) == ""
 
 
 def test_env_table_never_shows_a_literal_value(sample_app):
@@ -154,6 +174,7 @@ def test_metadata_table_drops_noisy_last_applied_configuration_annotation():
 
 def test_all_tables_empty_for_bare_app(bare_app):
     assert containers_table(bare_app) == ""
+    assert probes_table(bare_app) == ""
     assert services_table(bare_app) == ""
     assert ingresses_table(bare_app) == ""
     assert volumes_table(bare_app) == ""
