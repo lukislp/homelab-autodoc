@@ -1,3 +1,10 @@
+# [1.38.0](https://github.com/lukislp/homelab-autodoc/compare/v1.37.0...v1.38.0) (2026-08-23)
+
+
+### Features
+
+* **server:** AI-generated drift summary on the changelog page ([1e68514](https://github.com/lukislp/homelab-autodoc/commit/1e685145ac2a4f7027d58bac04a3615669e42e46))
+
 # [1.37.0](https://github.com/lukislp/homelab-autodoc/compare/v1.36.0...v1.37.0) (2026-08-23)
 
 
