@@ -1,3 +1,10 @@
+## [1.31.1](https://github.com/lukislp/homelab-autodoc/compare/v1.31.0...v1.31.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **docs:** stop mis-sizing small Mermaid diagrams and drop the 20s wrap delay ([edbd41e](https://github.com/lukislp/homelab-autodoc/commit/edbd41e3d5d41753f8cceb605286f8a2e2218c03))
+
 # [1.31.0](https://github.com/lukislp/homelab-autodoc/compare/v1.30.1...v1.31.0) (2026-08-23)
 
 
