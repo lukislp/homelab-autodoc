@@ -18,6 +18,8 @@ from autodoc_core.models import (
     NamespaceInventory,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    RoleBindingInfo,
+    ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -237,6 +239,46 @@ def _network_policy_matches_workload(
     return _selector_matches(match_labels, workload.pod_labels)
 
 
+def _role_binding_info(
+    binding: client.V1RoleBinding | client.V1ClusterRoleBinding,
+) -> RoleBindingInfo:
+    return RoleBindingInfo(
+        name=binding.metadata.name,
+        role_kind=binding.role_ref.kind,
+        role_name=binding.role_ref.name,
+    )
+
+
+def _service_account_role_bindings(
+    role_bindings: list[client.V1RoleBinding],
+    cluster_role_bindings: list[client.V1ClusterRoleBinding],
+    namespace: str,
+) -> dict[str, list[RoleBindingInfo]]:
+    """Groups RoleBinding/ClusterRoleBinding objects by the ServiceAccount name
+    each one's subjects target, computed once per namespace rather than once
+    per app - cheap either way, but this avoids rescanning the same handful of
+    bindings for every app in a namespace that shares them.
+
+    A subject's `namespace` field is optional on a (namespace-scoped)
+    RoleBinding - unset there implicitly means "this binding's own namespace",
+    which the caller already knows since role_bindings was fetched scoped to
+    it. A ClusterRoleBinding has no such implicit namespace to fall back to,
+    so its subjects must name one explicitly to match at all.
+    """
+    result: dict[str, list[RoleBindingInfo]] = {}
+    for rb in role_bindings:
+        info = _role_binding_info(rb)
+        for subject in rb.subjects or []:
+            if subject.kind == "ServiceAccount" and subject.namespace in (None, namespace):
+                result.setdefault(subject.name, []).append(info)
+    for crb in cluster_role_bindings:
+        info = _role_binding_info(crb)
+        for subject in crb.subjects or []:
+            if subject.kind == "ServiceAccount" and subject.namespace == namespace:
+                result.setdefault(subject.name, []).append(info)
+    return result
+
+
 def build_app(
     workload: NormalizedWorkload,
     services: list[client.V1Service],
@@ -246,6 +288,7 @@ def build_app(
     hpas: list[client.V2HorizontalPodAutoscaler] | None = None,
     pods: list[client.V1Pod] | None = None,
     network_policies: list[client.V1NetworkPolicy] | None = None,
+    service_account_role_bindings: dict[str, list[RoleBindingInfo]] | None = None,
 ) -> App:
     matched_services = [
         svc for svc in services if _selector_matches(svc.spec.selector, workload.pod_labels)
@@ -260,6 +303,15 @@ def build_app(
         if _httproute_targets_services(route, matched_service_names)
     ]
     matched_pvcs = [pvc for pvc in pvcs if pvc.metadata.name in workload.claim_names]
+
+    service_account = None
+    if workload.service_account_name:
+        service_account = ServiceAccountInfo(
+            name=workload.service_account_name,
+            role_bindings=(service_account_role_bindings or {}).get(
+                workload.service_account_name, []
+            ),
+        )
 
     return App(
         name=workload.name,
@@ -283,6 +335,7 @@ def build_app(
             for np in (network_policies or [])
             if _network_policy_matches_workload(np, workload)
         ],
+        service_account=service_account,
     )
 
 
@@ -296,9 +349,20 @@ def build_namespace_inventory(
     hpas: list[client.V2HorizontalPodAutoscaler] | None = None,
     pods: list[client.V1Pod] | None = None,
     network_policies: list[client.V1NetworkPolicy] | None = None,
+    service_account_role_bindings: dict[str, list[RoleBindingInfo]] | None = None,
 ) -> NamespaceInventory:
     apps = [
-        build_app(workload, services, ingresses, pvcs, httproutes, hpas, pods, network_policies)
+        build_app(
+            workload,
+            services,
+            ingresses,
+            pvcs,
+            httproutes,
+            hpas,
+            pods,
+            network_policies,
+            service_account_role_bindings,
+        )
         for workload in workloads
     ]
     return NamespaceInventory(name=namespace, apps=apps)
@@ -355,6 +419,11 @@ def collect_cluster_inventory(
             if include_system or ns.metadata.name not in DEFAULT_SYSTEM_NAMESPACES
         ]
 
+    # Cluster-scoped, so fetched once for the whole run rather than re-fetched
+    # identically for every namespace - a ClusterRoleBinding's subjects can
+    # name a ServiceAccount from any namespace.
+    cluster_role_bindings = apis.rbac_v1.list_cluster_role_binding().items
+
     namespace_inventories = []
     for namespace in namespaces:
         workloads = [
@@ -371,6 +440,10 @@ def collect_cluster_inventory(
         hpas = _list_hpas(apis, namespace)
         pods = apis.core_v1.list_namespaced_pod(namespace).items
         network_policies = apis.networking_v1.list_namespaced_network_policy(namespace).items
+        role_bindings = apis.rbac_v1.list_namespaced_role_binding(namespace).items
+        service_account_role_bindings = _service_account_role_bindings(
+            role_bindings, cluster_role_bindings, namespace
+        )
         namespace_inventories.append(
             build_namespace_inventory(
                 namespace,
@@ -382,6 +455,7 @@ def collect_cluster_inventory(
                 hpas,
                 pods,
                 network_policies,
+                service_account_role_bindings,
             )
         )
 

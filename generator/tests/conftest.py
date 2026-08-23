@@ -11,6 +11,8 @@ from autodoc_core.models import (
     IngressRule,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    RoleBindingInfo,
+    ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -83,6 +85,12 @@ def sample_app() -> App:
                 ],
             )
         ],
+        service_account=ServiceAccountInfo(
+            name="web-sa",
+            role_bindings=[
+                RoleBindingInfo(name="web-sa-view", role_kind="ClusterRole", role_name="view")
+            ],
+        ),
     )
 
 

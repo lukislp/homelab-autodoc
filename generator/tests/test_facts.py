@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from autodoc_core.models import App, NetworkPolicyInfo, NetworkPolicyRule
+from autodoc_core.models import App, NetworkPolicyInfo, NetworkPolicyRule, ServiceAccountInfo
 
 from autodoc_generator.facts import (
     autoscaler_table,
@@ -12,6 +12,7 @@ from autodoc_generator.facts import (
     network_policies_table,
     nodes_table,
     resources_table,
+    service_account_table,
     services_table,
     volumes_table,
 )
@@ -130,6 +131,32 @@ def test_network_policies_table_empty_when_app_has_no_policies(bare_app):
     assert network_policies_table(bare_app) == ""
 
 
+def test_service_account_table_lists_name_and_roles(sample_app):
+    table = service_account_table(sample_app)
+
+    assert "| ServiceAccount | web-sa |" in table
+    assert "| Roles | ClusterRole/view |" in table
+
+
+def test_service_account_table_omits_roles_row_when_no_bindings():
+    app = App(
+        name="worker",
+        kind="Deployment",
+        replicas=1,
+        ready_replicas=1,
+        service_account=ServiceAccountInfo(name="worker-sa"),
+    )
+
+    table = service_account_table(app)
+
+    assert "| ServiceAccount | worker-sa |" in table
+    assert "Roles" not in table
+
+
+def test_service_account_table_empty_when_app_has_no_service_account(bare_app):
+    assert service_account_table(bare_app) == ""
+
+
 def test_metadata_table_lists_created_owners_and_annotations(sample_app):
     table = metadata_table(sample_app)
 
@@ -161,6 +188,7 @@ def test_all_tables_empty_for_bare_app(bare_app):
     assert autoscaler_table(bare_app) == ""
     assert nodes_table(bare_app) == ""
     assert network_policies_table(bare_app) == ""
+    assert service_account_table(bare_app) == ""
     assert env_table(bare_app) == ""
     assert dependencies_table(bare_app) == ""
     assert metadata_table(bare_app) == ""
