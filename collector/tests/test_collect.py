@@ -15,6 +15,7 @@ from autodoc_collector.collect import (
     _build_autoscaler,
     _list_hpas,
     _list_httproutes,
+    _node_names_for_workload,
     build_app,
     build_namespace_inventory,
 )
@@ -101,6 +102,13 @@ def _httproute(name: str, service_name: str, hostnames: list[str], port: int = 8
             ],
         },
     }
+
+
+def _pod(node_name: str | None, labels: dict[str, str] | None = None) -> client.V1Pod:
+    return client.V1Pod(
+        metadata=client.V1ObjectMeta(labels=labels or {"app": "web"}),
+        spec=client.V1PodSpec(node_name=node_name, containers=[]),
+    )
 
 
 def _pvc(name: str, size: str = "1Gi") -> client.V1PersistentVolumeClaim:
@@ -385,6 +393,54 @@ def test_list_hpas_returns_items_on_success():
     hpas = _list_hpas(apis, "demo")
 
     assert [h.spec.scale_target_ref.name for h in hpas] == ["web"]
+
+
+def test_node_names_for_workload_matches_pods_by_label_subset():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    matching_pod = _pod("node-1", labels={"app": "web", "pod-template-hash": "abc"})
+    other_pod = _pod("node-2", labels={"app": "other"})
+
+    nodes = _node_names_for_workload([matching_pod, other_pod], workload)
+
+    assert nodes == ["node-1"]
+
+
+def test_node_names_for_workload_dedupes_and_sorts():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    pods = [
+        _pod("node-2", labels={"app": "web"}),
+        _pod("node-1", labels={"app": "web"}),
+        _pod("node-1", labels={"app": "web"}),
+    ]
+
+    nodes = _node_names_for_workload(pods, workload)
+
+    assert nodes == ["node-1", "node-2"]
+
+
+def test_node_names_for_workload_skips_unscheduled_pods():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+    pending_pod = _pod(None, labels={"app": "web"})
+
+    nodes = _node_names_for_workload([pending_pod], workload)
+
+    assert nodes == []
+
+
+def test_build_app_wires_matching_node_names():
+    workload = _workload(name="web", pod_labels={"app": "web"})
+
+    app = build_app(workload, [], [], [], pods=[_pod("node-1", labels={"app": "web"})])
+
+    assert app.nodes == ["node-1"]
+
+
+def test_build_app_without_pods_leaves_nodes_empty():
+    workload = _workload()
+
+    app = build_app(workload, [], [], [])
+
+    assert app.nodes == []
 
 
 def test_multiple_workloads_of_different_kinds_produce_multiple_apps():

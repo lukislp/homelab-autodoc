@@ -101,6 +101,7 @@ class App:
     owners: list[str] = field(default_factory=list)  # ["Kind/Name", ...]
     config_refs: list[ConfigReference] = field(default_factory=list)
     autoscaler: Autoscaler | None = None
+    nodes: list[str] = field(default_factory=list)  # names of nodes running this app's pods
 
 
 @dataclass(frozen=True, slots=True)
