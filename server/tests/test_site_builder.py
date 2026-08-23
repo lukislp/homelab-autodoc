@@ -307,3 +307,16 @@ def test_regenerate_cluster_docs_survives_a_broken_llm(tmp_path, sample_inventor
     app_page = (storage.docs_dir / "homelab" / "demo" / "web.md").read_text(encoding="utf-8")
     assert "# web" in app_page
     assert "nginx:1.25.3" in app_page
+
+
+def test_root_index_carries_an_about_card_and_the_page_exists(tmp_path):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+
+    site_builder._write_root_index(storage)
+
+    root_index = (storage.docs_dir / "index.md").read_text(encoding="utf-8")
+    about_page = (storage.docs_dir / "about.md").read_text(encoding="utf-8")
+    assert "[Read →](about.md)" in root_index
+    assert "# About this site" in about_page
+    assert "hallucination boundary" in about_page
+    assert "github.com/lukislp/homelab-autodoc" in about_page
