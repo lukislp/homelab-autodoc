@@ -11,7 +11,7 @@ from pathlib import Path
 from autodoc_core.models import App, NamespaceInventory
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from . import diagrams, facts, navigation
+from . import diagrams, facts, findings, navigation
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -33,6 +33,7 @@ def render_app_page(
         breadcrumb=navigation.breadcrumb(cluster_name, namespace.name, current=app.name),
         sidenav=navigation.namespace_sidenav(namespace, current=app.name),
         summary=summary,
+        findings_table=findings.findings_table(findings.evaluate_app(app)),
         diagram=diagrams.build_app_diagram(app),
         containers_table=facts.containers_table(app),
         probes_table=facts.probes_table(app),

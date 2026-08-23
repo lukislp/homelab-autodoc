@@ -18,6 +18,7 @@ NAMESPACE_PAGES = (
 
 CLUSTER_PAGES = (
     ("topology", "Topology"),
+    ("findings", "Findings"),
     ("storage-classes", "Storage Classes"),
     ("nodes", "Nodes"),
     ("changelog", "Changelog"),

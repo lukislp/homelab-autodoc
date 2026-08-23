@@ -61,6 +61,7 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     assert "[Storage Classes](storage-classes.md){: .chip-link }" in cluster_index
     assert "[Nodes](nodes.md){: .chip-link }" in cluster_index
     assert "[Changelog](changelog.md){: .chip-link }" in cluster_index
+    assert "[Findings](findings.md){: .chip-link }" in cluster_index
     assert "# homelab - Topology" in cluster_topology
     assert '<span class="chip-link chip-link--active">Topology</span>' in cluster_topology
     assert "[Nodes](nodes.md){: .chip-link }" in cluster_topology
@@ -147,6 +148,21 @@ def test_write_root_index_admin_tile_present_even_with_no_clusters(tmp_path):
     root_index = (storage.docs_dir / "index.md").read_text(encoding="utf-8")
     assert "[Open Admin →](/admin/)" in root_index
     assert root_index.startswith("---\nhide:\n  - navigation\n---")
+
+
+def test_regenerate_cluster_docs_writes_findings_page(tmp_path, sample_inventory):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", sample_inventory)
+
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=None)
+
+    findings_page = (storage.docs_dir / "homelab" / "findings.md").read_text(encoding="utf-8")
+    assert "# homelab - Findings" in findings_page
+    assert '<span class="chip-link chip-link--active">Findings</span>' in findings_page
+    # The sample app has no probes at all - that exact gap must surface,
+    # attributed and linked to the app.
+    assert "| [demo](demo/index.md) | [web](demo/web.md) | `missing-probes` |" in findings_page
+    assert "no liveness or readiness probe configured" in findings_page
 
 
 def test_regenerate_cluster_docs_writes_changelog_page(tmp_path, sample_inventory):

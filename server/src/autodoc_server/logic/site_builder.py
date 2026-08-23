@@ -8,7 +8,7 @@ from pathlib import Path
 from autodoc_core.diff import Change
 from autodoc_core.models import App, ClusterInventory, NamespaceInventory
 from autodoc_generator import changelog as changelog_render
-from autodoc_generator import diagrams, facts, navigation, render
+from autodoc_generator import diagrams, facts, findings, navigation, render
 from autodoc_generator.llm import LLMClient
 from autodoc_generator.prose import generate_summary
 
@@ -63,6 +63,7 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
 
     _write_cluster_index(storage, cluster_name, inventory, _drift_count(last_changes))
     _write_cluster_diagram(storage, cluster_name, inventory)
+    _write_findings_page(storage, cluster_name, inventory)
     _write_storage_classes_page(storage, cluster_name, inventory)
     _write_nodes_page(storage, cluster_name, inventory)
     _write_changelog_page(storage, cluster_name)
@@ -152,7 +153,9 @@ def _write_cluster_index(
         "",
         f"# {cluster_name}",
         "",
-        facts.cluster_stat_chips(inventory, drift_count),
+        facts.cluster_stat_chips(
+            inventory, drift_count, findings_count=len(findings.evaluate_cluster(inventory))
+        ),
         "",
         '<p class="section-label">Namespaces</p>',
         "",
@@ -242,6 +245,19 @@ def _write_cluster_diagram(
         cluster_name, "topology", f"{cluster_name} - Topology", f"```mermaid\n{diagram}\n```"
     )
     (storage.docs_dir / cluster_name / "topology.md").write_text(page, encoding="utf-8")
+
+
+def _write_findings_page(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:
+    table = findings.cluster_findings_table(inventory)
+    body = "\n\n".join(
+        [
+            "Deterministic best-practice checks over the collected inventory - "
+            "review hints, not failures. Every finding links back to the app it fired on.",
+            table if table else "No findings - every collected fact passed all checks.",
+        ]
+    )
+    page = _cluster_content_page(cluster_name, "findings", f"{cluster_name} - Findings", body)
+    (storage.docs_dir / cluster_name / "findings.md").write_text(page, encoding="utf-8")
 
 
 def _write_storage_classes_page(

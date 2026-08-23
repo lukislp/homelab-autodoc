@@ -258,20 +258,32 @@ def test_cluster_stat_chips_counts_namespaces_nodes_and_storage_classes():
         ],
     )
 
-    chips = cluster_stat_chips(inventory, drift_count=0)
+    chips = cluster_stat_chips(inventory, drift_count=0, findings_count=0)
 
     assert '<span class="stat-num">1</span><span class="stat-label">Namespaces</span>' in chips
     assert '<span class="stat-num">1</span><span class="stat-label">Nodes</span>' in chips
     assert '<span class="stat-num">1</span><span class="stat-label">Storage Classes</span>' in chips
+    assert '<span class="stat-num">0</span><span class="stat-label">Findings</span>' in chips
     assert '<span class="stat-num">0</span><span class="stat-label">Drift, Last Run</span>' in chips
 
 
 def test_cluster_stat_chips_highlights_nonzero_drift():
     inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-23T00:00:00+00:00")
 
-    chips = cluster_stat_chips(inventory, drift_count=4)
+    chips = cluster_stat_chips(inventory, drift_count=4, findings_count=0)
 
     assert '<span class="stat-num stat-num--warn">4</span>' in chips
+
+
+def test_cluster_stat_chips_highlights_nonzero_findings():
+    inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-23T00:00:00+00:00")
+
+    chips = cluster_stat_chips(inventory, drift_count=0, findings_count=7)
+
+    assert (
+        '<span class="stat-num stat-num--warn">7</span><span class="stat-label">Findings</span>'
+        in chips
+    )
 
 
 def test_namespace_stat_chips_shows_raw_quota_values_without_computing_a_percentage():

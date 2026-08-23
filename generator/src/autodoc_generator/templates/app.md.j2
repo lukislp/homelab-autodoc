@@ -23,6 +23,14 @@ hide:
 {{ summary }}
 
 {% endif %}
+{% if findings_table %}
+## Findings
+
+Deterministic best-practice checks over the collected facts - review hints, not failures.
+
+{{ findings_table }}
+
+{% endif %}
 ## Facts
 
 {% if containers_table %}
