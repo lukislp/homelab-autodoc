@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from autodoc_core.models import App, NamespaceInventory, NodeInfo, StorageClassInfo
+from autodoc_core.models import (
+    App,
+    ClusterInventory,
+    NamespaceInventory,
+    NodeInfo,
+    StorageClassInfo,
+)
 
 from .formatting import format_timestamp
 
@@ -357,6 +363,59 @@ def limit_ranges_table(namespace: NamespaceInventory) -> str:
                 )
     header = "| LimitRange | Applies To | Resource | Min | Max | Default Limit | Default Request |"
     return "\n".join([header, "|---|---|---|---|---|---|---|", *rows])
+
+
+def app_is_fully_ready(app: App) -> bool:
+    return app.ready_replicas == app.replicas
+
+
+def _stat_row_html(chips: list[tuple[str, str, bool]]) -> str:
+    """`chips` is (value, label, warn) triples - warn highlights the value in
+    the warning color (used for a non-zero drift count).
+    """
+    cells = []
+    for value, label, warn in chips:
+        num_class = "stat-num stat-num--warn" if warn else "stat-num"
+        cells.append(
+            f'<div class="stat-chip"><span class="{num_class}">{value}</span>'
+            f'<span class="stat-label">{label}</span></div>'
+        )
+    return '<div class="stat-row">' + "".join(cells) + "</div>"
+
+
+def cluster_stat_chips(inventory: ClusterInventory, drift_count: int) -> str:
+    return _stat_row_html(
+        [
+            (str(len(inventory.namespaces)), "Namespaces", False),
+            (str(len(inventory.nodes)), "Nodes", False),
+            (str(len(inventory.storage_classes)), "Storage Classes", False),
+            (str(drift_count), "Drift, Last Run", drift_count > 0),
+        ]
+    )
+
+
+def namespace_stat_chips(namespace: NamespaceInventory, drift_count: int) -> str:
+    """Pods and CPU figures are the raw hard/used quantity strings from the
+    namespace's first ResourceQuota, shown side by side rather than computed
+    into a percentage - resource quantities are never parsed in this codebase
+    (mixed units like "900m" vs "2" would need real unit-aware math to
+    compare correctly).
+    """
+    quota = namespace.resource_quotas[0] if namespace.resource_quotas else None
+    pods = f"{quota.used.get('pods', '-')}/{quota.hard.get('pods', '-')}" if quota else "-"
+    cpu = (
+        f"{quota.used.get('requests.cpu', '-')} / {quota.hard.get('requests.cpu', '-')}"
+        if quota
+        else "-"
+    )
+    return _stat_row_html(
+        [
+            (str(len(namespace.apps)), "Applications", False),
+            (pods, "Pods (Quota)", False),
+            (cpu, "CPU (Requests)", False),
+            (str(drift_count), "Drift, Last Run", drift_count > 0),
+        ]
+    )
 
 
 def storage_classes_table(storage_classes: list[StorageClassInfo]) -> str:

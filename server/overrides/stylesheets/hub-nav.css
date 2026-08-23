@@ -1,0 +1,215 @@
+/* Hub pages (root, cluster, namespace indexes) rely on Material's built-in
+   "grid cards" layout with no nav sidebar at all. Content pages (apps,
+   topology, dependencies, resource governance - see
+   generator/src/autodoc_generator/navigation.py) hide Material's global nav
+   tree via each page's own `hide: navigation` front matter and replace it
+   with the breadcrumb and sidebar styled below. Hiding via front matter
+   (rather than overriding here) lets Material's own template reflow the
+   content width correctly - a bolted-on CSS override would fight that.
+*/
+
+.ns-breadcrumb {
+  font-family: var(--md-code-font-family);
+  font-size: 0.7rem;
+  color: var(--md-default-fg-color--light);
+  margin-bottom: 1.2rem;
+}
+
+.ns-breadcrumb a {
+  color: var(--md-default-fg-color--light);
+}
+
+.ns-breadcrumb a:hover {
+  color: var(--md-primary-fg-color);
+}
+
+.ns-layout {
+  display: grid;
+  grid-template-columns: 13rem 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.ns-sidenav {
+  background: var(--md-code-bg-color);
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-radius: 0.2rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.7rem;
+  position: sticky;
+  top: 4.8rem;
+}
+
+.ns-sidenav p:first-child {
+  margin-top: 0;
+  font-family: var(--md-code-font-family);
+}
+
+.ns-sidenav p:first-child a {
+  color: var(--md-primary-fg-color);
+}
+
+.ns-sidenav ul {
+  margin: 0.4rem 0 1rem;
+  padding-left: 1.1rem;
+}
+
+.ns-sidenav li {
+  margin: 0.15rem 0;
+}
+
+.ns-active {
+  display: block;
+  color: var(--md-primary-fg-color);
+  font-weight: 700;
+  background: var(--md-accent-fg-color--transparent);
+  padding: 0.2rem 0.4rem;
+  margin: 0.1rem -0.4rem;
+  border-radius: 0.2rem;
+}
+
+.ns-list-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
+
+.ns-list-dot--ok {
+  background: #55c48a;
+}
+
+.ns-list-dot--warn {
+  background: #e3ac4c;
+}
+
+@media screen and (max-width: 45em) {
+  .ns-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ns-sidenav {
+    position: static;
+  }
+}
+
+/* Hub-page dashboard widgets: the stat-chip summary row (cluster/namespace
+   index), section labels above each card grid, the small ready/not-ready
+   dot on namespace and app cards, and the pill-style links for cluster- and
+   namespace-scoped utility pages. */
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1rem 0 1.6rem;
+}
+
+.stat-chip {
+  background: var(--md-code-bg-color);
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-radius: 0.3rem;
+  padding: 0.5rem 0.9rem;
+  min-width: 6.5rem;
+}
+
+.stat-num {
+  font-family: var(--md-code-font-family);
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--md-default-fg-color);
+  display: block;
+}
+
+.stat-num--warn {
+  color: #e3ac4c;
+}
+
+.stat-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--md-default-fg-color--lighter);
+}
+
+.section-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--md-default-fg-color--lighter);
+  font-weight: 700;
+  margin: 1.8rem 0 0.6rem;
+}
+
+.ns-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  float: right;
+  margin-top: 0.3rem;
+}
+
+.ns-dot--ok {
+  background: #55c48a;
+}
+
+.ns-dot--warn {
+  background: #e3ac4c;
+}
+
+.chip-link {
+  display: inline-block;
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-radius: 0.2rem;
+  padding: 0.3rem 0.7rem;
+  margin: 0 0.3rem 0.3rem 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.chip-link:hover {
+  border-color: var(--md-primary-fg-color);
+  color: var(--md-primary-fg-color);
+}
+
+.chip-link--active {
+  border-color: var(--md-primary-fg-color);
+  color: var(--md-primary-fg-color);
+  background: var(--md-accent-fg-color--transparent);
+}
+
+/* Kind badge + ready pill next to an app page's H1. */
+
+.kind-badge {
+  display: inline-block;
+  font-family: var(--md-code-font-family);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--md-default-fg-color--light);
+  background: var(--md-code-bg-color);
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.25rem;
+  vertical-align: middle;
+}
+
+.pill {
+  display: inline-block;
+  font-family: var(--md-code-font-family);
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 1rem;
+  background: rgba(85, 196, 138, 0.16);
+  color: #55c48a;
+  vertical-align: middle;
+}
+
+.pill--warn {
+  background: rgba(227, 172, 76, 0.18);
+  color: #e3ac4c;
+}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from autodoc_core.models import (
     App,
+    ClusterInventory,
     ConfigReference,
     Container,
     ContainerSecurityInfo,
@@ -17,7 +18,9 @@ from autodoc_core.models import (
 )
 
 from autodoc_generator.facts import (
+    app_is_fully_ready,
     autoscaler_table,
+    cluster_stat_chips,
     containers_table,
     dependencies_table,
     dependency_usage_table,
@@ -26,6 +29,7 @@ from autodoc_generator.facts import (
     ingresses_table,
     limit_ranges_table,
     metadata_table,
+    namespace_stat_chips,
     network_policies_table,
     node_specs_table,
     nodes_table,
@@ -219,6 +223,87 @@ def test_limit_ranges_table_empty_for_namespace_without_limit_ranges():
     namespace = NamespaceInventory(name="demo")
 
     assert limit_ranges_table(namespace) == ""
+
+
+def test_app_is_fully_ready_true_when_ready_equals_replicas():
+    app = App(name="web", kind="Deployment", replicas=2, ready_replicas=2)
+
+    assert app_is_fully_ready(app) is True
+
+
+def test_app_is_fully_ready_false_when_under_ready():
+    app = App(name="web", kind="Deployment", replicas=2, ready_replicas=1)
+
+    assert app_is_fully_ready(app) is False
+
+
+def test_cluster_stat_chips_counts_namespaces_nodes_and_storage_classes():
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-23T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo")],
+        storage_classes=[StorageClassInfo(name="local-path", provisioner="rancher.io/local-path")],
+        nodes=[
+            NodeInfo(
+                name="pi-node-1",
+                architecture="arm64",
+                kubelet_version="v1.31.2+k3s1",
+                os_image="Debian",
+                capacity_cpu="4",
+                capacity_memory="8Gi",
+                allocatable_cpu="3900m",
+                allocatable_memory="7Gi",
+                ready=True,
+            )
+        ],
+    )
+
+    chips = cluster_stat_chips(inventory, drift_count=0)
+
+    assert '<span class="stat-num">1</span><span class="stat-label">Namespaces</span>' in chips
+    assert '<span class="stat-num">1</span><span class="stat-label">Nodes</span>' in chips
+    assert '<span class="stat-num">1</span><span class="stat-label">Storage Classes</span>' in chips
+    assert '<span class="stat-num">0</span><span class="stat-label">Drift, Last Run</span>' in chips
+
+
+def test_cluster_stat_chips_highlights_nonzero_drift():
+    inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-23T00:00:00+00:00")
+
+    chips = cluster_stat_chips(inventory, drift_count=4)
+
+    assert '<span class="stat-num stat-num--warn">4</span>' in chips
+
+
+def test_namespace_stat_chips_shows_raw_quota_values_without_computing_a_percentage():
+    namespace = NamespaceInventory(
+        name="demo",
+        apps=[App(name="web", kind="Deployment", replicas=1, ready_replicas=1)],
+        resource_quotas=[
+            ResourceQuotaInfo(
+                name="demo-quota",
+                hard={"requests.cpu": "2", "pods": "20"},
+                used={"requests.cpu": "900m", "pods": "4"},
+            )
+        ],
+    )
+
+    chips = namespace_stat_chips(namespace, drift_count=0)
+
+    assert '<span class="stat-num">1</span><span class="stat-label">Applications</span>' in chips
+    assert '<span class="stat-num">4/20</span><span class="stat-label">Pods (Quota)</span>' in chips
+    assert (
+        '<span class="stat-num">900m / 2</span><span class="stat-label">CPU (Requests)</span>'
+        in chips
+    )
+
+
+def test_namespace_stat_chips_shows_dash_when_no_resource_quota():
+    namespace = NamespaceInventory(name="demo")
+
+    chips = namespace_stat_chips(namespace, drift_count=0)
+
+    assert '<span class="stat-num">-</span><span class="stat-label">Pods (Quota)</span>' in chips
+    assert '<span class="stat-num">-</span><span class="stat-label">CPU (Requests)</span>' in chips
 
 
 def test_autoscaler_table_lists_replica_bounds_and_cpu_target(sample_app):

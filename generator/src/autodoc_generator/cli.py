@@ -64,12 +64,13 @@ def main(argv: list[str] | None = None) -> int:
         namespace_dir = cluster_dir / namespace.name
         namespace_dir.mkdir(parents=True, exist_ok=True)
         namespace_dir.joinpath("index.md").write_text(
-            render.render_namespace_index(namespace), encoding="utf-8"
+            render.render_namespace_index(namespace, inventory.cluster_name), encoding="utf-8"
         )
         for app in namespace.apps:
             summary = generate_summary(app, llm) if llm else None
             namespace_dir.joinpath(f"{app.name}.md").write_text(
-                render.render_app_page(app, namespace.name, summary), encoding="utf-8"
+                render.render_app_page(app, namespace, inventory.cluster_name, summary),
+                encoding="utf-8",
             )
 
     return 0

@@ -8,7 +8,7 @@ from pathlib import Path
 from autodoc_core.diff import Change
 from autodoc_core.models import App, ClusterInventory, NamespaceInventory
 from autodoc_generator import changelog as changelog_render
-from autodoc_generator import diagrams, facts, render
+from autodoc_generator import diagrams, facts, navigation, render
 from autodoc_generator.llm import LLMClient
 from autodoc_generator.prose import generate_summary
 
@@ -16,28 +16,52 @@ from .storage import Storage
 
 logger = logging.getLogger(__name__)
 
+# Every generated page hides Material's global nav tree in favor of a
+# breadcrumb (every page) plus, on namespace-scoped content pages, a compact
+# sidebar scoped to just that namespace - see navigation.py and
+# _namespace_content_page/_cluster_content_page below.
+_HIDE_NAV_FRONTMATTER = "---\nhide:\n  - navigation\n---"
+
+
+def _last_run_changes(storage: Storage, cluster_name: str) -> list[dict]:
+    """The most recent collector run's drift, or [] if none yet/no changelog
+    entries exist - the "Drift, Last Run" stat chip on the cluster and
+    namespace hub pages, and _drift_count below, both read from this.
+    """
+    entries = storage.load_changelog_entries(cluster_name)
+    return entries[-1]["changes"] if entries else []
+
+
+def _drift_count(last_changes: list[dict], namespace_name: str | None = None) -> int:
+    if namespace_name is None:
+        return len(last_changes)
+    return sum(1 for c in last_changes if c["namespace"] == namespace_name)
+
 
 def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient | None) -> None:
     inventory = storage.load_inventory(cluster_name)
     cluster_dir = storage.docs_dir / cluster_name
     cluster_dir.mkdir(parents=True, exist_ok=True)
+    last_changes = _last_run_changes(storage, cluster_name)
 
     for namespace in inventory.namespaces:
         namespace_dir = cluster_dir / namespace.name
         namespace_dir.mkdir(parents=True, exist_ok=True)
+        namespace_drift = _drift_count(last_changes, namespace.name)
         namespace_dir.joinpath("index.md").write_text(
-            render.render_namespace_index(namespace), encoding="utf-8"
+            render.render_namespace_index(namespace, cluster_name, namespace_drift),
+            encoding="utf-8",
         )
         for app in namespace.apps:
             summary = _safe_generate_summary(app, llm) if llm else None
             namespace_dir.joinpath(f"{app.name}.md").write_text(
-                render.render_app_page(app, namespace.name, summary), encoding="utf-8"
+                render.render_app_page(app, namespace, cluster_name, summary), encoding="utf-8"
             )
         _write_namespace_diagram(storage, cluster_name, namespace)
         _write_namespace_dependencies_page(storage, cluster_name, namespace)
         _write_namespace_resource_governance_page(storage, cluster_name, namespace)
 
-    _write_cluster_index(storage, cluster_name, inventory)
+    _write_cluster_index(storage, cluster_name, inventory, _drift_count(last_changes))
     _write_cluster_diagram(storage, cluster_name, inventory)
     _write_storage_classes_page(storage, cluster_name, inventory)
     _write_nodes_page(storage, cluster_name, inventory)
@@ -58,18 +82,101 @@ def _safe_generate_summary(app: App, llm: LLMClient) -> str | None:
         return None
 
 
-def _write_cluster_index(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:
+def _cluster_content_page(cluster_name: str, current: str, heading: str, body: str) -> str:
+    """Shared shape for cluster-scoped content pages (topology, storage
+    classes, nodes, changelog): front matter + breadcrumb + the same
+    topology/storage-classes/nodes/changelog chip row the cluster hub shows,
+    marking `current` inert - these aren't namespace-scoped, so
+    navigation.namespace_sidenav's two-column layout doesn't apply, but a way
+    to jump straight to a sibling utility page (or notice you're already on
+    it) still does.
+    """
+    crumb = navigation.breadcrumb(cluster_name, current=current)
     lines = [
+        _HIDE_NAV_FRONTMATTER,
+        "",
+        f'<p class="ns-breadcrumb" markdown>{crumb}</p>',
+        "",
+        f"# {heading}",
+        "",
+        body,
+        "",
+        navigation.cluster_page_links(current),
+    ]
+    return "\n".join(lines)
+
+
+def _namespace_content_page(
+    cluster_name: str, namespace: NamespaceInventory, current: str, heading: str, body: str
+) -> str:
+    """Shared shape for namespace-scoped content pages (topology, dependencies,
+    resource governance): front matter + breadcrumb + the same compact,
+    namespace-scoped sidebar app pages use (see navigation.py).
+    """
+    crumb = navigation.breadcrumb(cluster_name, namespace.name, current=current)
+    lines = [
+        _HIDE_NAV_FRONTMATTER,
+        "",
+        f'<p class="ns-breadcrumb" markdown>{crumb}</p>',
+        "",
+        '<div class="ns-layout" markdown>',
+        '<div class="ns-sidenav" markdown>',
+        "",
+        navigation.namespace_sidenav(namespace, current),
+        "",
+        "</div>",
+        '<div class="ns-content" markdown>',
+        "",
+        f"# {heading}",
+        "",
+        body,
+        "",
+        "</div>",
+        "</div>",
+    ]
+    return "\n".join(lines)
+
+
+def _write_cluster_index(
+    storage: Storage, cluster_name: str, inventory: ClusterInventory, drift_count: int
+) -> None:
+    # Hub page: namespaces are shown as cards (same "grid cards" layout as the
+    # root index - attr_list + md_in_html, see mkdocs.yml), not a table - a
+    # hub is a "which of these" moment, nothing to scan yet. The card's own
+    # title is the link (no separate "Browse ->" line) - unlike the root
+    # index's Admin/cluster tiles, which stay as they were.
+    lines = [
+        _HIDE_NAV_FRONTMATTER,
+        "",
+        f'<p class="ns-breadcrumb" markdown>{navigation.breadcrumb(cluster_name)}</p>',
+        "",
         f"# {cluster_name}",
         "",
-        "[Topology](topology.md) · [Storage Classes](storage-classes.md) · "
-        "[Nodes](nodes.md) · [Changelog](changelog.md)",
+        facts.cluster_stat_chips(inventory, drift_count),
         "",
-        "| Namespace | Apps |",
-        "|---|---|",
+        '<p class="section-label">Namespaces</p>',
+        "",
+        '<div class="grid cards" markdown>',
+        "",
     ]
     for namespace in sorted(inventory.namespaces, key=lambda n: n.name):
-        lines.append(f"| [{namespace.name}]({namespace.name}/index.md) | {len(namespace.apps)} |")
+        app_count = len(namespace.apps)
+        all_ready = all(facts.app_is_fully_ready(app) for app in namespace.apps)
+        dot_class = "ns-dot ns-dot--ok" if all_ready else "ns-dot ns-dot--warn"
+        lines += [
+            f'-   [__{namespace.name}__ <span class="{dot_class}"></span>]'
+            f"({namespace.name}/index.md)",
+            "",
+            f"    {app_count} app{'' if app_count == 1 else 's'}",
+            "",
+        ]
+    lines += [
+        "</div>",
+        "",
+        '<p class="section-label">Cluster</p>',
+        "",
+        navigation.cluster_page_links(),
+    ]
     (storage.docs_dir / cluster_name / "index.md").write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -77,7 +184,13 @@ def _write_namespace_diagram(
     storage: Storage, cluster_name: str, namespace: NamespaceInventory
 ) -> None:
     diagram = diagrams.build_namespace_diagram(namespace)
-    page = f"# {namespace.name} - Topology\n\n```mermaid\n{diagram}\n```"
+    page = _namespace_content_page(
+        cluster_name,
+        namespace,
+        "topology",
+        f"{namespace.name} - Topology",
+        f"```mermaid\n{diagram}\n```",
+    )
     (storage.docs_dir / cluster_name / namespace.name / "topology.md").write_text(
         page, encoding="utf-8"
     )
@@ -87,28 +200,37 @@ def _write_namespace_dependencies_page(
     storage: Storage, cluster_name: str, namespace: NamespaceInventory
 ) -> None:
     table = facts.dependency_usage_table(namespace)
-    lines = [f"# {namespace.name} - Dependencies", ""]
-    lines.append(table if table else "No ConfigMap/Secret references collected yet.")
+    body = table if table else "No ConfigMap/Secret references collected yet."
+    page = _namespace_content_page(
+        cluster_name, namespace, "dependencies", f"{namespace.name} - Dependencies", body
+    )
     (storage.docs_dir / cluster_name / namespace.name / "dependencies.md").write_text(
-        "\n".join(lines), encoding="utf-8"
+        page, encoding="utf-8"
     )
 
 
 def _write_namespace_resource_governance_page(
     storage: Storage, cluster_name: str, namespace: NamespaceInventory
 ) -> None:
-    lines = [f"# {namespace.name} - Resource Governance", ""]
     quotas_table = facts.resource_quotas_table(namespace)
-    lines.append("## Resource Quotas")
-    lines.append("")
-    lines.append(quotas_table if quotas_table else "No ResourceQuota data collected yet.")
-    lines.append("")
     limits_table = facts.limit_ranges_table(namespace)
-    lines.append("## Limit Ranges")
-    lines.append("")
-    lines.append(limits_table if limits_table else "No LimitRange data collected yet.")
+    body = "\n\n".join(
+        [
+            "## Resource Quotas",
+            quotas_table if quotas_table else "No ResourceQuota data collected yet.",
+            "## Limit Ranges",
+            limits_table if limits_table else "No LimitRange data collected yet.",
+        ]
+    )
+    page = _namespace_content_page(
+        cluster_name,
+        namespace,
+        "resource-governance",
+        f"{namespace.name} - Resource Governance",
+        body,
+    )
     (storage.docs_dir / cluster_name / namespace.name / "resource-governance.md").write_text(
-        "\n".join(lines), encoding="utf-8"
+        page, encoding="utf-8"
     )
 
 
@@ -116,7 +238,9 @@ def _write_cluster_diagram(
     storage: Storage, cluster_name: str, inventory: ClusterInventory
 ) -> None:
     diagram = diagrams.build_cluster_diagram(inventory)
-    page = f"# {cluster_name} - Topology\n\n```mermaid\n{diagram}\n```"
+    page = _cluster_content_page(
+        cluster_name, "topology", f"{cluster_name} - Topology", f"```mermaid\n{diagram}\n```"
+    )
     (storage.docs_dir / cluster_name / "topology.md").write_text(page, encoding="utf-8")
 
 
@@ -124,18 +248,18 @@ def _write_storage_classes_page(
     storage: Storage, cluster_name: str, inventory: ClusterInventory
 ) -> None:
     table = facts.storage_classes_table(inventory.storage_classes)
-    lines = [f"# {cluster_name} - Storage Classes", ""]
-    lines.append(table if table else "No StorageClass data collected yet.")
-    (storage.docs_dir / cluster_name / "storage-classes.md").write_text(
-        "\n".join(lines), encoding="utf-8"
+    body = table if table else "No StorageClass data collected yet."
+    page = _cluster_content_page(
+        cluster_name, "storage-classes", f"{cluster_name} - Storage Classes", body
     )
+    (storage.docs_dir / cluster_name / "storage-classes.md").write_text(page, encoding="utf-8")
 
 
 def _write_nodes_page(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:
     table = facts.node_specs_table(inventory.nodes)
-    lines = [f"# {cluster_name} - Nodes", ""]
-    lines.append(table if table else "No node data collected yet.")
-    (storage.docs_dir / cluster_name / "nodes.md").write_text("\n".join(lines), encoding="utf-8")
+    body = table if table else "No node data collected yet."
+    page = _cluster_content_page(cluster_name, "nodes", f"{cluster_name} - Nodes", body)
+    (storage.docs_dir / cluster_name / "nodes.md").write_text(page, encoding="utf-8")
 
 
 def _write_changelog_page(storage: Storage, cluster_name: str) -> None:
@@ -146,7 +270,21 @@ def _write_changelog_page(storage: Storage, cluster_name: str) -> None:
         )
         for entry in reversed(entries)
     ]
-    page = changelog_render.render_changelog_page(cluster_name, rendered)
+    # render_changelog_page already builds its own "# {cluster} - Changelog"
+    # heading, so this only prepends front matter + breadcrumb rather than
+    # going through _cluster_content_page (which would add a second heading).
+    page = "\n".join(
+        [
+            _HIDE_NAV_FRONTMATTER,
+            "",
+            f'<p class="ns-breadcrumb" markdown>'
+            f"{navigation.breadcrumb(cluster_name, current='changelog')}</p>",
+            "",
+            changelog_render.render_changelog_page(cluster_name, rendered),
+            "",
+            navigation.cluster_page_links("changelog"),
+        ]
+    )
     (storage.docs_dir / cluster_name / "changelog.md").write_text(page, encoding="utf-8")
 
 
@@ -154,6 +292,8 @@ def _write_root_index(storage: Storage) -> None:
     # Material's "grid cards" layout (attr_list + md_in_html, see mkdocs.yml) - plain
     # Markdown inside a styled div, no icon shortcodes so no extra extension is needed.
     lines = [
+        _HIDE_NAV_FRONTMATTER,
+        "",
         "# homelab-autodoc",
         "",
         '<div class="grid cards" markdown>',

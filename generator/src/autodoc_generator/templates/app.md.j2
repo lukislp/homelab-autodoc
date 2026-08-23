@@ -1,6 +1,21 @@
-# {{ app.name }}
+---
+hide:
+  - navigation
+---
 
-*{{ app.kind }} in `{{ namespace }}` — {{ app.ready_replicas }}/{{ app.replicas }} ready*
+<p class="ns-breadcrumb" markdown>{{ breadcrumb }}</p>
+
+<div class="ns-layout" markdown>
+<div class="ns-sidenav" markdown>
+
+{{ sidenav }}
+
+</div>
+<div class="ns-content" markdown>
+
+# {{ app.name }} <span class="kind-badge">{{ app.kind }}</span> <span class="pill{{ '' if app.ready_replicas == app.replicas else ' pill--warn' }}">{{ app.ready_replicas }}/{{ app.replicas }} ready</span>
+
+{{ namespace.name }}
 
 {% if summary %}
 ## Summary (AI-generated)
@@ -129,3 +144,6 @@
 ```mermaid
 {{ diagram }}
 ```
+
+</div>
+</div>
