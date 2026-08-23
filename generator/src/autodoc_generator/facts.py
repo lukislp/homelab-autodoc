@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from autodoc_core.models import App
+from autodoc_core.models import App, NamespaceInventory, NodeInfo, StorageClassInfo
 
 from .formatting import format_timestamp
 
@@ -11,10 +11,24 @@ def containers_table(app: App) -> str:
     if not app.containers:
         return ""
     rows = [
-        f"| {c.name} | `{c.image}` | {', '.join(map(str, c.ports)) or '-'} |"
-        for c in sorted(app.containers, key=lambda c: c.name)
+        f"| {c.name} | {'Yes' if c.is_init else '-'} | `{c.image}` | "
+        f"{', '.join(map(str, c.ports)) or '-'} |"
+        # Init containers first, in the order they actually run in.
+        for c in sorted(app.containers, key=lambda c: (not c.is_init, c.name))
     ]
-    return "\n".join(["| Container | Image | Ports |", "|---|---|---|", *rows])
+    return "\n".join(["| Container | Init | Image | Ports |", "|---|---|---|---|", *rows])
+
+
+def probes_table(app: App) -> str:
+    if not any(c.probes for c in app.containers):
+        return ""
+    rows = []
+    for c in sorted(app.containers, key=lambda c: c.name):
+        for p in sorted(c.probes, key=lambda p: p.kind):
+            period = f"{p.period_seconds}s" if p.period_seconds is not None else "-"
+            rows.append(f"| {c.name} | {p.kind} | {p.check} | {period} |")
+    header = "| Container | Type | Check | Period |"
+    return "\n".join([header, "|---|---|---|---|", *rows])
 
 
 def services_table(app: App) -> str:
@@ -80,6 +94,21 @@ def autoscaler_table(app: App) -> str:
         f"| Max Replicas | {a.max_replicas} |",
         f"| Target CPU | {cpu_target} |",
         f"| Target Memory | {memory_target} |",
+    ]
+    return "\n".join(rows)
+
+
+def rollout_strategy_table(app: App) -> str:
+    if app.rollout_strategy is None:
+        return ""
+    s = app.rollout_strategy
+    rows = [
+        "| Field | Value |",
+        "|---|---|",
+        f"| Strategy | {s.strategy_type} |",
+        f"| Max Surge | {s.max_surge or '-'} |",
+        f"| Max Unavailable | {s.max_unavailable or '-'} |",
+        f"| Partition | {s.partition if s.partition is not None else '-'} |",
     ]
     return "\n".join(rows)
 
@@ -155,6 +184,18 @@ def network_policies_table(app: App) -> str:
     return "\n".join([header, "|---|---|---|---|", *rows])
 
 
+def pod_disruption_budgets_table(app: App) -> str:
+    if not app.pod_disruption_budgets:
+        return ""
+    rows = []
+    for pdb in sorted(app.pod_disruption_budgets, key=lambda p: p.name):
+        min_available = pdb.min_available if pdb.min_available is not None else "-"
+        max_unavailable = pdb.max_unavailable if pdb.max_unavailable is not None else "-"
+        rows.append(f"| {pdb.name} | {min_available} | {max_unavailable} |")
+    header = "| PDB | Min Available | Max Unavailable |"
+    return "\n".join([header, "|---|---|---|", *rows])
+
+
 def env_table(app: App) -> str:
     """Never shows a literal env var's actual value - only its name and, for a
     valueFrom reference, which ConfigMap/Secret key it points at. The docs site
@@ -186,6 +227,35 @@ _NOISY_ANNOTATIONS = frozenset({"kubectl.kubernetes.io/last-applied-configuratio
 _MAX_ANNOTATION_VALUE_LENGTH = 200
 
 
+def service_account_table(app: App) -> str:
+    if app.service_account is None:
+        return ""
+    rows = ["| Field | Value |", "|---|---|", f"| ServiceAccount | {app.service_account.name} |"]
+    if app.service_account.role_bindings:
+        roles = ", ".join(
+            f"{rb.role_kind}/{rb.role_name}"
+            for rb in sorted(
+                app.service_account.role_bindings, key=lambda rb: (rb.role_kind, rb.role_name)
+            )
+        )
+        rows.append(f"| Roles | {roles} |")
+    return "\n".join(rows)
+
+
+def scheduling_table(app: App) -> str:
+    if not (app.node_selector or app.node_affinity or app.tolerations):
+        return ""
+    rows = ["| Field | Value |", "|---|---|"]
+    if app.node_selector:
+        selector = ", ".join(f"{k}={v}" for k, v in sorted(app.node_selector.items()))
+        rows.append(f"| Node Selector | {selector} |")
+    for term in app.node_affinity:
+        rows.append(f"| Node Affinity | {term} |")
+    for toleration in sorted(app.tolerations):
+        rows.append(f"| Toleration | {toleration} |")
+    return "\n".join(rows)
+
+
 def metadata_table(app: App) -> str:
     annotations = {k: v for k, v in app.annotations.items() if k not in _NOISY_ANNOTATIONS}
     if not (app.created_at or app.owners or annotations):
@@ -200,3 +270,60 @@ def metadata_table(app: App) -> str:
             value = value[:_MAX_ANNOTATION_VALUE_LENGTH] + "…"
         rows.append(f"| `{key}` | {value} |")
     return "\n".join(rows)
+
+
+def dependency_usage_table(namespace: NamespaceInventory) -> str:
+    """Reverse of the per-app Dependencies table: for each ConfigMap/Secret in
+    this namespace, which apps reference it and how - instead of, per app,
+    which ConfigMaps/Secrets it references. Namespace-scoped like
+    ConfigMaps/Secrets themselves are, not cluster-wide.
+    """
+    usage: dict[tuple[str, str], list[str]] = {}
+    for app in namespace.apps:
+        for ref in app.config_refs:
+            usage.setdefault((ref.kind, ref.name), []).append(f"{app.name} ({ref.via})")
+    if not usage:
+        return ""
+    rows = [
+        f"| {kind} | {name} | {', '.join(sorted(users))} |"
+        for (kind, name), users in sorted(usage.items())
+    ]
+    return "\n".join(["| Kind | Name | Used By |", "|---|---|---|", *rows])
+
+
+def storage_classes_table(storage_classes: list[StorageClassInfo]) -> str:
+    """Cluster-wide, unlike every other table in this module - StorageClasses
+    aren't scoped to an app.
+    """
+    if not storage_classes:
+        return ""
+    rows = []
+    for sc in sorted(storage_classes, key=lambda s: s.name):
+        expansion = "-" if sc.allow_volume_expansion is None else str(sc.allow_volume_expansion)
+        rows.append(
+            f"| {sc.name} | {sc.provisioner} | {sc.reclaim_policy or '-'} | "
+            f"{sc.volume_binding_mode or '-'} | {expansion} |"
+        )
+    header = "| StorageClass | Provisioner | Reclaim Policy | Binding Mode | Volume Expansion |"
+    return "\n".join([header, "|---|---|---|---|---|", *rows])
+
+
+def node_specs_table(nodes: list[NodeInfo]) -> str:
+    """Cluster-wide, unlike every other table in this module - nodes aren't
+    scoped to an app.
+    """
+    if not nodes:
+        return ""
+    rows = []
+    for node in sorted(nodes, key=lambda n: n.name):
+        status = "Ready" if node.ready else "NotReady"
+        rows.append(
+            f"| {node.name} | {status} | {node.architecture} | {node.os_image} | "
+            f"{node.kubelet_version} | {node.capacity_cpu} | {node.allocatable_cpu} | "
+            f"{node.capacity_memory} | {node.allocatable_memory} |"
+        )
+    header = (
+        "| Node | Status | Arch | OS | Kubelet | CPU (Capacity) | CPU (Allocatable) | "
+        "Memory (Capacity) | Memory (Allocatable) |"
+    )
+    return "\n".join([header, "|---|---|---|---|---|---|---|---|---|", *rows])

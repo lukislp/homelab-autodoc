@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from autodoc_core.models import ConfigReference, Container, EnvVar
+from autodoc_core.models import ConfigReference, Container, EnvVar, RolloutStrategyInfo
 from kubernetes import client
 
 from autodoc_collector.workloads import (
@@ -83,6 +83,36 @@ def test_statefulset_collector_normalizes_pod_template():
     assert workload.replicas == 1
     assert workload.ready_replicas == 1
     assert workload.pod_labels == {"app": "postgres"}
+
+
+def test_statefulset_collector_normalizes_partitioned_rolling_update():
+    stateful_set = client.V1StatefulSet(
+        metadata=client.V1ObjectMeta(name="postgres", labels={}),
+        spec=client.V1StatefulSetSpec(
+            replicas=3,
+            service_name="postgres",
+            selector=client.V1LabelSelector(match_labels={"app": "postgres"}),
+            update_strategy=client.V1StatefulSetUpdateStrategy(
+                type="RollingUpdate",
+                rolling_update=client.V1RollingUpdateStatefulSetStrategy(
+                    max_unavailable="1", partition=2
+                ),
+            ),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "postgres"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="postgres", image="postgres:16")]
+                ),
+            ),
+        ),
+        status=client.V1StatefulSetStatus(replicas=3, ready_replicas=3),
+    )
+
+    workload = StatefulSetCollector().normalize(stateful_set)
+
+    assert workload.rollout_strategy == RolloutStrategyInfo(
+        strategy_type="RollingUpdate", max_unavailable="1", partition=2
+    )
 
 
 def test_deployment_collector_normalizes_resources_env_and_config_refs():
@@ -215,6 +245,251 @@ def test_deployment_collector_without_image_pull_secrets_is_empty():
     assert workload.image_pull_secrets == frozenset()
 
 
+def test_deployment_collector_normalizes_rolling_update_strategy():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            strategy=client.V1DeploymentStrategy(
+                type="RollingUpdate",
+                rolling_update=client.V1RollingUpdateDeployment(
+                    max_surge="25%", max_unavailable="0"
+                ),
+            ),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")]
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.rollout_strategy == RolloutStrategyInfo(
+        strategy_type="RollingUpdate", max_surge="25%", max_unavailable="0"
+    )
+
+
+def test_deployment_collector_without_strategy_has_no_rollout_strategy():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")]
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.rollout_strategy is None
+
+
+def test_deployment_collector_normalizes_node_selector():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    node_selector={"kubernetes.io/arch": "arm64"},
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.node_selector == {"kubernetes.io/arch": "arm64"}
+
+
+def test_deployment_collector_normalizes_required_and_preferred_node_affinity():
+    required_term = client.V1NodeSelectorTerm(
+        match_expressions=[
+            client.V1NodeSelectorRequirement(
+                key="kubernetes.io/arch", operator="In", values=["arm64"]
+            )
+        ]
+    )
+    preferred_term = client.V1NodeSelectorTerm(
+        match_expressions=[client.V1NodeSelectorRequirement(key="disktype", operator="Exists")]
+    )
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    affinity=client.V1Affinity(
+                        node_affinity=client.V1NodeAffinity(
+                            required_during_scheduling_ignored_during_execution=(
+                                client.V1NodeSelector(node_selector_terms=[required_term])
+                            ),
+                            preferred_during_scheduling_ignored_during_execution=[
+                                client.V1PreferredSchedulingTerm(
+                                    weight=10, preference=preferred_term
+                                )
+                            ],
+                        )
+                    ),
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.node_affinity == [
+        "required: kubernetes.io/arch In (arm64)",
+        "preferred (weight 10): disktype Exists",
+    ]
+
+
+def test_deployment_collector_normalizes_tolerations():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    tolerations=[
+                        client.V1Toleration(
+                            key="node-role.kubernetes.io/master",
+                            operator="Exists",
+                            effect="NoSchedule",
+                        ),
+                        client.V1Toleration(
+                            key="node.kubernetes.io/not-ready",
+                            operator="Exists",
+                            effect="NoExecute",
+                            toleration_seconds=300,
+                        ),
+                        client.V1Toleration(operator="Exists"),
+                    ],
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.tolerations == [
+        "node-role.kubernetes.io/master Exists:NoSchedule",
+        "node.kubernetes.io/not-ready Exists:NoExecute (300s)",
+        "all taints",
+    ]
+
+
+def test_deployment_collector_normalizes_init_containers_before_regular_ones():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    init_containers=[
+                        client.V1Container(name="migrate", image="migrate:1.0"),
+                    ],
+                    containers=[
+                        client.V1Container(name="web", image="nginx:1.25.3"),
+                    ],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert [(c.name, c.is_init) for c in workload.containers] == [
+        ("migrate", True),
+        ("web", False),
+    ]
+
+
+def test_deployment_collector_normalizes_probes():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    containers=[
+                        client.V1Container(
+                            name="web",
+                            image="nginx:1.25.3",
+                            liveness_probe=client.V1Probe(
+                                http_get=client.V1HTTPGetAction(path="/healthz", port=8080),
+                                period_seconds=10,
+                            ),
+                            readiness_probe=client.V1Probe(
+                                tcp_socket=client.V1TCPSocketAction(port=8080)
+                            ),
+                        ),
+                    ],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    probes = workload.containers[0].probes
+    assert {(p.kind, p.check, p.period_seconds) for p in probes} == {
+        ("liveness", "HTTP :8080/healthz", 10),
+        ("readiness", "TCP :8080", None),
+    }
+
+
+def test_deployment_collector_normalizes_service_account_name():
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(name="web", labels={}),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector=client.V1LabelSelector(match_labels={"app": "web"}),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "web"}),
+                spec=client.V1PodSpec(
+                    service_account_name="web-sa",
+                    containers=[client.V1Container(name="web", image="nginx:1.25.3")],
+                ),
+            ),
+        ),
+        status=client.V1DeploymentStatus(ready_replicas=1),
+    )
+
+    workload = DeploymentCollector().normalize(deployment)
+
+    assert workload.service_account_name == "web-sa"
+
+
 def test_normalize_without_status_defaults_ready_replicas_to_zero():
     deployment = client.V1Deployment(
         metadata=client.V1ObjectMeta(name="web", labels={}),
@@ -263,6 +538,37 @@ def test_daemonset_collector_normalizes_pod_template():
     assert workload.replicas == 2
     assert workload.ready_replicas == 2
     assert workload.pod_labels == {"app": "node-exporter"}
+
+
+def test_daemonset_collector_normalizes_rolling_update_strategy():
+    daemon_set = client.V1DaemonSet(
+        metadata=client.V1ObjectMeta(name="node-exporter", labels={}),
+        spec=client.V1DaemonSetSpec(
+            selector=client.V1LabelSelector(match_labels={"app": "node-exporter"}),
+            update_strategy=client.V1DaemonSetUpdateStrategy(
+                type="RollingUpdate",
+                rolling_update=client.V1RollingUpdateDaemonSet(max_surge="0", max_unavailable="1"),
+            ),
+            template=client.V1PodTemplateSpec(
+                metadata=client.V1ObjectMeta(labels={"app": "node-exporter"}),
+                spec=client.V1PodSpec(
+                    containers=[client.V1Container(name="node-exporter", image="node-exporter:1.0")]
+                ),
+            ),
+        ),
+        status=client.V1DaemonSetStatus(
+            current_number_scheduled=2,
+            desired_number_scheduled=2,
+            number_misscheduled=0,
+            number_ready=2,
+        ),
+    )
+
+    workload = DaemonSetCollector().normalize(daemon_set)
+
+    assert workload.rollout_strategy == RolloutStrategyInfo(
+        strategy_type="RollingUpdate", max_surge="0", max_unavailable="1"
+    )
 
 
 def test_daemonset_collector_without_status_defaults_to_zero():

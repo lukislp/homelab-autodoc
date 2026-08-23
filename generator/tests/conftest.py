@@ -11,6 +11,11 @@ from autodoc_core.models import (
     IngressRule,
     NetworkPolicyInfo,
     NetworkPolicyRule,
+    PodDisruptionBudgetInfo,
+    ProbeInfo,
+    RoleBindingInfo,
+    RolloutStrategyInfo,
+    ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
     Volume,
@@ -25,6 +30,7 @@ def sample_app() -> App:
         replicas=2,
         ready_replicas=2,
         containers=[
+            Container(name="init-migrate", image="migrate:1.0", is_init=True),
             Container(
                 name="web",
                 image="nginx:1.25.3",
@@ -35,7 +41,8 @@ def sample_app() -> App:
                     EnvVar(name="LOG_LEVEL", value="info"),
                     EnvVar(name="API_KEY", value_from="Secret:web-secrets/API_KEY"),
                 ],
-            )
+                probes=[ProbeInfo(kind="liveness", check="HTTP :8080/healthz", period_seconds=10)],
+            ),
         ],
         volumes=[
             Volume(
@@ -83,6 +90,19 @@ def sample_app() -> App:
                 ],
             )
         ],
+        service_account=ServiceAccountInfo(
+            name="web-sa",
+            role_bindings=[
+                RoleBindingInfo(name="web-sa-view", role_kind="ClusterRole", role_name="view")
+            ],
+        ),
+        pod_disruption_budgets=[PodDisruptionBudgetInfo(name="web-pdb", min_available="1")],
+        node_selector={"kubernetes.io/arch": "arm64"},
+        node_affinity=["required: kubernetes.io/arch In (arm64)"],
+        tolerations=["node-role.kubernetes.io/master Exists:NoSchedule"],
+        rollout_strategy=RolloutStrategyInfo(
+            strategy_type="RollingUpdate", max_surge="25%", max_unavailable="0"
+        ),
         image_pull_secrets=["ghcr-pull-secret"],
     )
 

@@ -1,3 +1,51 @@
+# [1.26.0](https://github.com/lukislp/homelab-autodoc/compare/v1.25.0...v1.26.0) (2026-08-23)
+
+
+### Features
+
+* add a per-cluster StorageClasses page ([c602eff](https://github.com/lukislp/homelab-autodoc/commit/c602eff454a35f6586065a938ad9a075db4abc4a))
+* add a per-namespace ConfigMap/Secret usage page ([96b880a](https://github.com/lukislp/homelab-autodoc/commit/96b880aa3d017fe50343601565f79473915402b4))
+
+# [1.25.0](https://github.com/lukislp/homelab-autodoc/compare/v1.24.0...v1.25.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document node affinity, node selector, and tolerations ([39ecd29](https://github.com/lukislp/homelab-autodoc/commit/39ecd295c2936246eefe7cf62048e17455ef76a0))
+
+# [1.24.0](https://github.com/lukislp/homelab-autodoc/compare/v1.23.0...v1.24.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document init containers and liveness/readiness/startup probes ([1765214](https://github.com/lukislp/homelab-autodoc/commit/176521435fa14ceadb0803e376a3e82f1c016604))
+
+# [1.23.0](https://github.com/lukislp/homelab-autodoc/compare/v1.22.0...v1.23.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document each app's ServiceAccount and its RBAC bindings ([be4b45e](https://github.com/lukislp/homelab-autodoc/commit/be4b45e2f7dfb5f5879b1f4d1ed94158f0e9099e))
+
+# [1.22.0](https://github.com/lukislp/homelab-autodoc/compare/v1.21.0...v1.22.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document PodDisruptionBudgets that apply to each app ([8664969](https://github.com/lukislp/homelab-autodoc/commit/8664969d3272e5ec6756eececf8689b537dc5792))
+
+# [1.21.0](https://github.com/lukislp/homelab-autodoc/compare/v1.20.1...v1.21.0) (2026-08-23)
+
+
+### Bug Fixes
+
+* **k8s:** bump pinned collector image from 1.14.1 to 1.20.0 ([93d000c](https://github.com/lukislp/homelab-autodoc/commit/93d000c53b111b6b6bbcfb649c8c7c8b1e80e49f))
+
+
+### Features
+
+* add a per-cluster Nodes page with node capacity/spec ([f1143e5](https://github.com/lukislp/homelab-autodoc/commit/f1143e5a989b1df3272d51e8c9b6e5cc1a4caa93))
+
 ## [1.20.1](https://github.com/lukislp/homelab-autodoc/compare/v1.20.0...v1.20.1) (2026-08-23)
 
 
