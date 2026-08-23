@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/lukislp/homelab-autodoc/compare/v1.21.0...v1.22.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** document PodDisruptionBudgets that apply to each app ([8664969](https://github.com/lukislp/homelab-autodoc/commit/8664969d3272e5ec6756eececf8689b537dc5792))
+
 # [1.21.0](https://github.com/lukislp/homelab-autodoc/compare/v1.20.1...v1.21.0) (2026-08-23)
 
 
