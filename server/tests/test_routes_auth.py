@@ -94,7 +94,11 @@ def test_callback_with_matching_identity_logs_in_and_redirects_to_admin(client, 
 
     assert response.status_code in (302, 307)
     assert response.headers["location"] == "/admin"
-    assert test_client.get("/api/auth/status").json() == {"configured": True, "identity": "lukislp"}
+    assert test_client.get("/api/auth/status").json() == {
+        "configured": True,
+        "provider": "github",
+        "identity": "lukislp",
+    }
 
 
 def test_logout_clears_the_session(client, monkeypatch):

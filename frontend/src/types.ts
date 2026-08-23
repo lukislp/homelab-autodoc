@@ -2,6 +2,7 @@ export type Provider = "github" | "oidc";
 
 export interface AuthStatus {
   configured: boolean;
+  provider: Provider | null;
   identity: string | null;
 }
 

@@ -7,7 +7,11 @@ vi.mock("../api/auth", () => ({ getAuthStatus: vi.fn() }));
 
 describe("useAuthStatus", () => {
   it("starts loading, then resolves with the fetched status", async () => {
-    vi.mocked(getAuthStatus).mockResolvedValue({ configured: true, identity: "lukislp" });
+    vi.mocked(getAuthStatus).mockResolvedValue({
+      configured: true,
+      provider: "github",
+      identity: "lukislp",
+    });
 
     const { result } = renderHook(() => useAuthStatus());
 
@@ -15,7 +19,11 @@ describe("useAuthStatus", () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.status).toEqual({ configured: true, identity: "lukislp" });
+    expect(result.current.status).toEqual({
+      configured: true,
+      provider: "github",
+      identity: "lukislp",
+    });
     expect(result.current.error).toBeNull();
   });
 
@@ -31,12 +39,20 @@ describe("useAuthStatus", () => {
   });
 
   it("refresh() re-fetches and toggles loading again", async () => {
-    vi.mocked(getAuthStatus).mockResolvedValue({ configured: false, identity: null });
+    vi.mocked(getAuthStatus).mockResolvedValue({
+      configured: false,
+      provider: null,
+      identity: null,
+    });
     const { result } = renderHook(() => useAuthStatus());
     await waitFor(() => expect(result.current.loading).toBe(false));
     const callsAfterMount = vi.mocked(getAuthStatus).mock.calls.length;
 
-    vi.mocked(getAuthStatus).mockResolvedValue({ configured: true, identity: null });
+    vi.mocked(getAuthStatus).mockResolvedValue({
+      configured: true,
+      provider: "github",
+      identity: null,
+    });
     await act(async () => {
       result.current.refresh();
     });
