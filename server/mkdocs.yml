@@ -38,5 +38,5 @@ extra_javascript:
   # this feature is broken when it's actually just serving old JS.
   - javascripts/mermaid-pan-zoom.js?v=3
 extra_css:
-  - stylesheets/mermaid-pan-zoom.css?v=3
+  - stylesheets/mermaid-pan-zoom.css?v=4
   - stylesheets/sidebar-scroll.css?v=2
