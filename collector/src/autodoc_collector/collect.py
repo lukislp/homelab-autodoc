@@ -167,6 +167,20 @@ def _autoscaler_for_workload(
     return None
 
 
+def _node_names_for_workload(pods: list[client.V1Pod], workload: NormalizedWorkload) -> list[str]:
+    """Which node(s) an app's pods are actually scheduled on - not derivable
+    from the workload spec itself (Deployment/StatefulSet/etc. don't carry a
+    node), only from the live Pod objects. Matched the same way Services are:
+    workload.pod_labels is a subset of the pod's own labels.
+    """
+    names = {
+        pod.spec.node_name
+        for pod in pods
+        if pod.spec.node_name and _selector_matches(workload.pod_labels, pod.metadata.labels)
+    }
+    return sorted(names)
+
+
 def build_app(
     workload: NormalizedWorkload,
     services: list[client.V1Service],
@@ -174,6 +188,7 @@ def build_app(
     pvcs: list[client.V1PersistentVolumeClaim],
     httproutes: list[dict] | None = None,
     hpas: list[client.V2HorizontalPodAutoscaler] | None = None,
+    pods: list[client.V1Pod] | None = None,
 ) -> App:
     matched_services = [
         svc for svc in services if _selector_matches(svc.spec.selector, workload.pod_labels)
@@ -205,6 +220,7 @@ def build_app(
         owners=workload.owners,
         config_refs=sorted(workload.config_refs, key=lambda c: (c.kind, c.name, c.via)),
         autoscaler=_autoscaler_for_workload(hpas or [], workload),
+        nodes=_node_names_for_workload(pods or [], workload),
     )
 
 
@@ -216,9 +232,11 @@ def build_namespace_inventory(
     pvcs: list[client.V1PersistentVolumeClaim],
     httproutes: list[dict] | None = None,
     hpas: list[client.V2HorizontalPodAutoscaler] | None = None,
+    pods: list[client.V1Pod] | None = None,
 ) -> NamespaceInventory:
     apps = [
-        build_app(workload, services, ingresses, pvcs, httproutes, hpas) for workload in workloads
+        build_app(workload, services, ingresses, pvcs, httproutes, hpas, pods)
+        for workload in workloads
     ]
     return NamespaceInventory(name=namespace, apps=apps)
 
@@ -288,9 +306,10 @@ def collect_cluster_inventory(
         pvcs = apis.core_v1.list_namespaced_persistent_volume_claim(namespace).items
         httproutes = _list_httproutes(apis, namespace)
         hpas = _list_hpas(apis, namespace)
+        pods = apis.core_v1.list_namespaced_pod(namespace).items
         namespace_inventories.append(
             build_namespace_inventory(
-                namespace, workloads, services, ingresses, pvcs, httproutes, hpas
+                namespace, workloads, services, ingresses, pvcs, httproutes, hpas, pods
             )
         )
 

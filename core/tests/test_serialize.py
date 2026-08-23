@@ -84,6 +84,7 @@ def _sample_inventory() -> ClusterInventory:
                         autoscaler=Autoscaler(
                             min_replicas=2, max_replicas=5, target_cpu_percent=70
                         ),
+                        nodes=["pi-node-1", "pi-node-2"],
                     )
                 ],
             )
@@ -132,3 +133,16 @@ def test_app_without_autoscaler_round_trips_as_none():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.namespaces[0].apps[0].autoscaler is None
+
+
+def test_app_without_nodes_round_trips_as_empty_list():
+    bare_app = App(name="worker", kind="Deployment", replicas=1, ready_replicas=1)
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo", apps=[bare_app])],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].apps[0].nodes == []

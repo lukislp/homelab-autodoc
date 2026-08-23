@@ -22,7 +22,7 @@ metadata:
   name: autodoc-collector
 rules:
   - apiGroups: [""]
-    resources: ["namespaces", "services", "persistentvolumeclaims"]
+    resources: ["namespaces", "services", "persistentvolumeclaims", "pods"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets", "daemonsets"]

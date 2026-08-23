@@ -84,6 +84,13 @@ def autoscaler_table(app: App) -> str:
     return "\n".join(rows)
 
 
+def nodes_table(app: App) -> str:
+    if not app.nodes:
+        return ""
+    rows = [f"| {node} |" for node in sorted(app.nodes)]
+    return "\n".join(["| Node |", "|---|", *rows])
+
+
 def env_table(app: App) -> str:
     """Never shows a literal env var's actual value - only its name and, for a
     valueFrom reference, which ConfigMap/Secret key it points at. The docs site

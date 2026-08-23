@@ -9,6 +9,7 @@ from autodoc_generator.facts import (
     env_table,
     ingresses_table,
     metadata_table,
+    nodes_table,
     resources_table,
     services_table,
     volumes_table,
@@ -73,6 +74,17 @@ def test_autoscaler_table_empty_when_app_has_no_autoscaler(bare_app):
     assert autoscaler_table(bare_app) == ""
 
 
+def test_nodes_table_lists_sorted_node_names(sample_app):
+    table = nodes_table(sample_app)
+
+    assert "| pi-node-1 |" in table
+    assert "| pi-node-2 |" in table
+
+
+def test_nodes_table_empty_when_app_has_no_nodes(bare_app):
+    assert nodes_table(bare_app) == ""
+
+
 def test_metadata_table_lists_created_owners_and_annotations(sample_app):
     table = metadata_table(sample_app)
 
@@ -102,6 +114,7 @@ def test_all_tables_empty_for_bare_app(bare_app):
     assert volumes_table(bare_app) == ""
     assert resources_table(bare_app) == ""
     assert autoscaler_table(bare_app) == ""
+    assert nodes_table(bare_app) == ""
     assert env_table(bare_app) == ""
     assert dependencies_table(bare_app) == ""
     assert metadata_table(bare_app) == ""

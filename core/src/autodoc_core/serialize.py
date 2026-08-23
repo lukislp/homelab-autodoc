@@ -125,6 +125,7 @@ def _app_from_dict(d: dict) -> App:
         owners=list(d.get("owners", [])),
         config_refs=[_config_reference_from_dict(c) for c in d.get("config_refs", [])],
         autoscaler=_autoscaler_from_dict(autoscaler) if autoscaler else None,
+        nodes=list(d.get("nodes", [])),
     )
 
 

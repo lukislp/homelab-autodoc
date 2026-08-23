@@ -12,6 +12,7 @@ def test_render_app_page_without_summary_omits_the_summary_section(sample_app):
     assert "Deployment in `demo`" in page
     assert "## Summary (AI-generated)" not in page
     assert "### Containers" in page
+    assert "### Nodes" in page
     assert "### Resources" in page
     assert "### Autoscaling" in page
     assert "### Environment" in page
@@ -34,6 +35,7 @@ def test_render_app_page_for_bare_app_omits_empty_fact_sections(bare_app):
     assert "### Services" not in page
     assert "### Ingress" not in page
     assert "### Volumes" not in page
+    assert "### Nodes" not in page
     assert "### Resources" not in page
     assert "### Autoscaling" not in page
     assert "### Environment" not in page

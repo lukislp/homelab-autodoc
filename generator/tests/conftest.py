@@ -71,6 +71,7 @@ def sample_app() -> App:
             ConfigReference(kind="ConfigMap", name="web-config", via="volume"),
         ],
         autoscaler=Autoscaler(min_replicas=2, max_replicas=5, target_cpu_percent=70),
+        nodes=["pi-node-1", "pi-node-2"],
     )
 
 
