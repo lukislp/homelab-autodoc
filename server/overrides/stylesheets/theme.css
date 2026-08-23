@@ -80,3 +80,11 @@
   border-color: var(--md-primary-fg-color);
   transform: translateY(-1px);
 }
+
+/* No footer on a generated site: there is no prev/next reading flow to
+   navigate, and the "Made with Material for MkDocs" bar was the last thing
+   pushing the one-viewport pages (topology) past 100vh. Attribution lives
+   in the repository README instead. */
+.md-footer {
+  display: none;
+}
