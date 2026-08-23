@@ -1,3 +1,10 @@
+## [1.18.1](https://github.com/lukislp/homelab-autodoc/compare/v1.18.0...v1.18.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **server:** stop mermaid diagrams rendering into an oversized empty box ([e4a3fcb](https://github.com/lukislp/homelab-autodoc/commit/e4a3fcbb56ba29bb4f9f2783ea0cdc0e3cba3c96))
+
 # [1.18.0](https://github.com/lukislp/homelab-autodoc/compare/v1.17.0...v1.18.0) (2026-08-23)
 
 
