@@ -1,3 +1,15 @@
+# [1.20.0](https://github.com/lukislp/homelab-autodoc/compare/v1.19.0...v1.20.0) (2026-08-23)
+
+
+### Bug Fixes
+
+* **ci:** retrigger release skipped by a semantic-release race ([2edfe34](https://github.com/lukislp/homelab-autodoc/commit/2edfe340d8ce74a895bee19e656d66196fe30397)), closes [#36](https://github.com/lukislp/homelab-autodoc/issues/36)
+
+
+### Features
+
+* **collector:** document which NetworkPolicy rules apply to each app ([e3c1065](https://github.com/lukislp/homelab-autodoc/commit/e3c10653480e015911a270614eaf9cc5b64a601b))
+
 # [1.19.0](https://github.com/lukislp/homelab-autodoc/compare/v1.18.1...v1.19.0) (2026-08-23)
 
 
