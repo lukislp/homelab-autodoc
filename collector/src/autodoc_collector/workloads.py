@@ -77,8 +77,11 @@ def _describe_probe_check(probe: client.V1Probe) -> str:
         return f"TCP :{probe.tcp_socket.port}"
     if probe.grpc:
         return f"gRPC :{probe.grpc.port}"
-    if probe.exec:
-        return f"exec: {' '.join(probe.exec.command or [])}"
+    # The generated client names this field `_exec` (its attribute_map maps
+    # `_exec` -> the JSON key "exec") to avoid shadowing the `exec` builtin -
+    # there is no plain `.exec` property.
+    if probe._exec:
+        return f"exec: {' '.join(probe._exec.command or [])}"
     return "unknown"
 
 
