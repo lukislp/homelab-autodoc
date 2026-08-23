@@ -69,3 +69,4 @@ def test_render_namespace_index_links_each_app(sample_app):
     assert "# demo" in index
     assert "[web](web.md)" in index
     assert "Deployment" in index
+    assert "[Resource Governance](resource-governance.md)" in index

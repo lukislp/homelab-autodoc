@@ -326,6 +326,39 @@ def dependency_usage_table(namespace: NamespaceInventory) -> str:
     return "\n".join(["| Kind | Name | Used By |", "|---|---|---|", *rows])
 
 
+def resource_quotas_table(namespace: NamespaceInventory) -> str:
+    if not namespace.resource_quotas:
+        return ""
+    rows = []
+    for rq in sorted(namespace.resource_quotas, key=lambda rq: rq.name):
+        for resource in sorted(rq.hard):
+            hard = rq.hard.get(resource, "-")
+            used = rq.used.get(resource, "-")
+            rows.append(f"| {rq.name} | {resource} | {hard} | {used} |")
+    header = "| Quota | Resource | Hard | Used |"
+    return "\n".join([header, "|---|---|---|---|", *rows])
+
+
+def limit_ranges_table(namespace: NamespaceInventory) -> str:
+    if not namespace.limit_ranges:
+        return ""
+    rows = []
+    for lr in sorted(namespace.limit_ranges, key=lambda lr: lr.name):
+        for item in lr.limits:
+            resources = sorted(
+                set(item.min) | set(item.max) | set(item.default) | set(item.default_request)
+            )
+            for resource in resources:
+                rows.append(
+                    f"| {lr.name} | {item.kind} | {resource} | "
+                    f"{item.min.get(resource, '-')} | {item.max.get(resource, '-')} | "
+                    f"{item.default.get(resource, '-')} | "
+                    f"{item.default_request.get(resource, '-')} |"
+                )
+    header = "| LimitRange | Applies To | Resource | Min | Max | Default Limit | Default Request |"
+    return "\n".join([header, "|---|---|---|---|---|---|---|", *rows])
+
+
 def storage_classes_table(storage_classes: list[StorageClassInfo]) -> str:
     """Cluster-wide, unlike every other table in this module - StorageClasses
     aren't scoped to an app.
