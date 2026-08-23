@@ -1,3 +1,10 @@
+## [1.33.1](https://github.com/lukislp/homelab-autodoc/compare/v1.33.0...v1.33.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **server:** stop wide app-page tables sliding under the ToC ([1121837](https://github.com/lukislp/homelab-autodoc/commit/11218373ff8250103bdb4ef5f615a3ef81eace65))
+
 # [1.33.0](https://github.com/lukislp/homelab-autodoc/compare/v1.32.1...v1.33.0) (2026-08-23)
 
 
