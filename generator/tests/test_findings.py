@@ -13,10 +13,10 @@ from autodoc_core.models import (
 )
 
 from autodoc_generator.findings import (
-    evaluate_namespace,
     cluster_findings_table,
     evaluate_app,
     evaluate_cluster,
+    evaluate_namespace,
     findings_table,
 )
 
