@@ -369,6 +369,22 @@ def app_is_fully_ready(app: App) -> bool:
     return app.ready_replicas == app.replicas
 
 
+def collection_freshness(collected_at: str) -> str:
+    """A "collected ..." stamp with the raw ISO timestamp attached as a data
+    attribute for overrides/javascripts/freshness.js, which upgrades the text
+    to a live relative age ("collected 3 h ago") and flags it stale once the
+    last collector run is older than its threshold. Staleness has to be
+    client-side: the static site only rebuilds on a push, so a build-time
+    stale flag could never appear exactly when the collector stops pushing.
+    The server-rendered absolute time is the no-JS fallback, not a
+    placeholder.
+    """
+    return (
+        f'<span class="freshness" data-collected-at="{collected_at}">'
+        f"collected {format_timestamp(collected_at)}</span>"
+    )
+
+
 def _stat_row_html(chips: list[tuple[str, str, bool]]) -> str:
     """`chips` is (value, label, warn) triples - warn highlights the value in
     the warning color (used for a non-zero drift count).

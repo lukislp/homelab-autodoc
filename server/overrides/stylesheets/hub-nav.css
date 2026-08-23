@@ -223,3 +223,23 @@
   background: rgba(227, 172, 76, 0.18);
   color: #e3ac4c;
 }
+
+/* "collected ..." freshness stamp (root-index cluster cards + cluster hub) -
+   rendered server-side as an absolute time, upgraded to a live relative age
+   by javascripts/freshness.js, which also toggles the stale state. */
+
+.freshness {
+  display: inline-block;
+  font-family: var(--md-code-font-family);
+  font-size: 0.62rem;
+  color: var(--md-default-fg-color--lighter);
+}
+
+.freshness--stale {
+  color: #e5534b;
+  font-weight: 600;
+}
+
+.freshness--stale::after {
+  content: " - collector has not pushed in over a day";
+}
