@@ -1,3 +1,10 @@
+# [1.34.0](https://github.com/lukislp/homelab-autodoc/compare/v1.33.1...v1.34.0) (2026-08-23)
+
+
+### Features
+
+* **generator:** deterministic best-practice findings ([8e1181f](https://github.com/lukislp/homelab-autodoc/commit/8e1181fa318732bb293a45c463cc34daad6edae8))
+
 ## [1.33.1](https://github.com/lukislp/homelab-autodoc/compare/v1.33.0...v1.33.1) (2026-08-23)
 
 
