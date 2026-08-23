@@ -18,6 +18,20 @@ def healthz() -> dict:
     return {"status": "ok"}
 
 
+@router.get("/api/site/version")
+def site_version(storage: Storage = Depends(get_storage)) -> dict:
+    """Build stamp of the served static site. The auto-refresh script every
+    doc page loads (overrides/javascripts/auto-refresh.js) polls this and
+    reloads the page when a new build lands, so open pages never go stale
+    after a collector push or a cluster delete. Every mkdocs build rewrites
+    the root index, so its mtime doubles as the stamp; 0 means no build yet
+    (a fresh install with nothing registered).
+    """
+    index = storage.docs_dir.parent / "site" / "index.html"
+    version = index.stat().st_mtime_ns if index.exists() else 0
+    return {"version": str(version)}
+
+
 @router.post(
     "/api/clusters/{cluster_name}/inventory",
     dependencies=[Depends(require_cluster_push_token)],

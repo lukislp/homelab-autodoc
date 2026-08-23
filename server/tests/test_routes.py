@@ -98,3 +98,31 @@ def test_push_inventory_second_push_records_drift(client, sample_inventory):
     assert response.json()["drift_changes"] == 1
     changelog_page = (storage.docs_dir / "homelab" / "changelog.md").read_text(encoding="utf-8")
     assert "replicas: 2 -> 3" in changelog_page
+
+
+def test_site_version_reports_zero_before_any_build(client):
+    test_client, _ = client
+
+    response = test_client.get("/api/site/version")
+
+    assert response.status_code == 200
+    assert response.json() == {"version": "0"}
+
+
+def test_site_version_changes_when_a_new_build_lands(client):
+    test_client, storage = client
+    site_index = storage.docs_dir.parent / "site" / "index.html"
+    site_index.parent.mkdir(parents=True)
+    site_index.write_text("<html>build one</html>", encoding="utf-8")
+
+    first = test_client.get("/api/site/version").json()["version"]
+    assert first != "0"
+
+    # A rebuild rewrites the root index - simulate it with a bumped mtime.
+    import os
+
+    stat = site_index.stat()
+    os.utime(site_index, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000))
+
+    second = test_client.get("/api/site/version").json()["version"]
+    assert second != first
