@@ -1,3 +1,16 @@
+# [1.33.0](https://github.com/lukislp/homelab-autodoc/compare/v1.32.1...v1.33.0) (2026-08-23)
+
+
+### Bug Fixes
+
+* **k8s:** zero-downtime rollouts via RollingUpdate and a startupProbe ([51c87d9](https://github.com/lukislp/homelab-autodoc/commit/51c87d9b8145857844c0bfd93bae0083e7fbe4b0))
+
+
+### Features
+
+* **admin-ui:** live-updating lists and a GitHub logo on the login button ([47b21cb](https://github.com/lukislp/homelab-autodoc/commit/47b21cb4ad2570740db56a55ebce0dd78a6c4844))
+* **server:** auto-refresh open doc pages when a new build lands ([200c28c](https://github.com/lukislp/homelab-autodoc/commit/200c28cccf6934abdfcc9197a5a63c155eadbfa0))
+
 ## [1.32.1](https://github.com/lukislp/homelab-autodoc/compare/v1.32.0...v1.32.1) (2026-08-23)
 
 
