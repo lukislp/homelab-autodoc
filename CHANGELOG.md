@@ -1,3 +1,11 @@
+# [1.40.0](https://github.com/lukislp/homelab-autodoc/compare/v1.39.0...v1.40.0) (2026-08-23)
+
+
+### Features
+
+* **collector:** per-namespace Recent Warnings from cluster events ([46e26d9](https://github.com/lukislp/homelab-autodoc/commit/46e26d9c19bffc9527136597913735bf7d7b8831))
+* **server:** About page explaining the pipeline ([19a6d67](https://github.com/lukislp/homelab-autodoc/commit/19a6d6718ff96ac9af8df8f47afd91ed96416a62))
+
 # [1.39.0](https://github.com/lukislp/homelab-autodoc/compare/v1.38.0...v1.39.0) (2026-08-23)
 
 
