@@ -1,3 +1,10 @@
+## [1.41.6](https://github.com/lukislp/homelab-autodoc/compare/v1.41.5...v1.41.6) (2026-08-23)
+
+
+### Bug Fixes
+
+* **server:** chip navigation above cluster content, no H1 on cluster topology ([b55bfb1](https://github.com/lukislp/homelab-autodoc/commit/b55bfb166859f926285fade75b7bb009fcf47cbc))
+
 ## [1.41.5](https://github.com/lukislp/homelab-autodoc/compare/v1.41.4...v1.41.5) (2026-08-23)
 
 
