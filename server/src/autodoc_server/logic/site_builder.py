@@ -85,27 +85,38 @@ def _safe_generate_summary(app: App, llm: LLMClient) -> str | None:
         return None
 
 
-def _cluster_content_page(cluster_name: str, current: str, heading: str, body: str) -> str:
-    """Shared shape for cluster-scoped content pages (topology, storage
-    classes, nodes, changelog): front matter + breadcrumb + the same
-    topology/storage-classes/nodes/changelog chip row the cluster hub shows,
-    marking `current` inert - these aren't namespace-scoped, so
-    navigation.namespace_sidenav's two-column layout doesn't apply, but a way
-    to jump straight to a sibling utility page (or notice you're already on
-    it) still does.
+def _cluster_content_page(
+    cluster_name: str, current: str, heading: str, body: str, show_heading: bool = True
+) -> str:
+    """Shared shape for cluster-scoped content pages (topology, findings,
+    images, storage classes, nodes): front matter + breadcrumb + the same
+    chip row the cluster hub shows, marking `current` inert. The chips sit
+    ABOVE the content: they are navigation, and below a long table (or the
+    viewport-sized topology box) they were effectively invisible - on the
+    topology page they were also the one element still forcing a scroll.
+
+    show_heading=False drops the visible H1 (the topology page: breadcrumb
+    and active chip already say where you are, and the heading's height came
+    straight out of the diagram's viewport budget); the heading then goes
+    into the front matter as `title:` so the browser tab and search keep it.
     """
     crumb = navigation.breadcrumb(cluster_name, current=current)
+    front_matter = (
+        _HIDE_NAV_FRONTMATTER
+        if show_heading
+        else f'---\ntitle: "{heading}"\nhide:\n  - navigation\n---'
+    )
     lines = [
-        _HIDE_NAV_FRONTMATTER,
+        front_matter,
         "",
         f'<p class="ns-breadcrumb" markdown>{crumb}</p>',
         "",
-        f"# {heading}",
-        "",
-        body,
-        "",
         navigation.cluster_page_links(current),
+        "",
     ]
+    if show_heading:
+        lines += [f"# {heading}", ""]
+    lines.append(body)
     return "\n".join(lines)
 
 
@@ -246,7 +257,11 @@ def _write_cluster_diagram(
 ) -> None:
     diagram = diagrams.build_cluster_diagram(inventory)
     page = _cluster_content_page(
-        cluster_name, "topology", f"{cluster_name} - Topology", f"```mermaid\n{diagram}\n```"
+        cluster_name,
+        "topology",
+        f"{cluster_name} - Topology",
+        f"```mermaid\n{diagram}\n```",
+        show_heading=False,
     )
     (storage.docs_dir / cluster_name / "topology.md").write_text(page, encoding="utf-8")
 
@@ -327,8 +342,10 @@ def _write_changelog_page(storage: Storage, cluster_name: str, llm: LLMClient | 
     if llm and recent:
         summary = _safe_generate_drift_summary(cluster_name, recent, llm)
     # render_changelog_page already builds its own "# {cluster} - Changelog"
-    # heading, so this only prepends front matter + breadcrumb rather than
-    # going through _cluster_content_page (which would add a second heading).
+    # heading, so this only prepends front matter + breadcrumb + the chip row
+    # rather than going through _cluster_content_page (which would add a
+    # second heading). Chips sit above the content, same as every other
+    # cluster page - below a long changelog they were effectively invisible.
     page = "\n".join(
         [
             _HIDE_NAV_FRONTMATTER,
@@ -336,9 +353,9 @@ def _write_changelog_page(storage: Storage, cluster_name: str, llm: LLMClient | 
             f'<p class="ns-breadcrumb" markdown>'
             f"{navigation.breadcrumb(cluster_name, current='changelog')}</p>",
             "",
-            changelog_render.render_changelog_page(cluster_name, rendered, summary),
-            "",
             navigation.cluster_page_links("changelog"),
+            "",
+            changelog_render.render_changelog_page(cluster_name, rendered, summary),
         ]
     )
     (storage.docs_dir / cluster_name / "changelog.md").write_text(page, encoding="utf-8")

@@ -63,7 +63,17 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
     assert "[Nodes](nodes.md){: .chip-link }" in cluster_index
     assert "[Changelog](changelog.md){: .chip-link }" in cluster_index
     assert "[Findings](findings.md){: .chip-link }" in cluster_index
-    assert "# homelab - Topology" in cluster_topology
+    # Its front matter carries the title instead of the plain hide-only block.
+    assert cluster_topology.startswith('---\ntitle: "homelab - Topology"')
+    # The cluster topology drops its visible H1 (breadcrumb + active chip
+    # already locate the page; the heading's height came straight out of the
+    # diagram's viewport budget) but keeps the title for the browser tab.
+    assert "# homelab - Topology" not in cluster_topology
+    assert 'title: "homelab - Topology"' in cluster_topology
+    # The chip row sits above the diagram, not below it.
+    assert cluster_topology.index('chip-link--active">Topology') < cluster_topology.index(
+        "```mermaid"
+    )
     assert '<span class="chip-link chip-link--active">Topology</span>' in cluster_topology
     assert "[Nodes](nodes.md){: .chip-link }" in cluster_topology
     assert "[homelab-autodoc](../index.md) · [homelab](index.md) · **Topology**" in cluster_topology
@@ -101,7 +111,6 @@ def test_regenerate_cluster_docs_writes_app_and_index_pages(tmp_path, sample_inv
         namespace_dependencies,
         namespace_resource_governance,
         cluster_index,
-        cluster_topology,
         storage_classes_page,
         nodes_page,
         root_index,
