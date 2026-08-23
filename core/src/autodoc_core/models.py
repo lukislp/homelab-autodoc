@@ -220,6 +220,15 @@ class LimitRangeInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class WarningEventInfo:
+    reason: str  # e.g. "BackOff", "FailedScheduling"
+    object_ref: str  # "Kind/name" the event is about
+    message: str
+    count: int
+    last_seen: str | None = None  # ISO 8601; None if the API reported no timestamp
+
+
+@dataclass(frozen=True, slots=True)
 class NamespaceInventory:
     name: str
     apps: list[App] = field(default_factory=list)
@@ -233,6 +242,9 @@ class NamespaceInventory:
     # level, and the collector's no-secret-access guarantee outweighs being
     # able to flag a dangling Secret reference.
     configmap_names: list[str] | None = None
+    # Recent Warning-type events, newest first, capped by the collector.
+    # Same None-vs-empty semantics as configmap_names.
+    warning_events: list[WarningEventInfo] | None = None
 
 
 @dataclass(frozen=True, slots=True)

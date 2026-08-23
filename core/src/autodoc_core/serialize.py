@@ -34,6 +34,7 @@ from .models import (
     ServicePort,
     StorageClassInfo,
     Volume,
+    WarningEventInfo,
 )
 
 Format = Literal["json", "yaml"]
@@ -237,17 +238,31 @@ def _limit_range_from_dict(d: dict) -> LimitRangeInfo:
     )
 
 
+def _warning_event_from_dict(d: dict) -> WarningEventInfo:
+    return WarningEventInfo(
+        reason=d["reason"],
+        object_ref=d["object_ref"],
+        message=d["message"],
+        count=d["count"],
+        last_seen=d.get("last_seen"),
+    )
+
+
 def _namespace_from_dict(d: dict) -> NamespaceInventory:
-    # configmap_names distinguishes None ("not collected") from [] ("collected,
+    # configmap_names/warning_events distinguish None ("not collected") from [] ("collected,
     # none exist") - see the model's own comment - so unlike every other list
     # field it must NOT be defaulted to [] here.
     configmap_names = d.get("configmap_names")
+    warning_events = d.get("warning_events")
     return NamespaceInventory(
         name=d["name"],
         apps=[_app_from_dict(a) for a in d.get("apps", [])],
         resource_quotas=[_resource_quota_from_dict(rq) for rq in d.get("resource_quotas", [])],
         limit_ranges=[_limit_range_from_dict(lr) for lr in d.get("limit_ranges", [])],
         configmap_names=list(configmap_names) if configmap_names is not None else None,
+        warning_events=[_warning_event_from_dict(e) for e in warning_events]
+        if warning_events is not None
+        else None,
     )
 
 

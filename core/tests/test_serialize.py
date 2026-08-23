@@ -28,6 +28,7 @@ from autodoc_core.models import (
     ServicePort,
     StorageClassInfo,
     Volume,
+    WarningEventInfo,
 )
 from autodoc_core.serialize import from_text, to_text
 
@@ -459,3 +460,57 @@ def test_namespace_with_empty_collected_configmaps_round_trips_as_empty_list():
     reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
 
     assert reconstructed.namespaces[0].configmap_names == []
+
+
+def test_namespace_warning_events_round_trip():
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[
+            NamespaceInventory(
+                name="demo",
+                warning_events=[
+                    WarningEventInfo(
+                        reason="BackOff",
+                        object_ref="Pod/web-abc",
+                        message="Back-off restarting failed container",
+                        count=12,
+                        last_seen="2026-08-21T23:55:00+00:00",
+                    )
+                ],
+            )
+        ],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed == inventory
+
+
+def test_namespace_without_collected_warning_events_round_trips_as_none():
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name="demo")],
+    )
+
+    reconstructed = from_text(to_text(inventory, fmt="json"), fmt="json")
+
+    assert reconstructed.namespaces[0].warning_events is None
+
+
+def test_namespace_payload_predating_warning_events_loads_as_none():
+    text = to_text(
+        ClusterInventory(
+            cluster_name="homelab",
+            collected_at="2026-08-22T00:00:00+00:00",
+            namespaces=[NamespaceInventory(name="demo")],
+        ),
+        fmt="json",
+    )
+    data = json.loads(text)
+    del data["namespaces"][0]["warning_events"]
+
+    reconstructed = from_text(json.dumps(data), fmt="json")
+
+    assert reconstructed.namespaces[0].warning_events is None

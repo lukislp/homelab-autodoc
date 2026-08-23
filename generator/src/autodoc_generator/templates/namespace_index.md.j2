@@ -23,6 +23,12 @@ hide:
 {% endfor %}
 </div>
 
+{% if warning_events_table %}
+<p class="section-label">Recent Warnings</p>
+
+{{ warning_events_table }}
+
+{% endif %}
 <p class="section-label">Namespace Pages</p>
 
 [Topology](topology.md){: .chip-link } [Dependencies](dependencies.md){: .chip-link } [Resource Governance](resource-governance.md){: .chip-link }

@@ -65,4 +65,5 @@ def render_namespace_index(
         namespace=namespace,
         breadcrumb=navigation.breadcrumb(cluster_name, namespace.name),
         stat_chips=facts.namespace_stat_chips(namespace, drift_count),
+        warning_events_table=facts.warning_events_table(namespace),
     )

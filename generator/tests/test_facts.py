@@ -15,6 +15,7 @@ from autodoc_core.models import (
     ResourceQuotaInfo,
     ServiceAccountInfo,
     StorageClassInfo,
+    WarningEventInfo,
 )
 
 from autodoc_generator.facts import (
@@ -48,6 +49,7 @@ from autodoc_generator.facts import (
     services_table,
     storage_classes_table,
     volumes_table,
+    warning_events_table,
 )
 
 
@@ -731,3 +733,34 @@ def test_cluster_card_facts_shows_disagreeing_kubelet_versions():
     card = cluster_card_facts(inventory, drift_count=0, findings_count=0)
 
     assert "v1.30.4+k3s1 / v1.31.2+k3s1" in card
+
+
+def test_warning_events_table_renders_rows_and_truncates_messages():
+    namespace = NamespaceInventory(
+        name="demo",
+        warning_events=[
+            WarningEventInfo(
+                reason="BackOff",
+                object_ref="Pod/web-abc",
+                message="x" * 200,
+                count=12,
+                last_seen="2026-08-21T23:55:00+00:00",
+            ),
+            WarningEventInfo(
+                reason="FailedScheduling", object_ref="Pod/db-xyz", message="no nodes", count=1
+            ),
+        ],
+    )
+
+    table = warning_events_table(namespace)
+
+    assert table.splitlines()[0] == "| Last Seen | Object | Reason | Count | Message |"
+    assert "| 2026-08-21 23:55 UTC | Pod/web-abc | BackOff | 12 | " in table
+    assert "x" * 160 + "…" in table
+    assert "x" * 161 not in table
+    assert "| - | Pod/db-xyz | FailedScheduling | 1 | no nodes |" in table
+
+
+def test_warning_events_table_empty_for_none_and_for_no_events():
+    assert warning_events_table(NamespaceInventory(name="demo")) == ""
+    assert warning_events_table(NamespaceInventory(name="demo", warning_events=[])) == ""
