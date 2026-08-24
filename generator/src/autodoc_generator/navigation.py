@@ -13,6 +13,7 @@ from autodoc_core.models import NamespaceInventory
 NAMESPACE_PAGES = (
     ("topology", "Topology"),
     ("network", "Network"),
+    ("connections", "Connections"),
     ("dependencies", "Dependencies"),
     ("resource-governance", "Resource Governance"),
 )
@@ -20,6 +21,7 @@ NAMESPACE_PAGES = (
 CLUSTER_PAGES = (
     ("topology", "Topology"),
     ("network", "Network"),
+    ("connections", "Connections"),
     ("findings", "Findings"),
     ("backups", "Backups"),
     ("images", "Images"),

@@ -9,7 +9,7 @@ from pathlib import Path
 from autodoc_core.diff import Change
 from autodoc_core.models import App, ClusterInventory, NamespaceInventory
 from autodoc_generator import changelog as changelog_render
-from autodoc_generator import diagrams, facts, findings, navigation, network, render
+from autodoc_generator import connections, diagrams, facts, findings, navigation, network, render
 from autodoc_generator.llm import LLMClient
 from autodoc_generator.prose import (
     build_drift_prompt,
@@ -82,12 +82,14 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
             )
         _write_namespace_diagram(storage, cluster_name, namespace)
         _write_namespace_network_page(storage, cluster_name, namespace, inventory)
+        _write_namespace_connections_page(storage, cluster_name, namespace, inventory)
         _write_namespace_dependencies_page(storage, cluster_name, namespace)
         _write_namespace_resource_governance_page(storage, cluster_name, namespace)
 
     _write_cluster_index(storage, cluster_name, inventory, _drift_count(last_changes))
     _write_cluster_diagram(storage, cluster_name, inventory)
     _write_cluster_network_page(storage, cluster_name, inventory)
+    _write_cluster_connections_page(storage, cluster_name, inventory)
     _write_findings_page(storage, cluster_name, inventory)
     _write_backups_page(storage, cluster_name, inventory)
     _write_images_page(storage, cluster_name, inventory)
@@ -381,6 +383,52 @@ def _write_findings_page(storage: Storage, cluster_name: str, inventory: Cluster
     body = "\n\n".join(parts)
     page = _cluster_content_page(cluster_name, "findings", f"{cluster_name} - Findings", body)
     (storage.docs_dir / cluster_name / "findings.md").write_text(page, encoding="utf-8")
+
+
+def _write_namespace_connections_page(
+    storage: Storage, cluster_name: str, namespace: NamespaceInventory, inventory: ClusterInventory
+) -> None:
+    """The third lens after Topology (what exists) and Network (what MAY
+    talk): what each app is CONFIGURED to use, from its own plain-text
+    config.
+    """
+    diagram = connections.build_namespace_connections_diagram(namespace, inventory)
+    body = "\n\n".join(
+        [
+            "What each app is CONFIGURED to use - every edge is a service endpoint found in "
+            "the app's own plain-text configuration (env values and referenced ConfigMap "
+            "contents), resolved to the app owning that Service. Edge labels are the "
+            "configured ports. Connection strings living only in Secrets are invisible here "
+            "(the collector never reads Secrets), so an absent edge never proves absence - "
+            "but every drawn edge is real and declared.",
+            f"```mermaid\n{diagram}\n```",
+        ]
+    )
+    page = _namespace_content_page(
+        cluster_name, namespace, "connections", f"{namespace.name} - Connections", body
+    )
+    (storage.docs_dir / cluster_name / namespace.name / "connections.md").write_text(
+        page, encoding="utf-8"
+    )
+
+
+def _write_cluster_connections_page(
+    storage: Storage, cluster_name: str, inventory: ClusterInventory
+) -> None:
+    diagram = connections.build_cluster_connections_diagram(inventory)
+    body = "\n\n".join(
+        [
+            "The CROSS-namespace application connections - the edges no single namespace "
+            "page can show, from each app's own plain-text configuration. Connections "
+            "within a namespace live on that namespace's Connections page; Secret-held "
+            "connection strings are invisible by design.",
+            f"```mermaid\n{diagram}\n```"
+            if diagram
+            else "No cross-namespace connections found in any collected configuration.",
+        ]
+    )
+    page = _cluster_content_page(cluster_name, "connections", f"{cluster_name} - Connections", body)
+    (storage.docs_dir / cluster_name / "connections.md").write_text(page, encoding="utf-8")
 
 
 def _write_backups_page(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:

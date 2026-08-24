@@ -6,7 +6,7 @@ itself is covered in test_workloads.py.
 from __future__ import annotations
 
 import pytest
-from autodoc_core.models import ConfigReference, Container, RolloutStrategyInfo
+from autodoc_core.models import ConfigReference, Container, EnvVar, RolloutStrategyInfo
 from kubernetes import client
 from kubernetes.client.exceptions import ApiException
 
@@ -21,7 +21,7 @@ from autodoc_collector.collect import (
     _build_resource_quota,
     _build_storage_class,
     _build_warning_event,
-    _list_configmap_names,
+    _list_configmaps,
     _list_hpas,
     _list_httproutes,
     _list_warning_events,
@@ -1068,25 +1068,27 @@ class _FakeApisWithCoreV1:
         self.core_v1 = core_v1
 
 
-def test_list_configmap_names_returns_sorted_names():
+def test_list_configmaps_returns_the_items():
     apis = _FakeApisWithCoreV1(_FakeCoreV1ConfigMaps(names=["zeta", "alpha"]))
 
-    assert _list_configmap_names(apis, "demo") == ["alpha", "zeta"]
+    items = _list_configmaps(apis, "demo")
+
+    assert sorted(cm.metadata.name for cm in items) == ["alpha", "zeta"]
 
 
-def test_list_configmap_names_returns_none_when_rbac_denies():
+def test_list_configmaps_returns_none_when_rbac_denies():
     # The ClusterRole may predate the configmaps grant - "unknown" (None)
     # must stay distinguishable from "there are none" ([]).
     apis = _FakeApisWithCoreV1(_FakeCoreV1ConfigMaps(exception=ApiException(status=403)))
 
-    assert _list_configmap_names(apis, "demo") is None
+    assert _list_configmaps(apis, "demo") is None
 
 
-def test_list_configmap_names_reraises_non_403_errors():
+def test_list_configmaps_reraises_non_403_errors():
     apis = _FakeApisWithCoreV1(_FakeCoreV1ConfigMaps(exception=ApiException(status=500)))
 
     with pytest.raises(ApiException):
-        _list_configmap_names(apis, "demo")
+        _list_configmaps(apis, "demo")
 
 
 def test_build_namespace_inventory_wires_configmap_names():
@@ -1246,3 +1248,47 @@ def test_backup_volumes_parsed_from_the_pod_template_annotation():
     app = build_namespace_inventory("demo", [workload], [], [], []).apps[0]
 
     assert app.backup_volumes == ["data", "config"]
+
+
+def _refs(app):
+    return {(r.service, r.namespace, r.port, r.via) for r in app.service_references}
+
+
+def test_service_references_from_env_and_configmap_values():
+    workload = _workload(
+        name="web",
+        config_refs=frozenset(
+            {ConfigReference(kind="ConfigMap", name="web-config", via="envFrom")}
+        ),
+    )
+    workload.containers[0].env.append(
+        EnvVar(name="AI_URL", value="http://studylife-ai.studylife-ai.svc.cluster.local:8000")
+    )
+    configmap_data = {
+        "web-config": {
+            # headless StatefulSet pod DNS - must resolve to the redis service
+            "Cache__ConnectionString": (
+                "redis-cluster-0.redis-cluster:6380,redis-cluster-1.redis-cluster:6380"
+            ),
+            "Cache__Provider": "Redis",  # prose-like value - no false edge
+        },
+        "unrelated-config": {"OTHER": "postgres:5432"},  # not referenced by the app - ignored
+    }
+    services = [_service("redis-cluster", {"app": "redis"}), _service("postgres", {"app": "pg"})]
+
+    app = build_app(workload, services, [], [], configmap_data=configmap_data)
+
+    assert _refs(app) == {
+        ("studylife-ai", "studylife-ai", 8000, "env AI_URL"),
+        ("redis-cluster", None, 6380, "ConfigMap web-config/Cache__ConnectionString"),
+    }
+
+
+def test_bare_token_only_counts_when_it_matches_a_local_service():
+    workload = _workload(name="web")
+    workload.containers[0].env.append(EnvVar(name="DB_HOST", value="postgres"))
+    workload.containers[0].env.append(EnvVar(name="MODE", value="production"))
+
+    app = build_app(workload, [_service("postgres", {"app": "pg"})], [], [])
+
+    assert _refs(app) == {("postgres", None, None, "env DB_HOST")}

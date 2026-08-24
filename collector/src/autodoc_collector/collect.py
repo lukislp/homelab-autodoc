@@ -7,6 +7,7 @@ specific Deployment/StatefulSet. collect_cluster_inventory does the I/O.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 
 from autodoc_core.models import (
@@ -27,6 +28,7 @@ from autodoc_core.models import (
     ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
+    ServiceReference,
     StorageClassInfo,
     Volume,
     WarningEventInfo,
@@ -397,23 +399,89 @@ def _list_warning_events(apis: K8sApis, namespace: str) -> list[WarningEventInfo
     return events[:_MAX_WARNING_EVENTS_PER_NAMESPACE]
 
 
-def _list_configmap_names(apis: K8sApis, namespace: str) -> list[str] | None:
-    """Existence only - the names feed the dangling-reference check, contents
-    are never read past this call and never persisted. Secrets are
-    deliberately not listed at all, not even for names: the API returns full
-    secret values on a list, and the collector's no-secret-access guarantee
-    (see the RBAC manifest) is worth more than flagging a dangling Secret
-    reference. None (not []) when RBAC denies the read: this collector may
-    run against a cluster whose ClusterRole predates the configmaps grant,
-    and "unknown" must stay distinguishable from "there are none".
+def _list_configmaps(apis: K8sApis, namespace: str) -> list[client.V1ConfigMap] | None:
+    """The names feed the dangling-reference check; the CONTENTS are scanned
+    in memory for service-endpoint references (_service_references) and then
+    dropped - never persisted into the inventory. Secrets are deliberately
+    not listed at all, not even for names: the API returns full secret
+    values on a list, and the collector's no-secret-access guarantee (see
+    the RBAC manifest) is worth more than either check. None (not []) when
+    RBAC denies the read: this collector may run against a cluster whose
+    ClusterRole predates the configmaps grant, and "unknown" must stay
+    distinguishable from "there are none".
     """
     try:
-        items = apis.core_v1.list_namespaced_config_map(namespace).items
+        return apis.core_v1.list_namespaced_config_map(namespace).items
     except ApiException as e:
         if e.status == 403:
             return None
         raise
-    return sorted(cm.metadata.name for cm in items)
+
+
+# Candidate host[:port] tokens inside config values. Lowercase DNS-1123 shapes
+# only, hard-bounded so URLs/connection strings tokenize cleanly.
+_HOST_CANDIDATE = re.compile(
+    r"(?<![A-Za-z0-9_.-])"
+    r"([a-z0-9][a-z0-9-]{0,62}(?:\.[a-z0-9][a-z0-9-]{0,62})*)"
+    r"(?::([0-9]{1,5}))?"
+    r"(?![A-Za-z0-9-])"
+)
+
+
+def _service_refs_in_text(text: str, via: str, service_names: set[str]) -> set[ServiceReference]:
+    """Deterministic service-endpoint detection in one plain-text value.
+    Three shapes count, everything else is ignored rather than guessed at:
+    full cluster DNS (name.namespace.svc[...]), a bare token exactly matching
+    a Service in the app's own namespace, and headless-StatefulSet pod DNS
+    (<pod>.<service>). Bare words can only ever match real local Services,
+    so prose-like config values produce no false edges.
+    """
+    refs: set[ServiceReference] = set()
+    for match in _HOST_CANDIDATE.finditer(text):
+        host, port_text = match.group(1), match.group(2)
+        port = int(port_text) if port_text else None
+        labels = host.split(".")
+        if "svc" in labels:
+            i = labels.index("svc")
+            if i >= 2:
+                refs.add(
+                    ServiceReference(
+                        service=labels[i - 2], namespace=labels[i - 1], port=port, via=via
+                    )
+                )
+            continue
+        if host in service_names:
+            refs.add(ServiceReference(service=host, port=port, via=via))
+        elif len(labels) == 2 and labels[1] in service_names:
+            refs.add(ServiceReference(service=labels[1], port=port, via=via))
+    return refs
+
+
+def _service_references(
+    workload: NormalizedWorkload,
+    configmap_data: dict[str, dict[str, str]] | None,
+    service_names: set[str],
+) -> list[ServiceReference]:
+    """What this app is CONFIGURED to talk to - from its plain env values and
+    the contents of the ConfigMaps it references (scanned in memory here,
+    never persisted). Secret-held connection strings stay invisible by
+    design. Deduplicated per (service, namespace, port), keeping the first
+    via alphabetically for a stable inventory.
+    """
+    refs: set[ServiceReference] = set()
+    for container in workload.containers:
+        for env in container.env:
+            if env.value:
+                refs |= _service_refs_in_text(env.value, f"env {env.name}", service_names)
+    if configmap_data:
+        referenced = {r.name for r in workload.config_refs if r.kind == "ConfigMap"}
+        for cm_name in sorted(referenced):
+            for key, value in sorted((configmap_data.get(cm_name) or {}).items()):
+                refs |= _service_refs_in_text(value, f"ConfigMap {cm_name}/{key}", service_names)
+    deduped: dict[tuple, ServiceReference] = {}
+    for ref in sorted(refs, key=lambda r: (r.service, r.namespace or "", r.port or 0, r.via)):
+        deduped.setdefault((ref.service, ref.namespace, ref.port), ref)
+    return list(deduped.values())
 
 
 def build_app(
@@ -427,6 +495,7 @@ def build_app(
     network_policies: list[client.V1NetworkPolicy] | None = None,
     service_account_role_bindings: dict[str, list[RoleBindingInfo]] | None = None,
     pdbs: list[client.V1PodDisruptionBudget] | None = None,
+    configmap_data: dict[str, dict[str, str]] | None = None,
 ) -> App:
     matched_services = [
         svc for svc in services if _selector_matches(svc.spec.selector, workload.pod_labels)
@@ -468,6 +537,9 @@ def build_app(
         created_at=workload.created_at,
         owners=workload.owners,
         config_refs=sorted(workload.config_refs, key=lambda c: (c.kind, c.name, c.via)),
+        service_references=_service_references(
+            workload, configmap_data, {svc.metadata.name for svc in services}
+        ),
         autoscaler=_autoscaler_for_workload(hpas or [], workload),
         nodes=_node_names_for_workload(pods or [], workload),
         network_policies=[
@@ -503,6 +575,7 @@ def build_namespace_inventory(
     limit_ranges: list[client.V1LimitRange] | None = None,
     configmap_names: list[str] | None = None,
     warning_events: list[WarningEventInfo] | None = None,
+    configmap_data: dict[str, dict[str, str]] | None = None,
 ) -> NamespaceInventory:
     apps = [
         build_app(
@@ -516,6 +589,7 @@ def build_namespace_inventory(
             network_policies,
             service_account_role_bindings,
             pdbs,
+            configmap_data,
         )
         for workload in workloads
     ]
@@ -635,7 +709,15 @@ def collect_cluster_inventory(
         pdbs = apis.policy_v1.list_namespaced_pod_disruption_budget(namespace).items
         resource_quotas = apis.core_v1.list_namespaced_resource_quota(namespace).items
         limit_ranges = apis.core_v1.list_namespaced_limit_range(namespace).items
-        configmap_names = _list_configmap_names(apis, namespace)
+        configmaps = _list_configmaps(apis, namespace)
+        configmap_names = (
+            sorted(cm.metadata.name for cm in configmaps) if configmaps is not None else None
+        )
+        configmap_data = (
+            {cm.metadata.name: dict(cm.data or {}) for cm in configmaps}
+            if configmaps is not None
+            else None
+        )
         warning_events = _list_warning_events(apis, namespace)
         namespace_inventories.append(
             build_namespace_inventory(
@@ -654,6 +736,7 @@ def collect_cluster_inventory(
                 limit_ranges,
                 configmap_names,
                 warning_events,
+                configmap_data,
             )
         )
 

@@ -103,6 +103,22 @@ class ConfigReference:
 
 
 @dataclass(frozen=True, slots=True)
+class ServiceReference:
+    """A concrete service endpoint an app is CONFIGURED to talk to - parsed
+    at collection time from plain-text env values and the contents of
+    ConfigMaps the app references. The raw values are scanned in memory and
+    never persisted; Secrets are never read at all, so a connection string
+    that lives only in a Secret stays invisible (documented limitation, the
+    price of the no-secret-access guarantee).
+    """
+
+    service: str
+    namespace: str | None = None  # None = the app's own namespace
+    port: int | None = None
+    via: str = ""  # e.g. "env CACHE_URL" or "ConfigMap studylife-config/Cache__ConnectionString"
+
+
+@dataclass(frozen=True, slots=True)
 class Autoscaler:
     min_replicas: int
     max_replicas: int
@@ -189,6 +205,7 @@ class App:
     created_at: str | None = None
     owners: list[str] = field(default_factory=list)  # ["Kind/Name", ...]
     config_refs: list[ConfigReference] = field(default_factory=list)
+    service_references: list[ServiceReference] = field(default_factory=list)
     autoscaler: Autoscaler | None = None
     nodes: list[str] = field(default_factory=list)  # names of nodes running this app's pods
     network_policies: list[NetworkPolicyInfo] = field(default_factory=list)
