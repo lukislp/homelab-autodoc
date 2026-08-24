@@ -127,6 +127,19 @@ def _security_findings(app: App) -> list[Finding]:
     # Kubernetes defaults are exactly the permissive case each rule flags.
     findings = []
     for c in _run_containers(app):
+        if c.security is not None and c.security.privileged:
+            # privileged: true IS the explicit maximal grant - a privileged
+            # container is always root-capable (the API even rejects
+            # allowPrivilegeEscalation: false next to it), so the two
+            # sub-rules below would only echo this finding twice.
+            findings.append(
+                Finding(
+                    rule="privileged-container",
+                    subject=f"container {c.name}",
+                    message="privileged: true - full access to the host's devices and kernel",
+                )
+            )
+            continue
         if c.security is None or c.security.run_as_non_root is not True:
             findings.append(
                 Finding(

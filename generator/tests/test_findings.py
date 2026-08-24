@@ -493,3 +493,22 @@ def test_cnpg_default_monitoring_is_never_an_orphan():
     findings = evaluate_namespace(_ns([_clean_app()], configmap_names=["cnpg-default-monitoring"]))
 
     assert findings == []
+
+
+def test_privileged_container_collapses_the_security_rules_into_one_finding():
+    app = _clean_app(
+        containers=[
+            _container(
+                probes=_BOTH_PROBES,
+                limits=dict(_FULL_RESOURCES),
+                requests=dict(_FULL_RESOURCES),
+                security=ContainerSecurityInfo(privileged=True),
+            )
+        ]
+    )
+
+    rules = _rules(app)
+
+    assert "privileged-container" in rules
+    assert "run-as-root-allowed" not in rules
+    assert "privilege-escalation-allowed" not in rules

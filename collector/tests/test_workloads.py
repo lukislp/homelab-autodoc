@@ -222,6 +222,7 @@ def test_deployment_collector_normalizes_container_level_security_context():
                                 run_as_non_root=True,
                                 read_only_root_filesystem=True,
                                 allow_privilege_escalation=False,
+                                privileged=False,
                                 capabilities=client.V1Capabilities(
                                     add=["NET_BIND_SERVICE"], drop=["ALL"]
                                 ),
@@ -241,6 +242,7 @@ def test_deployment_collector_normalizes_container_level_security_context():
         run_as_non_root=True,
         read_only_root_filesystem=True,
         allow_privilege_escalation=False,
+        privileged=False,
         added_capabilities=["NET_BIND_SERVICE"],
         dropped_capabilities=["ALL"],
         seccomp_profile="RuntimeDefault",
