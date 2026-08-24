@@ -1,3 +1,10 @@
+## [1.49.2](https://github.com/lukislp/homelab-autodoc/compare/v1.49.1...v1.49.2) (2026-08-24)
+
+
+### Bug Fixes
+
+* **site:** responsive topology - spread on desktop, classic stack on phones ([0fde4dc](https://github.com/lukislp/homelab-autodoc/commit/0fde4dc8fe0d24f2ac30d87ab27ef9e3d9362c60))
+
 ## [1.49.1](https://github.com/lukislp/homelab-autodoc/compare/v1.49.0...v1.49.1) (2026-08-24)
 
 
