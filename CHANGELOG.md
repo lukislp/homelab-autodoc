@@ -1,3 +1,10 @@
+## [1.48.5](https://github.com/lukislp/homelab-autodoc/compare/v1.48.4...v1.48.5) (2026-08-24)
+
+
+### Bug Fixes
+
+* **site:** hubs use the full window width ([97206c5](https://github.com/lukislp/homelab-autodoc/commit/97206c5cbacb6654da4b1b376afdca45846301c9))
+
 ## [1.48.4](https://github.com/lukislp/homelab-autodoc/compare/v1.48.3...v1.48.4) (2026-08-24)
 
 
