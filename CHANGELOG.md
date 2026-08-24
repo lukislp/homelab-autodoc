@@ -1,3 +1,15 @@
+# [1.44.0](https://github.com/lukislp/homelab-autodoc/compare/v1.43.0...v1.44.0) (2026-08-24)
+
+
+### Bug Fixes
+
+* **release:** retrigger release lost to the flux image-bump race ([7359357](https://github.com/lukislp/homelab-autodoc/commit/7359357c593f55ed1b19ceb33f78e50357ca5cdd)), closes [#83](https://github.com/lukislp/homelab-autodoc/issues/83)
+
+
+### Features
+
+* **findings:** accepted findings via workload annotations ([080aea4](https://github.com/lukislp/homelab-autodoc/commit/080aea41e774a45303ea05153af59a6cdaf33af2))
+
 # [1.43.0](https://github.com/lukislp/homelab-autodoc/compare/v1.42.4...v1.43.0) (2026-08-24)
 
 
