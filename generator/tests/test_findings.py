@@ -486,6 +486,14 @@ def test_daemonsets_are_exempt_from_the_pdb_rule():
     assert "missing-pdb" not in _rules(app)
 
 
+def test_velero_repo_maintenance_is_never_an_orphan():
+    # Consumed by Velero's short-lived repo-maintenance Jobs - a workload kind
+    # this inventory doesn't collect, so the orphan rule would be forever noise.
+    findings = evaluate_namespace(_ns([_clean_app()], configmap_names=["velero-repo-maintenance"]))
+
+    assert findings == []
+
+
 def test_cnpg_default_monitoring_is_never_an_orphan():
     # CloudNativePG consumes it through the Cluster CRD's monitoring spec - a
     # resource kind this inventory doesn't collect, so "no collected workload

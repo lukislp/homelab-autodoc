@@ -261,7 +261,12 @@ def _config_reference_findings(app: App, namespace: NamespaceInventory) -> list[
 # cnpg-default-monitoring: CloudNativePG's operator places it in its own and
 # every Cluster's namespace and consumes it through the Cluster CRD's
 # monitoring spec - a resource kind this inventory doesn't collect.
-_WELL_KNOWN_CONFIGMAPS = frozenset({"kube-root-ca.crt", "cnpg-default-monitoring"})
+# velero-repo-maintenance: Velero writes it into its install namespace and
+# consumes it from the short-lived repo-maintenance Jobs it spawns - again a
+# resource kind this inventory doesn't collect.
+_WELL_KNOWN_CONFIGMAPS = frozenset(
+    {"kube-root-ca.crt", "cnpg-default-monitoring", "velero-repo-maintenance"}
+)
 
 
 def evaluate_namespace(namespace: NamespaceInventory) -> list[Finding]:
