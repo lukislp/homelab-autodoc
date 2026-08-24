@@ -35,6 +35,7 @@ from .models import (
     ServiceAccountInfo,
     ServiceInfo,
     ServicePort,
+    ServiceReference,
     StorageClassInfo,
     VeleroBackupInfo,
     VeleroScheduleInfo,
@@ -208,6 +209,15 @@ def _app_from_dict(d: dict) -> App:
         created_at=d.get("created_at"),
         owners=list(d.get("owners", [])),
         config_refs=[_config_reference_from_dict(c) for c in d.get("config_refs", [])],
+        service_references=[
+            ServiceReference(
+                service=s["service"],
+                namespace=s.get("namespace"),
+                port=s.get("port"),
+                via=s.get("via", ""),
+            )
+            for s in d.get("service_references", [])
+        ],
         autoscaler=_autoscaler_from_dict(autoscaler) if autoscaler else None,
         nodes=list(d.get("nodes", [])),
         network_policies=[_network_policy_from_dict(np) for np in d.get("network_policies", [])],
