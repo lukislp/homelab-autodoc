@@ -1,3 +1,10 @@
+# [1.49.0](https://github.com/lukislp/homelab-autodoc/compare/v1.48.5...v1.49.0) (2026-08-24)
+
+
+### Features
+
+* **site:** cluster topology as a responsive grid of namespace tiles ([7fd76bf](https://github.com/lukislp/homelab-autodoc/commit/7fd76bf86e1e539bdd88ce1276b3d5df8b3c3e7d))
+
 ## [1.48.5](https://github.com/lukislp/homelab-autodoc/compare/v1.48.4...v1.48.5) (2026-08-24)
 
 
