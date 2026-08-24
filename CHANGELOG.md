@@ -1,3 +1,15 @@
+# [1.48.0](https://github.com/lukislp/homelab-autodoc/compare/v1.47.1...v1.48.0) (2026-08-24)
+
+
+### Bug Fixes
+
+* **admin:** show approved clusters immediately as 'awaiting first push' ([5a1bbaf](https://github.com/lukislp/homelab-autodoc/commit/5a1bbaf6279276cc94ee56da8bb2413401e5a504))
+
+
+### Features
+
+* **connections:** who-uses-whom diagrams per namespace and cluster ([3ca23a0](https://github.com/lukislp/homelab-autodoc/commit/3ca23a0027a7d5e8b0a3776a4a1c5eb20268995c))
+
 ## [1.47.1](https://github.com/lukislp/homelab-autodoc/compare/v1.47.0...v1.47.1) (2026-08-24)
 
 
