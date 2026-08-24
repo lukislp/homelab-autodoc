@@ -15,10 +15,22 @@
    ultrawide screens don't stretch lines into absurdity) and a truly
    collapsed hidden sidebar. */
 .md-grid {
-  max-width: min(105rem, 96vw);
+  /* Full width, minus a small breathing margin - the 105rem cap that stood
+     here still wasted a fifth of an ultrawide window, and this site's
+     content is cards, tables and diagrams, not long prose lines that would
+     need a measure cap. */
+  max-width: 98vw;
 }
 
 .md-sidebar[hidden] {
+  display: none;
+}
+
+/* An EMPTY table of contents still reserved its ~12rem rail on the hub
+   pages (their sections are card grids under plain labels, no h2 headings,
+   so the ToC has no items) - collapse it. Content pages keep their ToC:
+   they have real h2/h3 sections, so the :has() never matches there. */
+.md-sidebar--secondary:not(:has(.md-nav__item)) {
   display: none;
 }
 
