@@ -1,3 +1,10 @@
+## [1.48.4](https://github.com/lukislp/homelab-autodoc/compare/v1.48.3...v1.48.4) (2026-08-24)
+
+
+### Bug Fixes
+
+* **site:** hub cards - real four columns, full-width frame, measured ([2f6a7bd](https://github.com/lukislp/homelab-autodoc/commit/2f6a7bd8550075f715909fa679bbc22004906503))
+
 ## [1.48.3](https://github.com/lukislp/homelab-autodoc/compare/v1.48.2...v1.48.3) (2026-08-24)
 
 
