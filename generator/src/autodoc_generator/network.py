@@ -6,13 +6,14 @@ show what may TALK to what - every edge is an ingress rule some NetworkPolicy
 actually allows, resolved back to the concrete source workloads where the
 selectors permit it.
 
-Peer strings are the collector's own stable contract (_describe_peer in
-collect.py): "pods:<sel>", "namespaces:<sel>", "namespaces:<sel>+pods:<sel>",
-"ipBlock:<cidr>", "unknown", where <sel> is "k=v,k2=v2" or "all". Selector
-matching mirrors the collector's: matchLabels subset semantics against the
-pod TEMPLATE labels (App.pod_labels). Anything unresolvable stays visible as a
-generic node instead of being dropped - an edge that cannot be attributed is
-still an allowed flow.
+Peers come structured from the inventory (NetworkPolicyRule.peer_selectors);
+for inventories collected before that field existed, the human-readable peer
+strings ("pods:<sel>", "namespaces:<sel>+pods:<sel>", "ipBlock:<cidr>") are
+parsed as a legacy fallback. Selector matching mirrors the collector's:
+matchLabels subset semantics against the pod TEMPLATE labels
+(App.pod_labels). Anything unresolvable stays visible as a generic node
+instead of being dropped - an edge that cannot be attributed is still an
+allowed flow.
 """
 
 from __future__ import annotations
@@ -20,22 +21,18 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from autodoc_core.models import App, ClusterInventory, NamespaceInventory
+from autodoc_core.models import (
+    App,
+    ClusterInventory,
+    NamespaceInventory,
+    NetworkPolicyPeerInfo,
+    NetworkPolicyRule,
+)
 
 # Namespaces are matched via the well-known label Kubernetes stamps on every
 # namespace since 1.21 - the only namespace-selector shape this cluster's
 # policies (and most real ones) use. Other keys stay unresolved-but-visible.
 _NS_NAME_LABEL = "kubernetes.io/metadata.name"
-
-
-@dataclass(frozen=True, slots=True)
-class _Peer:
-    # None = no selector of that kind on the peer; {} = selector present but
-    # empty ("all"). The distinction matters: no namespaceSelector means "the
-    # policy's own namespace", an empty one means "every namespace".
-    namespace_selector: dict[str, str] | None
-    pod_selector: dict[str, str] | None
-    ip_block: str | None
 
 
 def _parse_selector(text: str) -> dict[str, str]:
@@ -44,9 +41,13 @@ def _parse_selector(text: str) -> dict[str, str]:
     return dict(part.split("=", 1) for part in text.split(",") if "=" in part)
 
 
-def _parse_peer(text: str) -> _Peer:
+def _parse_peer(text: str) -> NetworkPolicyPeerInfo:
+    """LEGACY fallback: inventories from collectors older than
+    NetworkPolicyRule.peer_selectors only carry the display strings - parse
+    them back into the structured shape. New inventories never hit this.
+    """
     if text.startswith("ipBlock:"):
-        return _Peer(None, None, text.removeprefix("ipBlock:"))
+        return NetworkPolicyPeerInfo(ip_block=text.removeprefix("ipBlock:"))
     namespace_selector = None
     pod_selector = None
     for part in text.split("+"):
@@ -54,7 +55,13 @@ def _parse_peer(text: str) -> _Peer:
             namespace_selector = _parse_selector(part.removeprefix("namespaces:"))
         elif part.startswith("pods:"):
             pod_selector = _parse_selector(part.removeprefix("pods:"))
-    return _Peer(namespace_selector, pod_selector, None)
+    return NetworkPolicyPeerInfo(namespace_selector=namespace_selector, pod_selector=pod_selector)
+
+
+def _rule_peers(rule: NetworkPolicyRule) -> list[NetworkPolicyPeerInfo]:
+    if rule.peer_selectors:
+        return rule.peer_selectors
+    return [_parse_peer(text) for text in rule.peers]
 
 
 def _matches(selector: dict[str, str], labels: dict[str, str]) -> bool:
@@ -62,7 +69,9 @@ def _matches(selector: dict[str, str], labels: dict[str, str]) -> bool:
 
 
 def _peer_namespaces(
-    peer: _Peer, own_namespace: NamespaceInventory, inventory: ClusterInventory | None
+    peer: NetworkPolicyPeerInfo,
+    own_namespace: NamespaceInventory,
+    inventory: ClusterInventory | None,
 ) -> list[NamespaceInventory] | None:
     """The namespaces a peer's sources may live in, or None when the selector
     can't be resolved to concrete namespaces (labels beyond the well-known
@@ -93,7 +102,9 @@ class _Source:
 
 
 def _resolve_peer(
-    peer: _Peer, own_namespace: NamespaceInventory, inventory: ClusterInventory | None
+    peer: NetworkPolicyPeerInfo,
+    own_namespace: NamespaceInventory,
+    inventory: ClusterInventory | None,
 ) -> list[_Source]:
     if peer.ip_block is not None:
         return [_Source("generic", None, f"ipBlock {peer.ip_block}")]
@@ -154,8 +165,8 @@ def _app_flows(
             if not rule.peers:
                 flows.append(Flow(_ANY_SOURCE, namespace.name, app.name, ports))
                 continue
-            for peer_text in rule.peers:
-                for source in _resolve_peer(_parse_peer(peer_text), namespace, inventory):
+            for peer in _rule_peers(rule):
+                for source in _resolve_peer(peer, namespace, inventory):
                     flows.append(Flow(source, namespace.name, app.name, ports))
     return flows
 

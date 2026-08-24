@@ -151,3 +151,38 @@ def test_cluster_diagram_aggregates_cross_namespace_flows_only():
     assert "ns_studylife_scale -->" not in diagram
     # ...but the unrestricted web app still surfaces as an any-source flow.
     assert '  ext_any_source(["any source"])' in diagram
+
+
+def test_structured_peers_are_preferred_over_string_parsing():
+    # New inventories carry NetworkPolicyRule.peer_selectors - resolution
+    # must use them directly; the display strings here are deliberately
+    # unparsable garbage to prove the strings are not consulted.
+    from autodoc_core.models import NetworkPolicyPeerInfo
+
+    ns = NamespaceInventory(
+        name="demo",
+        apps=[
+            _app("web"),
+            _app(
+                "redis",
+                policies=[
+                    _DENY_ALL,
+                    NetworkPolicyInfo(
+                        name="allow",
+                        policy_types=["Ingress"],
+                        ingress=[
+                            NetworkPolicyRule(
+                                peers=["<display only>"],
+                                ports=["TCP/6379"],
+                                peer_selectors=[NetworkPolicyPeerInfo(pod_selector={"app": "web"})],
+                            )
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+
+    diagram = build_namespace_network_diagram(ns)
+
+    assert '  app_web -->|"TCP/6379"| app_redis' in diagram

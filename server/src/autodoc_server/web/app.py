@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -19,8 +20,22 @@ from .routes_device import router as device_router
 from .routes_setup import router as setup_router
 
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Rebuild the static site from the persisted inventory BEFORE serving:
+    docs_dir/site_dir are not on a persistent volume, so a pod restart
+    otherwise 404s until the next push. A startup hook rather than an
+    import-time side effect (which this used to be): uvicorn runs the
+    lifespan before accepting connections, so the readiness gating via
+    /healthz is identical - but importing the module for tests or tooling
+    no longer triggers a full rebuild.
+    """
+    site_builder.rebuild_all_sites(get_storage(), get_llm(), get_mkdocs_config_path())
+    yield
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="homelab-autodoc server")
+    app = FastAPI(title="homelab-autodoc server", lifespan=_lifespan)
     app.add_middleware(SessionMiddleware, secret_key=get_session_secret(), same_site="lax")
 
     app.include_router(inventory_router)
@@ -40,13 +55,11 @@ def create_app() -> FastAPI:
     admin_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/admin", StaticFiles(directory=admin_dir, html=True), name="admin-ui")
 
-    # The generated MkDocs site - the public documentation, mounted last (catch-all).
-    # Rebuilt from the persisted inventory before mounting: docs_dir/site_dir are
-    # NOT on a persistent volume, so a pod restart otherwise 404s until the next push.
-    storage = get_storage()
-    site_builder.rebuild_all_sites(storage, get_llm(), get_mkdocs_config_path())
-
-    site_dir = storage.docs_dir.parent / "site"
+    # The generated MkDocs site - the public documentation, mounted last
+    # (catch-all). The mount only needs the directory to EXIST; its content
+    # appears when the lifespan rebuild (above) has run - which uvicorn
+    # guarantees happens before the first request is accepted.
+    site_dir = get_storage().docs_dir.parent / "site"
     site_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/", StaticFiles(directory=site_dir, html=True), name="site")
 
