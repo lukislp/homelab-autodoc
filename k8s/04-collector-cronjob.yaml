@@ -50,7 +50,7 @@ spec:
                   mountPath: /var/run/autodoc
           containers:
             - name: collector
-              image: ghcr.io/lukislp/homelab-autodoc-collector:1.44.0 # {"$imagepolicy": "flux-system:homelab-autodoc-collector"}
+              image: ghcr.io/lukislp/homelab-autodoc-collector:1.44.1 # {"$imagepolicy": "flux-system:homelab-autodoc-collector"}
               securityContext:
                 runAsNonRoot: true
                 allowPrivilegeEscalation: false
@@ -69,8 +69,8 @@ spec:
                 - name: CLUSTER_NAME
                   value: homelab
               resources:
-                requests: { cpu: 100m, memory: 128Mi }
-                limits: { cpu: 500m, memory: 256Mi }
+                requests: {cpu: 100m, memory: 128Mi}
+                limits: {cpu: 500m, memory: 256Mi}
               volumeMounts:
                 - name: token
                   mountPath: /var/run/autodoc
