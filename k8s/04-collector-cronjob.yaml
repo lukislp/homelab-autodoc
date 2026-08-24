@@ -47,7 +47,7 @@ spec:
                   mountPath: /var/run/autodoc
           containers:
             - name: collector
-              image: ghcr.io/lukislp/homelab-autodoc-collector:1.41.0
+              image: ghcr.io/lukislp/homelab-autodoc-collector:1.42.2
               securityContext:
                 runAsNonRoot: true
                 allowPrivilegeEscalation: false
