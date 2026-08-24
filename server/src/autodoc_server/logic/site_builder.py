@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from pathlib import Path
 
@@ -10,7 +11,12 @@ from autodoc_core.models import App, ClusterInventory, NamespaceInventory
 from autodoc_generator import changelog as changelog_render
 from autodoc_generator import diagrams, facts, findings, navigation, render
 from autodoc_generator.llm import LLMClient
-from autodoc_generator.prose import generate_drift_summary, generate_summary
+from autodoc_generator.prose import (
+    build_drift_prompt,
+    build_prompt,
+    generate_drift_summary,
+    generate_summary,
+)
 
 from .about import ABOUT_PAGE
 from .storage import Storage
@@ -45,6 +51,16 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
     cluster_dir.mkdir(parents=True, exist_ok=True)
     last_changes = _last_run_changes(storage, cluster_name)
 
+    # Prompt-hash memoization for all LLM prose: a prompt is a pure function of
+    # exactly the facts the prose is allowed to mention, so an identical prompt
+    # means regeneration could only restate the same facts - pure cost, skipped.
+    # Writing back only the entries touched this rebuild prunes deleted apps
+    # for free. This is what keeps a push (and the import-time rebuild of every
+    # site on server start) from paying one LLM call per app when almost
+    # nothing changed.
+    old_cache = storage.load_prose_cache(cluster_name)
+    new_cache: dict = {"apps": {}, "drift": None}
+
     for namespace in inventory.namespaces:
         namespace_dir = cluster_dir / namespace.name
         namespace_dir.mkdir(parents=True, exist_ok=True)
@@ -54,7 +70,13 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
             encoding="utf-8",
         )
         for app in namespace.apps:
-            summary = _safe_generate_summary(app, llm) if llm else None
+            summary = (
+                _summary_with_cache(
+                    app, namespace.name, llm, old_cache.get("apps", {}), new_cache["apps"]
+                )
+                if llm
+                else None
+            )
             namespace_dir.joinpath(f"{app.name}.md").write_text(
                 render.render_app_page(app, namespace, cluster_name, summary), encoding="utf-8"
             )
@@ -68,8 +90,33 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
     _write_images_page(storage, cluster_name, inventory)
     _write_storage_classes_page(storage, cluster_name, inventory)
     _write_nodes_page(storage, cluster_name, inventory)
-    _write_changelog_page(storage, cluster_name, llm)
+    _write_changelog_page(storage, cluster_name, llm, old_cache.get("drift"), new_cache)
     _write_root_index(storage)
+    storage.save_prose_cache(cluster_name, new_cache)
+
+
+def _prompt_sha(prompt: str) -> str:
+    return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+
+
+def _summary_with_cache(
+    app: App, namespace_name: str, llm: LLMClient, cached_apps: dict, new_apps: dict
+) -> str | None:
+    """Reuse the cached summary when the app's prompt is byte-identical to the
+    one its cached prose was generated from. Only successful generations are
+    cached: a failed LLM call leaves no entry, so it is retried on the next
+    rebuild instead of pinning a permanent gap.
+    """
+    key = f"{namespace_name}/{app.name}"
+    prompt_sha = _prompt_sha(build_prompt(app))
+    cached = cached_apps.get(key)
+    if cached and cached.get("prompt_sha") == prompt_sha:
+        new_apps[key] = cached
+        return cached.get("summary")
+    summary = _safe_generate_summary(app, llm)
+    if summary is not None:
+        new_apps[key] = {"prompt_sha": prompt_sha, "summary": summary}
+    return summary
 
 
 def _safe_generate_summary(app: App, llm: LLMClient) -> str | None:
@@ -337,7 +384,13 @@ def _safe_generate_drift_summary(
         return None
 
 
-def _write_changelog_page(storage: Storage, cluster_name: str, llm: LLMClient | None) -> None:
+def _write_changelog_page(
+    storage: Storage,
+    cluster_name: str,
+    llm: LLMClient | None,
+    cached_drift: dict | None = None,
+    new_cache: dict | None = None,
+) -> None:
     entries = storage.load_changelog_entries(cluster_name)
     rendered = [
         changelog_render.render_changelog_entry(
@@ -352,7 +405,19 @@ def _write_changelog_page(storage: Storage, cluster_name: str, llm: LLMClient | 
         if entry["changes"]
     ]
     if llm and recent:
-        summary = _safe_generate_drift_summary(cluster_name, recent, llm)
+        # Same prompt-hash memoization as the app summaries: a push without
+        # drift (and the import-time rebuild on every server start) leaves the
+        # recent-runs window unchanged, so the summary would come out of the
+        # same facts.
+        prompt_sha = _prompt_sha(build_drift_prompt(recent))
+        if cached_drift and cached_drift.get("prompt_sha") == prompt_sha:
+            summary = cached_drift.get("summary")
+            if new_cache is not None:
+                new_cache["drift"] = cached_drift
+        else:
+            summary = _safe_generate_drift_summary(cluster_name, recent, llm)
+            if summary is not None and new_cache is not None:
+                new_cache["drift"] = {"prompt_sha": prompt_sha, "summary": summary}
     # render_changelog_page already builds its own "# {cluster} - Changelog"
     # heading, so this only prepends front matter + breadcrumb + the chip row
     # rather than going through _cluster_content_page (which would add a

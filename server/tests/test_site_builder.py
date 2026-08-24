@@ -408,3 +408,116 @@ def test_empty_governance_and_dependency_states_say_none_exist(tmp_path):
     assert "No workload in this namespace references a ConfigMap or Secret." in dependencies
     assert "collected yet" not in governance
     assert "collected yet" not in dependencies
+
+
+class _CountingLLM:
+    """Records every prompt - the prose-cache tests assert on call COUNTS,
+    which is the whole point of the cache."""
+
+    def __init__(self):
+        self.prompts = []
+
+    def generate(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        return "Drift prose." if "configuration drift" in prompt else "App prose."
+
+
+def _two_app_inventory(web_image: str = "nginx:1.25.3") -> ClusterInventory:
+    from autodoc_core.models import App, Container, NamespaceInventory
+
+    return ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T00:00:00+00:00",
+        namespaces=[
+            NamespaceInventory(
+                name="demo",
+                apps=[
+                    App(
+                        name="web",
+                        kind="Deployment",
+                        replicas=1,
+                        ready_replicas=1,
+                        containers=[Container(name="web", image=web_image)],
+                    ),
+                    App(
+                        name="api",
+                        kind="Deployment",
+                        replicas=1,
+                        ready_replicas=1,
+                        containers=[Container(name="api", image="api:1.0.0")],
+                    ),
+                ],
+            )
+        ],
+    )
+
+
+def test_unchanged_inventory_rebuild_makes_zero_llm_calls(tmp_path):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", _two_app_inventory())
+    storage.append_changelog_entry(
+        "homelab",
+        "2026-08-22T02:00:00+00:00",
+        [{"kind": "app_changed", "namespace": "demo", "app_name": "web", "details": ["x"]}],
+    )
+    first = _CountingLLM()
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=first)
+    assert len(first.prompts) == 3  # two app summaries + one drift summary
+
+    second = _CountingLLM()
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=second)
+
+    assert second.prompts == []
+    # ...and the cached prose still renders on the pages.
+    app_page = (storage.docs_dir / "homelab" / "demo" / "web.md").read_text(encoding="utf-8")
+    changelog_page = (storage.docs_dir / "homelab" / "changelog.md").read_text(encoding="utf-8")
+    assert "App prose." in app_page
+    assert "Drift prose." in changelog_page
+
+
+def test_changed_app_regenerates_only_its_own_summary(tmp_path):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", _two_app_inventory())
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=_CountingLLM())
+
+    storage.save_inventory("homelab", _two_app_inventory(web_image="nginx:1.26.0"))
+    llm = _CountingLLM()
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=llm)
+
+    assert len(llm.prompts) == 1
+    assert "nginx:1.26.0" in llm.prompts[0]
+
+
+def test_failed_summary_is_not_cached_and_retried_next_rebuild(tmp_path):
+    class _BrokenLLM:
+        def generate(self, prompt: str) -> str:
+            raise RuntimeError("rate limited")
+
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", _two_app_inventory())
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=_BrokenLLM())
+
+    llm = _CountingLLM()
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=llm)
+
+    assert len(llm.prompts) == 2  # both summaries retried, nothing pinned as a permanent gap
+
+
+def test_deleted_app_is_pruned_from_the_prose_cache(tmp_path):
+    storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
+    storage.save_inventory("homelab", _two_app_inventory())
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=_CountingLLM())
+    assert set(storage.load_prose_cache("homelab")["apps"]) == {"demo/web", "demo/api"}
+
+    inventory = _two_app_inventory()
+    trimmed = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-22T01:00:00+00:00",
+        namespaces=[
+            type(inventory.namespaces[0])(name="demo", apps=[inventory.namespaces[0].apps[0]])
+        ],
+    )
+    storage.save_inventory("homelab", trimmed)
+    site_builder.regenerate_cluster_docs(storage, "homelab", llm=_CountingLLM())
+
+    assert set(storage.load_prose_cache("homelab")["apps"]) == {"demo/web"}
