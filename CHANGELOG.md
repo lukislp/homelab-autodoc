@@ -1,3 +1,10 @@
+## [1.42.1](https://github.com/lukislp/homelab-autodoc/compare/v1.42.0...v1.42.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **generator:** probe and PDB rules respect the workload kind ([8bb4215](https://github.com/lukislp/homelab-autodoc/commit/8bb42156d713841f0c6342bba8f74a3381fced34))
+
 # [1.42.0](https://github.com/lukislp/homelab-autodoc/compare/v1.41.8...v1.42.0) (2026-08-23)
 
 
