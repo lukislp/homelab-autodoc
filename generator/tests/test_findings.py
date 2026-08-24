@@ -448,3 +448,39 @@ def test_namespace_findings_appear_on_the_cluster_table_without_an_app_link():
     table = cluster_findings_table(inventory)
 
     assert "| [demo](demo/index.md) | - | `orphaned-configmap` | ConfigMap unused |" in table
+
+
+def test_cronjobs_are_exempt_from_the_probe_rule():
+    app = _clean_app(
+        kind="CronJob",
+        containers=[
+            _container(
+                limits=dict(_FULL_RESOURCES),
+                requests=dict(_FULL_RESOURCES),
+                security=_HARDENED,
+            )
+        ],
+    )
+
+    rules = _rules(app)
+
+    # Job pods run to completion - no probes expected, but the other
+    # long-running-container rules still apply.
+    assert "missing-probes" not in rules
+
+
+def test_cronjobs_still_get_resource_and_security_rules():
+    app = _clean_app(kind="CronJob", containers=[_container()])
+
+    rules = _rules(app)
+
+    assert "missing-resource-limits" in rules
+    assert "run-as-root-allowed" in rules
+
+
+def test_daemonsets_are_exempt_from_the_pdb_rule():
+    # A DaemonSet's "replicas" are just the node count, and a drain skips
+    # DaemonSet pods entirely - a PDB protects nothing there.
+    app = _clean_app(kind="DaemonSet", replicas=2, pod_disruption_budgets=[])
+
+    assert "missing-pdb" not in _rules(app)

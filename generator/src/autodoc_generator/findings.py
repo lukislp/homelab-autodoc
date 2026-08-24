@@ -76,6 +76,12 @@ def _run_containers(app: App) -> list[Container]:
 
 
 def _probe_findings(app: App) -> list[Finding]:
+    # A CronJob's pods run to completion - readiness has nothing to gate and
+    # liveness guidance aimed at long-running servers doesn't apply, so the
+    # rule would only ever produce noise there (it flagged the project's own
+    # collector CronJob in production).
+    if app.kind == "CronJob":
+        return []
     findings = []
     for c in _run_containers(app):
         kinds = {p.kind for p in c.probes}
@@ -155,7 +161,11 @@ def _network_policy_findings(app: App) -> list[Finding]:
 def _pdb_findings(app: App) -> list[Finding]:
     # A PDB on a single replica is pointless (any disruption takes the one
     # pod either way), so only multi-replica workloads are held to this.
-    if app.replicas < 2 or app.pod_disruption_budgets:
+    # DaemonSets are exempt too: their "replicas" are just the node count,
+    # and a drain skips them entirely (kubectl drain --ignore-daemonsets),
+    # so a PDB protects nothing there - in production this rule's only hits
+    # were DaemonSets.
+    if app.kind == "DaemonSet" or app.replicas < 2 or app.pod_disruption_budgets:
         return []
     return [
         Finding(
