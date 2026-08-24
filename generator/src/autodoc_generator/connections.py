@@ -137,7 +137,12 @@ def build_cluster_connections_diagram(inventory: ClusterInventory) -> str:
     external_ids: dict[str, str] = {}
     rendered: list[str] = []
     seen: set[tuple] = set()
-    for src_ns, src_app, dst_ns, dst_app, ports in sorted(edges):
+    # dst_ns is None for unresolvable targets - a plain sorted() would compare
+    # None against str the moment one app has both edge kinds (crashed the
+    # first production rebuild), so None sorts explicitly as "".
+    for src_ns, src_app, dst_ns, dst_app, ports in sorted(
+        edges, key=lambda e: (e[0], e[1], e[2] or "", e[3], e[4])
+    ):
         key = (src_ns, src_app, dst_ns, dst_app, ports)
         if key in seen:
             continue

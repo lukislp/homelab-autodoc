@@ -141,3 +141,31 @@ def test_empty_cluster_diagram_when_nothing_crosses_namespaces():
     )
 
     assert build_cluster_connections_diagram(inventory) == ""
+
+
+def test_cluster_diagram_survives_mixed_resolvable_and_unresolvable_targets():
+    # Regression: one app with BOTH a resolvable and an unresolvable target
+    # made sorted() compare None against str and crash the production rebuild.
+    ns = NamespaceInventory(
+        name="demo",
+        apps=[
+            _app(
+                "web",
+                references=[
+                    ServiceReference(service="api", port=8080),
+                    ServiceReference(service="ghost", port=1234),
+                ],
+            ),
+            _app("api", services=["api"]),
+        ],
+    )
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-25T00:00:00+00:00",
+        namespaces=[ns],
+    )
+
+    diagram = build_cluster_connections_diagram(inventory)
+
+    assert '  app_demo_web -->|"8080"| app_demo_api' in diagram
+    assert '(["service ghost (demo)"])' in diagram
