@@ -1,3 +1,10 @@
+## [1.44.1](https://github.com/lukislp/homelab-autodoc/compare/v1.44.0...v1.44.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **k8s:** bump collector to 1.44.0 ([3d4d4fd](https://github.com/lukislp/homelab-autodoc/commit/3d4d4fd8019fb16c9b4ca37abf59189f87aa8b69)), closes [#82](https://github.com/lukislp/homelab-autodoc/issues/82)
+
 # [1.44.0](https://github.com/lukislp/homelab-autodoc/compare/v1.43.0...v1.44.0) (2026-08-24)
 
 
