@@ -1,3 +1,10 @@
+# [1.47.0](https://github.com/lukislp/homelab-autodoc/compare/v1.46.0...v1.47.0) (2026-08-24)
+
+
+### Features
+
+* **backups:** backup posture page and coverage findings ([21dbffa](https://github.com/lukislp/homelab-autodoc/commit/21dbffafa4a0db4115a6c8fca3f3e219875717f6))
+
 # [1.46.0](https://github.com/lukislp/homelab-autodoc/compare/v1.45.1...v1.46.0) (2026-08-24)
 
 
