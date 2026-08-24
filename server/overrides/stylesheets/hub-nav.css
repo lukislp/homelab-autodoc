@@ -120,6 +120,18 @@
   }
 }
 
+/* Hub card grids (root clusters, cluster namespaces, namespace apps):
+   Material's auto-fit default ballooned into two huge cards per row on wide
+   screens - each card carries a name and one fact line, four fit
+   comfortably. Explicit four columns from desktop widths up; below that,
+   Material's own responsive default keeps handling it. */
+@media screen and (min-width: 60em) {
+  .md-typeset .grid.cards > ul,
+  .md-typeset .grid.cards > ol {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 /* Hub-page dashboard widgets: the stat-chip summary row (cluster/namespace
    index), section labels above each card grid, the small ready/not-ready
    dot on namespace and app cards, and the pill-style links for cluster- and
