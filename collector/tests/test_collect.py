@@ -1206,3 +1206,30 @@ def test_build_namespace_inventory_keeps_uncollected_warning_events_none():
     inventory = build_namespace_inventory("demo", [_workload()], [], [], [])
 
     assert inventory.warning_events is None
+
+
+def test_describe_peer_keeps_both_namespace_and_pod_selector_halves():
+    # The generator's network module parses this exact string contract - a
+    # combined peer ("prometheus pods in the monitoring namespace") must keep
+    # both halves, joined with "+".
+    peer = client.V1NetworkPolicyPeer(
+        namespace_selector=client.V1LabelSelector(
+            match_labels={"kubernetes.io/metadata.name": "monitoring"}
+        ),
+        pod_selector=client.V1LabelSelector(match_labels={"app": "prometheus"}),
+    )
+
+    from autodoc_collector.collect import _describe_peer
+
+    assert (
+        _describe_peer(peer)
+        == "namespaces:kubernetes.io/metadata.name=monitoring+pods:app=prometheus"
+    )
+
+
+def test_app_carries_the_pod_template_labels():
+    workload = _workload(name="web", pod_labels={"app": "web", "tier": "frontend"})
+
+    app = build_namespace_inventory("demo", [workload], [], [], []).apps[0]
+
+    assert app.pod_labels == {"app": "web", "tier": "frontend"}

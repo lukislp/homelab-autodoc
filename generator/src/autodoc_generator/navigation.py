@@ -12,12 +12,14 @@ from autodoc_core.models import NamespaceInventory
 # id (used as both the file stem and the `current` marker) -> display label.
 NAMESPACE_PAGES = (
     ("topology", "Topology"),
+    ("network", "Network"),
     ("dependencies", "Dependencies"),
     ("resource-governance", "Resource Governance"),
 )
 
 CLUSTER_PAGES = (
     ("topology", "Topology"),
+    ("network", "Network"),
     ("findings", "Findings"),
     ("images", "Images"),
     ("storage-classes", "Storage Classes"),

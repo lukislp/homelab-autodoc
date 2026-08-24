@@ -197,13 +197,20 @@ def _describe_selector(selector: dict[str, str] | None) -> str:
 
 
 def _describe_peer(peer: client.V1NetworkPolicyPeer) -> str:
+    """A peer may combine namespaceSelector AND podSelector ("pods matching X
+    in namespaces matching Y") - both halves must survive, joined with "+".
+    The earlier either/or version silently dropped the pod half of exactly the
+    most interesting peers (e.g. prometheus-only scrape allowances). This
+    string shape is a stable contract parsed by the generator's network module.
+    """
     if peer.ip_block is not None:
         return f"ipBlock:{peer.ip_block.cidr}"
+    parts = []
     if peer.namespace_selector is not None:
-        return f"namespaces:{_describe_selector(peer.namespace_selector.match_labels)}"
+        parts.append(f"namespaces:{_describe_selector(peer.namespace_selector.match_labels)}")
     if peer.pod_selector is not None:
-        return f"pods:{_describe_selector(peer.pod_selector.match_labels)}"
-    return "unknown"
+        parts.append(f"pods:{_describe_selector(peer.pod_selector.match_labels)}")
+    return "+".join(parts) or "unknown"
 
 
 def _describe_port(port: client.V1NetworkPolicyPort) -> str:
@@ -447,6 +454,7 @@ def build_app(
         + [_build_httproute(route) for route in matched_httproutes],
         labels=workload.labels,
         annotations=workload.annotations,
+        pod_labels=workload.pod_labels,
         created_at=workload.created_at,
         owners=workload.owners,
         config_refs=sorted(workload.config_refs, key=lambda c: (c.kind, c.name, c.via)),
