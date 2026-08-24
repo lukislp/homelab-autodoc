@@ -1,8 +1,8 @@
-# Applies EXCLUSIVELY k8s/flux-deploy/ (this repo's curated Flux-managed subset - currently just
-# 01-app.yaml, the server's PVC+Deployment+Service - see that folder's own kustomization.yaml).
-# No RBAC changes needed on the reconciler side (homelab-infra's flux/01-reconciler-rbac.yaml) -
-# the resource kinds used here (PersistentVolumeClaim/Service/Deployment) are already covered by
-# the existing shared ClusterRole.
+# Applies EXCLUSIVELY k8s/flux-deploy/ (this repo's curated Flux-managed subset: 01-app.yaml,
+# the server's PVC+Deployment+Service, plus 04-collector-cronjob.yaml - see that folder's own
+# kustomization.yaml). The reconciler side (homelab-infra's flux/01-reconciler-rbac.yaml)
+# covers all resource kinds used here; batch/cronjobs was added there specifically for the
+# collector.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

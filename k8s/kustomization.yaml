@@ -1,8 +1,9 @@
 # The bootstrap-only resources - everything Flux's shared reconciler RBAC doesn't cover, so it
 # has to be applied by hand once (see k8s/README.md). Deliberately does NOT include 01-app.yaml
-# anymore: that file is Flux-managed now (k8s/flux/ wires this repo in, k8s/flux-deploy/
-# applies exactly that file) - re-applying it here too would just be a second, redundant owner
-# of the same objects. `kubectl apply -k k8s/` covers everything in this list in one shot.
+# or 04-collector-cronjob.yaml: both are Flux-managed now (k8s/flux/ wires this repo in,
+# k8s/flux-deploy/ applies exactly that subset) - re-applying them here too would just be a
+# second, redundant owner of the same objects. `kubectl apply -k k8s/` covers everything in
+# this list in one shot.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -10,4 +11,3 @@ resources:
   - 02-httproute.yaml
   - 03-network-policies.yaml
   - 03-collector-rbac.yaml
-  - 04-collector-cronjob.yaml

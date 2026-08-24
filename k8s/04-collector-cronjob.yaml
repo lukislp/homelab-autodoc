@@ -1,7 +1,10 @@
 # Persists the device-grant push token across runs, so only the very first run ever needs an
 # admin to approve it - see collector/README.md and k8s/README.md#token-persistence for why a
-# PVC and not a Secret. Bootstrap-only, NOT Flux-managed (batch/v1 CronJob isn't in the central
-# studylife repo's kustomize-controller RBAC either - see k8s/README.md).
+# PVC and not a Secret. Flux-managed since the shared reconciler ClusterRole gained
+# batch/cronjobs (homelab-infra flux/01-reconciler-rbac.yaml): part of the
+# k8s/flux-deploy/ subset, with image automation bumping the marker below - the manual
+# collector bump repeatedly lagged behind the Flux-automated server, leaving mismatched
+# versions between bumps.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -47,7 +50,7 @@ spec:
                   mountPath: /var/run/autodoc
           containers:
             - name: collector
-              image: ghcr.io/lukislp/homelab-autodoc-collector:1.44.0
+              image: ghcr.io/lukislp/homelab-autodoc-collector:1.44.0 # {"$imagepolicy": "flux-system:homelab-autodoc-collector"}
               securityContext:
                 runAsNonRoot: true
                 allowPrivilegeEscalation: false
