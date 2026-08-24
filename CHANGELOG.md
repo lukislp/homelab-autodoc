@@ -1,3 +1,10 @@
+## [1.47.1](https://github.com/lukislp/homelab-autodoc/compare/v1.47.0...v1.47.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **generator:** velero-repo-maintenance is never an orphaned ConfigMap ([2a6621b](https://github.com/lukislp/homelab-autodoc/commit/2a6621b0a72c7719d9e0dd3bf9fba00a300f12ea))
+
 # [1.47.0](https://github.com/lukislp/homelab-autodoc/compare/v1.46.0...v1.47.0) (2026-08-24)
 
 
