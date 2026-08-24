@@ -130,12 +130,33 @@ class Autoscaler:
 
 
 @dataclass(frozen=True, slots=True)
+class NetworkPolicyPeerInfo:
+    """One structured NetworkPolicy peer. Exactly one shape per peer:
+    ip_block set, or any combination of the two selectors. Selector
+    semantics mirror the Kubernetes API: None = that selector is absent
+    (namespace_selector None means "the policy's own namespace"), {} = the
+    selector is present but empty ("all"). matchExpressions are not modeled
+    - the collector marks such peers unresolvable rather than guessing.
+    """
+
+    ip_block: str | None = None
+    namespace_selector: dict[str, str] | None = None
+    pod_selector: dict[str, str] | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class NetworkPolicyRule:
     # Human-readable peer descriptions, e.g. "pods:app=foo", "namespaces:all",
-    # "ipBlock:10.0.0.0/8". An empty list means "all sources/destinations" -
-    # the rule is present but has no peer restriction.
+    # "ipBlock:10.0.0.0/8" - DERIVED from peer_selectors for display; the
+    # structured list below is what the network-flow resolution consumes.
+    # An empty list means "all sources/destinations" - the rule is present
+    # but has no peer restriction.
     peers: list[str] = field(default_factory=list)
     ports: list[str] = field(default_factory=list)  # e.g. "TCP/8080"; empty means all ports
+    # Structured peers, same order as `peers`. Empty on inventories from
+    # collectors older than this field - consumers fall back to parsing the
+    # display strings there.
+    peer_selectors: list[NetworkPolicyPeerInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)

@@ -4,7 +4,7 @@ import shutil
 
 from autodoc_core.models import ClusterInventory
 
-from autodoc_server.logic import site_builder
+from autodoc_server.logic import pages, site_builder
 from autodoc_server.logic.storage import Storage
 
 
@@ -158,7 +158,7 @@ def test_regenerate_cluster_docs_nodes_page_without_nodes(tmp_path):
 def test_write_root_index_admin_tile_present_even_with_no_clusters(tmp_path):
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
 
-    site_builder._write_root_index(storage)
+    pages.write_root_index(storage)
 
     root_index = (storage.docs_dir / "index.md").read_text(encoding="utf-8")
     assert "[Open Admin →](/admin/)" in root_index
@@ -367,7 +367,7 @@ def test_regenerate_cluster_docs_survives_a_broken_llm(tmp_path, sample_inventor
 def test_root_index_carries_an_about_card_and_the_page_exists(tmp_path):
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
 
-    site_builder._write_root_index(storage)
+    pages.write_root_index(storage)
 
     root_index = (storage.docs_dir / "index.md").read_text(encoding="utf-8")
     about_page = (storage.docs_dir / "about.md").read_text(encoding="utf-8")

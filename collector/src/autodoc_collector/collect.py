@@ -20,6 +20,7 @@ from autodoc_core.models import (
     LimitRangeItemInfo,
     NamespaceInventory,
     NetworkPolicyInfo,
+    NetworkPolicyPeerInfo,
     NetworkPolicyRule,
     NodeInfo,
     PodDisruptionBudgetInfo,
@@ -195,24 +196,42 @@ def _node_names_for_workload(pods: list[client.V1Pod], workload: NormalizedWorkl
     return sorted(names)
 
 
-def _describe_selector(selector: dict[str, str] | None) -> str:
-    return ",".join(f"{k}={v}" for k, v in sorted((selector or {}).items())) or "all"
-
-
-def _describe_peer(peer: client.V1NetworkPolicyPeer) -> str:
-    """A peer may combine namespaceSelector AND podSelector ("pods matching X
-    in namespaces matching Y") - both halves must survive, joined with "+".
-    The earlier either/or version silently dropped the pod half of exactly the
-    most interesting peers (e.g. prometheus-only scrape allowances). This
-    string shape is a stable contract parsed by the generator's network module.
+def _build_peer(peer: client.V1NetworkPolicyPeer) -> NetworkPolicyPeerInfo:
+    """The structured peer the generator's network resolution consumes.
+    matchExpressions are not modeled: a selector using them becomes None
+    fields all around ("unknown"), never a guess.
     """
     if peer.ip_block is not None:
-        return f"ipBlock:{peer.ip_block.cidr}"
+        return NetworkPolicyPeerInfo(ip_block=peer.ip_block.cidr)
+
+    def match_labels(selector: client.V1LabelSelector | None) -> dict[str, str] | None:
+        if selector is None:
+            return None
+        return dict(selector.match_labels or {})
+
+    return NetworkPolicyPeerInfo(
+        namespace_selector=match_labels(peer.namespace_selector),
+        pod_selector=match_labels(peer.pod_selector),
+    )
+
+
+def _describe_peer(info: NetworkPolicyPeerInfo) -> str:
+    """Display string DERIVED from the structured peer - one source of
+    truth. A peer may combine namespaceSelector AND podSelector; both
+    halves survive, joined with "+". Older generators parse this shape as a
+    fallback for inventories predating peer_selectors.
+    """
+    if info.ip_block is not None:
+        return f"ipBlock:{info.ip_block}"
+
+    def describe(selector: dict[str, str] | None) -> str:
+        return ",".join(f"{k}={v}" for k, v in sorted((selector or {}).items())) or "all"
+
     parts = []
-    if peer.namespace_selector is not None:
-        parts.append(f"namespaces:{_describe_selector(peer.namespace_selector.match_labels)}")
-    if peer.pod_selector is not None:
-        parts.append(f"pods:{_describe_selector(peer.pod_selector.match_labels)}")
+    if info.namespace_selector is not None:
+        parts.append(f"namespaces:{describe(info.namespace_selector)}")
+    if info.pod_selector is not None:
+        parts.append(f"pods:{describe(info.pod_selector)}")
     return "+".join(parts) or "unknown"
 
 
@@ -224,9 +243,11 @@ def _describe_port(port: client.V1NetworkPolicyPort) -> str:
 def _build_network_policy_rule(
     peers: list[client.V1NetworkPolicyPeer] | None, ports: list[client.V1NetworkPolicyPort] | None
 ) -> NetworkPolicyRule:
+    structured = [_build_peer(p) for p in (peers or [])]
     return NetworkPolicyRule(
-        peers=[_describe_peer(p) for p in (peers or [])],
+        peers=[_describe_peer(info) for info in structured],
         ports=[_describe_port(p) for p in (ports or [])],
+        peer_selectors=structured,
     )
 
 

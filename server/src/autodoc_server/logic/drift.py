@@ -25,3 +25,18 @@ def record_drift(
             cluster_name, new_inventory.collected_at, [asdict(c) for c in changes]
         )
     return changes
+
+
+def last_run_changes(storage: Storage, cluster_name: str) -> list[dict]:
+    """The most recent collector run's drift, or [] if none yet/no changelog
+    entries exist - the "Drift, Last Run" stat chip on the cluster and
+    namespace hub pages, and drift_count below, both read from this.
+    """
+    entries = storage.load_changelog_entries(cluster_name)
+    return entries[-1]["changes"] if entries else []
+
+
+def drift_count(last_changes: list[dict], namespace_name: str | None = None) -> int:
+    if namespace_name is None:
+        return len(last_changes)
+    return sum(1 for c in last_changes if c["namespace"] == namespace_name)

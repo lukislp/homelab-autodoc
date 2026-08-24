@@ -25,6 +25,7 @@ from .models import (
     LimitRangeItemInfo,
     NamespaceInventory,
     NetworkPolicyInfo,
+    NetworkPolicyPeerInfo,
     NetworkPolicyRule,
     NodeInfo,
     PodDisruptionBudgetInfo,
@@ -149,7 +150,18 @@ def _autoscaler_from_dict(d: dict) -> Autoscaler:
 
 
 def _network_policy_rule_from_dict(d: dict) -> NetworkPolicyRule:
-    return NetworkPolicyRule(peers=list(d.get("peers", [])), ports=list(d.get("ports", [])))
+    return NetworkPolicyRule(
+        peers=list(d.get("peers", [])),
+        ports=list(d.get("ports", [])),
+        peer_selectors=[
+            NetworkPolicyPeerInfo(
+                ip_block=s.get("ip_block"),
+                namespace_selector=s.get("namespace_selector"),
+                pod_selector=s.get("pod_selector"),
+            )
+            for s in d.get("peer_selectors", [])
+        ],
+    )
 
 
 def _network_policy_from_dict(d: dict) -> NetworkPolicyInfo:

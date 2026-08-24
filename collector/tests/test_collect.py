@@ -1212,10 +1212,11 @@ def test_build_namespace_inventory_keeps_uncollected_warning_events_none():
     assert inventory.warning_events is None
 
 
-def test_describe_peer_keeps_both_namespace_and_pod_selector_halves():
-    # The generator's network module parses this exact string contract - a
-    # combined peer ("prometheus pods in the monitoring namespace") must keep
-    # both halves, joined with "+".
+def test_peers_are_structured_with_a_derived_display_string():
+    # A combined peer ("prometheus pods in the monitoring namespace") keeps
+    # both halves - structured for the generator's network resolution, and
+    # as a display string derived from the same structure (which older
+    # generators still parse as the legacy fallback).
     peer = client.V1NetworkPolicyPeer(
         namespace_selector=client.V1LabelSelector(
             match_labels={"kubernetes.io/metadata.name": "monitoring"}
@@ -1223,10 +1224,15 @@ def test_describe_peer_keeps_both_namespace_and_pod_selector_halves():
         pod_selector=client.V1LabelSelector(match_labels={"app": "prometheus"}),
     )
 
-    from autodoc_collector.collect import _describe_peer
+    from autodoc_collector.collect import _build_peer, _describe_peer
 
+    info = _build_peer(peer)
+
+    assert info.namespace_selector == {"kubernetes.io/metadata.name": "monitoring"}
+    assert info.pod_selector == {"app": "prometheus"}
+    assert info.ip_block is None
     assert (
-        _describe_peer(peer)
+        _describe_peer(info)
         == "namespaces:kubernetes.io/metadata.name=monitoring+pods:app=prometheus"
     )
 
