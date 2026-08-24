@@ -523,14 +523,18 @@ def test_deleted_app_is_pruned_from_the_prose_cache(tmp_path):
     assert set(storage.load_prose_cache("homelab")["apps"]) == {"demo/web"}
 
 
-def test_cluster_topology_is_one_diagram_again(tmp_path, sample_inventory):
-    # The tile-grid variant was rejected: the plan is ONE graph in ONE
-    # pan/zoom box, spreading sideways via the diagram source itself.
+def test_topology_pages_carry_both_responsive_variants(tmp_path, sample_inventory):
+    # Desktop gets the sideways-spread diagram, phones the classic stack -
+    # both pre-rendered, a CSS breakpoint picks one. No tile grid.
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
     storage.save_inventory("homelab", sample_inventory)
 
     site_builder.regenerate_cluster_docs(storage, "homelab", llm=None)
 
-    page = (storage.docs_dir / "homelab" / "topology.md").read_text(encoding="utf-8")
-    assert "topology-grid" not in page
-    assert page.count("```mermaid") == 1
+    cluster_page = (storage.docs_dir / "homelab" / "topology.md").read_text(encoding="utf-8")
+    ns_page = (storage.docs_dir / "homelab" / "demo" / "topology.md").read_text(encoding="utf-8")
+    for page in (cluster_page, ns_page):
+        assert page.count("```mermaid") == 2
+        assert 'class="topology-variant topology-variant--wide"' in page
+        assert 'class="topology-variant topology-variant--stacked"' in page
+    assert "topology-grid" not in cluster_page

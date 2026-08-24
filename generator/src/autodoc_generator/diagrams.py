@@ -55,11 +55,37 @@ def build_app_diagram(app: App) -> str:
     return "\n".join(["flowchart LR", *_app_nodes_and_edges(app, "app")])
 
 
-def build_namespace_diagram(namespace: NamespaceInventory) -> str:
+# Same trick as the cluster diagram's namespace rows, one level down: apps
+# whose trees share no nodes are disconnected components, and Mermaid stacks
+# those vertically. Three per row - an app tree already spreads to the right
+# (workload -> services -> ingresses plus the config fan), so it is wider
+# than a whole namespace box in the cluster view.
+_APPS_PER_ROW = 3
+
+
+def _chain_rows(ids: list[str], per_row: int) -> list[str]:
+    """Invisible ~~~ links that pack disconnected components into rows: a
+    chain lays out left-to-right in flowchart LR, separate chains stack as
+    rows. spread=False on the builders skips this - the classic vertical
+    stack, which is exactly right on a phone.
+    """
+    lines = []
+    for start in range(0, len(ids), per_row):
+        row = ids[start : start + per_row]
+        for left, right in zip(row, row[1:], strict=False):
+            lines.append(f"  {left} ~~~ {right}")
+    return lines
+
+
+def build_namespace_diagram(namespace: NamespaceInventory, spread: bool = True) -> str:
     lines = ["flowchart LR"]
+    app_ids = []
     for app in sorted(namespace.apps, key=lambda a: a.name):
         app_id = _node_id("app", f"{app.kind}_{app.name}")
+        app_ids.append(app_id)
         lines.extend(_app_nodes_and_edges(app, app_id))
+    if spread:
+        lines.extend(_chain_rows(app_ids, _APPS_PER_ROW))
     return "\n".join(lines)
 
 
@@ -72,7 +98,7 @@ def build_namespace_diagram(namespace: NamespaceInventory) -> str:
 _NAMESPACES_PER_ROW = 4
 
 
-def build_cluster_diagram(inventory: ClusterInventory) -> str:
+def build_cluster_diagram(inventory: ClusterInventory, spread: bool = True) -> str:
     lines = ["flowchart LR"]
     ns_ids = []
     for namespace in sorted(inventory.namespaces, key=lambda n: n.name):
@@ -83,8 +109,6 @@ def build_cluster_diagram(inventory: ClusterInventory) -> str:
             app_id = _node_id(f"{ns_id}_app", f"{app.kind}_{app.name}")
             lines.extend(_app_nodes_and_edges(app, app_id, node_prefix=f"{ns_id}_"))
         lines.append("  end")
-    for start in range(0, len(ns_ids), _NAMESPACES_PER_ROW):
-        row = ns_ids[start : start + _NAMESPACES_PER_ROW]
-        for left, right in zip(row, row[1:], strict=False):
-            lines.append(f"  {left} ~~~ {right}")
+    if spread:
+        lines.extend(_chain_rows(ns_ids, _NAMESPACES_PER_ROW))
     return "\n".join(lines)

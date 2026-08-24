@@ -114,3 +114,29 @@ def test_cluster_diagram_chains_namespaces_into_rows():
     assert "  ns_ns_0 ~~~ ns_ns_1" in diagram
     assert "  ns_ns_2 ~~~ ns_ns_3" in diagram
     assert diagram.count("~~~") == 3
+
+
+def test_spread_false_restores_the_classic_stack():
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-25T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name=f"ns-{i}") for i in range(5)],
+    )
+
+    assert "~~~" not in build_cluster_diagram(inventory, spread=False)
+    assert build_cluster_diagram(inventory, spread=True).count("~~~") == 3
+
+
+def test_namespace_diagram_chains_apps_into_rows():
+    namespace = NamespaceInventory(
+        name="demo",
+        apps=[
+            App(name=f"app-{i}", kind="Deployment", replicas=1, ready_replicas=1) for i in range(4)
+        ],
+    )
+
+    spread = build_namespace_diagram(namespace, spread=True)
+    stacked = build_namespace_diagram(namespace, spread=False)
+
+    assert spread.count("~~~") == 2  # rows of three: 2 links + a lone fourth
+    assert "~~~" not in stacked
