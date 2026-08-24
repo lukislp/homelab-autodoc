@@ -1,3 +1,10 @@
+## [1.49.1](https://github.com/lukislp/homelab-autodoc/compare/v1.49.0...v1.49.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **site:** cluster topology back to ONE diagram, spread sideways ([ee7df1f](https://github.com/lukislp/homelab-autodoc/commit/ee7df1f18957f938f1963423a86e67f977dac574))
+
 # [1.49.0](https://github.com/lukislp/homelab-autodoc/compare/v1.48.5...v1.49.0) (2026-08-24)
 
 
