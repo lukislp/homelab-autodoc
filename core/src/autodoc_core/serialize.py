@@ -70,6 +70,7 @@ def _container_security_from_dict(d: dict) -> ContainerSecurityInfo:
         run_as_non_root=d.get("run_as_non_root"),
         read_only_root_filesystem=d.get("read_only_root_filesystem"),
         allow_privilege_escalation=d.get("allow_privilege_escalation"),
+        privileged=d.get("privileged"),
         added_capabilities=list(d.get("added_capabilities", [])),
         dropped_capabilities=list(d.get("dropped_capabilities", [])),
         seccomp_profile=d.get("seccomp_profile"),

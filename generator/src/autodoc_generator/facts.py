@@ -50,7 +50,7 @@ def security_table(app: App) -> str:
     for c in sorted(app.containers, key=lambda c: c.name):
         s = c.security
         if s is None:
-            rows.append(f"| {c.name} | - | - | - | - | - |")
+            rows.append(f"| {c.name} | - | - | - | - | - | - |")
             continue
         capabilities = (
             ", ".join(
@@ -60,16 +60,17 @@ def security_table(app: App) -> str:
             or "-"
         )
         rows.append(
-            f"| {c.name} | {_describe_tristate(s.run_as_non_root)} | "
+            f"| {c.name} | {_describe_tristate(s.privileged)} | "
+            f"{_describe_tristate(s.run_as_non_root)} | "
             f"{_describe_tristate(s.read_only_root_filesystem)} | "
             f"{_describe_tristate(s.allow_privilege_escalation)} | {capabilities} | "
             f"{s.seccomp_profile or '-'} |"
         )
     header = (
-        "| Container | Run as Non-Root | Read-Only Root FS | Priv. Escalation | "
+        "| Container | Privileged | Run as Non-Root | Read-Only Root FS | Priv. Escalation | "
         "Capabilities | Seccomp |"
     )
-    return "\n".join([header, "|---|---|---|---|---|---|", *rows])
+    return "\n".join([header, "|---|---|---|---|---|---|---|", *rows])
 
 
 def services_table(app: App) -> str:

@@ -106,7 +106,7 @@ def test_probes_table_empty_when_no_container_has_probes(bare_app):
 def test_security_table_lists_effective_flags_and_capabilities(sample_app):
     table = security_table(sample_app)
 
-    assert "| web | yes | yes | no | -ALL | RuntimeDefault |" in table
+    assert "| web | - | yes | yes | no | -ALL | RuntimeDefault |" in table
 
 
 def test_security_table_shows_dashes_for_container_without_security_context():
@@ -123,7 +123,7 @@ def test_security_table_shows_dashes_for_container_without_security_context():
 
     table = security_table(app)
 
-    assert "| plain | - | - | - | - | - |" in table
+    assert "| plain | - | - | - | - | - | - |" in table
 
 
 def test_security_table_empty_when_no_container_has_security_context(bare_app):

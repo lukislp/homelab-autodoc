@@ -117,7 +117,8 @@ def _container_security_from_container(
     securityContext setting wins, falling back to the pod-level
     podSecurityContext for the two fields that support one there
     (run_as_non_root, seccomp_profile). read_only_root_filesystem,
-    allow_privilege_escalation, and capabilities have no pod-level equivalent.
+    allow_privilege_escalation, privileged, and capabilities have no
+    pod-level equivalent.
     """
     sc = c.security_context
     run_as_non_root = sc.run_as_non_root if sc else None
@@ -131,10 +132,12 @@ def _container_security_from_container(
     dropped_capabilities = sorted(capabilities.drop or []) if capabilities else []
     read_only_root_filesystem = sc.read_only_root_filesystem if sc else None
     allow_privilege_escalation = sc.allow_privilege_escalation if sc else None
+    privileged = sc.privileged if sc else None
     if not (
         run_as_non_root is not None
         or read_only_root_filesystem is not None
         or allow_privilege_escalation is not None
+        or privileged is not None
         or added_capabilities
         or dropped_capabilities
         or seccomp_profile is not None
@@ -144,6 +147,7 @@ def _container_security_from_container(
         run_as_non_root=run_as_non_root,
         read_only_root_filesystem=read_only_root_filesystem,
         allow_privilege_escalation=allow_privilege_escalation,
+        privileged=privileged,
         added_capabilities=added_capabilities,
         dropped_capabilities=dropped_capabilities,
         seccomp_profile=seccomp_profile,
