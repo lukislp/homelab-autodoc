@@ -1,3 +1,10 @@
+# [1.43.0](https://github.com/lukislp/homelab-autodoc/compare/v1.42.4...v1.43.0) (2026-08-24)
+
+
+### Features
+
+* **findings:** collapse privileged containers into one explicit finding ([71add6c](https://github.com/lukislp/homelab-autodoc/commit/71add6c815eb866109ba0a392eacdbbb3721b5d9))
+
 ## [1.42.4](https://github.com/lukislp/homelab-autodoc/compare/v1.42.3...v1.42.4) (2026-08-24)
 
 
