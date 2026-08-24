@@ -1,3 +1,10 @@
+## [1.45.1](https://github.com/lukislp/homelab-autodoc/compare/v1.45.0...v1.45.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **k8s:** opt the server volumes into the nightly Velero backup ([e3da833](https://github.com/lukislp/homelab-autodoc/commit/e3da8333e053a1c3b677dd3affa26ffed06001df))
+
 # [1.45.0](https://github.com/lukislp/homelab-autodoc/compare/v1.44.1...v1.45.0) (2026-08-24)
 
 
