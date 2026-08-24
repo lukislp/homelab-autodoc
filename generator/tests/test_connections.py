@@ -100,14 +100,14 @@ def test_self_reference_is_skipped_and_unresolvable_stays_visible():
     assert '(["service ghost-db (demo)"])' in diagram
 
 
-def test_cluster_diagram_shows_only_cross_namespace_edges_in_subgraphs():
+def test_cluster_diagram_shows_the_full_graph_in_subgraphs():
     scale = NamespaceInventory(
         name="studylife-scale",
         apps=[
             _app(
                 "studylife-web",
                 references=[
-                    ServiceReference(service="redis-cluster", port=6380),  # intra-ns - stays out
+                    ServiceReference(service="redis-cluster", port=6380),
                     ServiceReference(service="studylife-ai", namespace="studylife-ai", port=8000),
                 ],
             ),
@@ -127,9 +127,10 @@ def test_cluster_diagram_shows_only_cross_namespace_edges_in_subgraphs():
 
     assert "subgraph ns_studylife_scale[studylife-scale]" in diagram
     assert "subgraph ns_studylife_ai[studylife-ai]" in diagram
-    assert '"6380"' not in diagram
+    # Intra-namespace detail is part of the cluster picture too...
+    assert '  app_studylife_scale_studylife_web -->|"6380"| app_studylife_scale_redis' in diagram
+    # ...alongside the cross-namespace edge.
     assert '-->|"8000"|' in diagram
-    assert "app_studylife_scale_studylife_web" in diagram
 
 
 def test_empty_cluster_diagram_when_nothing_crosses_namespaces():
