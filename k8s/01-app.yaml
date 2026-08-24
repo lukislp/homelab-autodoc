@@ -76,7 +76,7 @@ spec:
               mountPath: /config
       containers:
         - name: server
-          image: ghcr.io/lukislp/homelab-autodoc-server:1.48.0 # {"$imagepolicy": "flux-system:homelab-autodoc-server"}
+          image: ghcr.io/lukislp/homelab-autodoc-server:1.48.1 # {"$imagepolicy": "flux-system:homelab-autodoc-server"}
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
