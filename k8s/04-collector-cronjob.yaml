@@ -56,7 +56,7 @@ spec:
                   mountPath: /var/run/autodoc
           containers:
             - name: collector
-              image: ghcr.io/lukislp/homelab-autodoc-collector:1.48.2 # {"$imagepolicy": "flux-system:homelab-autodoc-collector"}
+              image: ghcr.io/lukislp/homelab-autodoc-collector:1.48.3 # {"$imagepolicy": "flux-system:homelab-autodoc-collector"}
               securityContext:
                 runAsNonRoot: true
                 allowPrivilegeEscalation: false
