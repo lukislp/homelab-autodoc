@@ -1,3 +1,11 @@
+# [1.45.0](https://github.com/lukislp/homelab-autodoc/compare/v1.44.1...v1.45.0) (2026-08-24)
+
+
+### Features
+
+* **k8s:** move the collector CronJob under Flux with image automation ([eb3d4ad](https://github.com/lukislp/homelab-autodoc/commit/eb3d4adac6c5cc4b4bd8bd81ffb9b1ce28854999))
+* **server:** prompt-hash prose cache - regenerate only what changed ([a444a1b](https://github.com/lukislp/homelab-autodoc/commit/a444a1bdd8be7b94cc3258a317534c991c75418d))
+
 ## [1.44.1](https://github.com/lukislp/homelab-autodoc/compare/v1.44.0...v1.44.1) (2026-08-24)
 
 
