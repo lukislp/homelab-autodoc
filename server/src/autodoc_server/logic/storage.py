@@ -81,3 +81,22 @@ class Storage:
             return False
         expected = path.read_text(encoding="utf-8")
         return hmac.compare_digest(token, expected)
+
+    def load_prose_cache(self, cluster_name: str) -> dict:
+        """The per-cluster LLM prose cache (see site_builder's prompt-hash
+        memoization). A missing or unreadable file is an empty cache, never an
+        error - the cache is a pure cost optimization, docs must build without
+        it.
+        """
+        path = self.data_dir / cluster_name / "prose_cache.json"
+        if not path.exists():
+            return {}
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return {}
+
+    def save_prose_cache(self, cluster_name: str, cache: dict) -> None:
+        cluster_dir = self.data_dir / cluster_name
+        cluster_dir.mkdir(parents=True, exist_ok=True)
+        cluster_dir.joinpath("prose_cache.json").write_text(json.dumps(cache), encoding="utf-8")
