@@ -42,6 +42,7 @@ def _workload(
     pod_labels: dict[str, str] | None = None,
     claim_names: frozenset[str] = frozenset(),
     annotations: dict[str, str] | None = None,
+    template_annotations: dict[str, str] | None = None,
     created_at: str | None = None,
     owners: list[str] | None = None,
     config_refs: frozenset[ConfigReference] = frozenset(),
@@ -62,6 +63,7 @@ def _workload(
         claim_names=claim_names,
         labels={},
         annotations=annotations or {},
+        template_annotations=template_annotations or {},
         created_at=created_at,
         owners=owners or [],
         config_refs=config_refs,
@@ -1233,3 +1235,14 @@ def test_app_carries_the_pod_template_labels():
     app = build_namespace_inventory("demo", [workload], [], [], []).apps[0]
 
     assert app.pod_labels == {"app": "web", "tier": "frontend"}
+
+
+def test_backup_volumes_parsed_from_the_pod_template_annotation():
+    workload = _workload(
+        name="web",
+        template_annotations={"backup.velero.io/backup-volumes": "data, config"},
+    )
+
+    app = build_namespace_inventory("demo", [workload], [], [], []).apps[0]
+
+    assert app.backup_volumes == ["data", "config"]

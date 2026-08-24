@@ -11,7 +11,10 @@ import yaml
 from .models import (
     App,
     Autoscaler,
+    ClusterBackupInfo,
     ClusterInventory,
+    CNPGBackupInfo,
+    CNPGScheduledBackupInfo,
     ConfigReference,
     Container,
     ContainerSecurityInfo,
@@ -33,6 +36,8 @@ from .models import (
     ServiceInfo,
     ServicePort,
     StorageClassInfo,
+    VeleroBackupInfo,
+    VeleroScheduleInfo,
     Volume,
     WarningEventInfo,
 )
@@ -194,6 +199,7 @@ def _app_from_dict(d: dict) -> App:
         ready_replicas=d["ready_replicas"],
         containers=[_container_from_dict(c) for c in d.get("containers", [])],
         volumes=[_volume_from_dict(v) for v in d.get("volumes", [])],
+        backup_volumes=list(d.get("backup_volumes", [])),
         services=[_service_from_dict(s) for s in d.get("services", [])],
         ingresses=[_ingress_from_dict(i) for i in d.get("ingresses", [])],
         labels=dict(d.get("labels", {})),
@@ -278,6 +284,51 @@ def _storage_class_from_dict(d: dict) -> StorageClassInfo:
     )
 
 
+def _backup_info_from_dict(d: dict) -> ClusterBackupInfo:
+    return ClusterBackupInfo(
+        velero_schedules=[
+            VeleroScheduleInfo(
+                name=s["name"],
+                schedule=s["schedule"],
+                ttl=s.get("ttl"),
+                included_namespaces=list(s.get("included_namespaces", [])),
+                last_backup=s.get("last_backup"),
+            )
+            for s in d.get("velero_schedules", [])
+        ],
+        velero_backups=[
+            VeleroBackupInfo(
+                name=b["name"],
+                phase=b["phase"],
+                schedule=b.get("schedule"),
+                started=b.get("started"),
+                expiration=b.get("expiration"),
+                errors=b.get("errors", 0),
+            )
+            for b in d.get("velero_backups", [])
+        ],
+        cnpg_scheduled_backups=[
+            CNPGScheduledBackupInfo(
+                namespace=s["namespace"],
+                name=s["name"],
+                schedule=s["schedule"],
+                cluster=s["cluster"],
+                last_schedule_time=s.get("last_schedule_time"),
+            )
+            for s in d.get("cnpg_scheduled_backups", [])
+        ],
+        cnpg_backups=[
+            CNPGBackupInfo(
+                namespace=b["namespace"],
+                name=b["name"],
+                phase=b["phase"],
+                stopped_at=b.get("stopped_at"),
+            )
+            for b in d.get("cnpg_backups", [])
+        ],
+    )
+
+
 def _node_info_from_dict(d: dict) -> NodeInfo:
     return NodeInfo(
         name=d["name"],
@@ -293,12 +344,14 @@ def _node_info_from_dict(d: dict) -> NodeInfo:
 
 
 def from_dict(data: dict) -> ClusterInventory:
+    backups = data.get("backups")
     return ClusterInventory(
         cluster_name=data["cluster_name"],
         collected_at=data["collected_at"],
         namespaces=[_namespace_from_dict(ns) for ns in data.get("namespaces", [])],
         storage_classes=[_storage_class_from_dict(sc) for sc in data.get("storage_classes", [])],
         nodes=[_node_info_from_dict(n) for n in data.get("nodes", [])],
+        backups=_backup_info_from_dict(backups) if backups is not None else None,
     )
 
 

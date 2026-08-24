@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from autodoc_core.models import (
     App,
+    ClusterBackupInfo,
     ClusterInventory,
     NamespaceInventory,
     NodeInfo,
@@ -595,3 +596,53 @@ def managed_by(app: App) -> str | None:
         release = app.annotations.get(_HELM_RELEASE_ANNOTATION)
         return f"Helm release {release}" if release else "Helm"
     return None
+
+
+def velero_schedules_table(backups: ClusterBackupInfo) -> str:
+    if not backups.velero_schedules:
+        return ""
+    rows = [
+        f"| {s.name} | `{s.schedule}` | {s.ttl or '-'} | "
+        f"{', '.join(s.included_namespaces) or 'all'} | "
+        f"{format_timestamp(s.last_backup) if s.last_backup else 'never'} |"
+        for s in backups.velero_schedules
+    ]
+    header = "| Schedule | Cron | TTL | Namespaces | Last Backup |"
+    return "\n".join([header, "|---|---|---|---|---|", *rows])
+
+
+def velero_backups_table(backups: ClusterBackupInfo) -> str:
+    if not backups.velero_backups:
+        return ""
+    rows = [
+        f"| {b.name} | {b.schedule or 'manual'} | {b.phase} | "
+        f"{format_timestamp(b.started) if b.started else '-'} | "
+        f"{format_timestamp(b.expiration) if b.expiration else '-'} | {b.errors} |"
+        for b in backups.velero_backups
+    ]
+    header = "| Backup | Schedule | Phase | Started | Expires | Errors |"
+    return "\n".join([header, "|---|---|---|---|---|---|", *rows])
+
+
+def cnpg_scheduled_backups_table(backups: ClusterBackupInfo) -> str:
+    if not backups.cnpg_scheduled_backups:
+        return ""
+    rows = [
+        f"| {s.namespace} | {s.name} | {s.cluster} | `{s.schedule}` | "
+        f"{format_timestamp(s.last_schedule_time) if s.last_schedule_time else 'never'} |"
+        for s in backups.cnpg_scheduled_backups
+    ]
+    header = "| Namespace | ScheduledBackup | Cluster | Cron | Last Scheduled |"
+    return "\n".join([header, "|---|---|---|---|---|", *rows])
+
+
+def cnpg_backups_table(backups: ClusterBackupInfo) -> str:
+    if not backups.cnpg_backups:
+        return ""
+    rows = [
+        f"| {b.namespace} | {b.name} | {b.phase} | "
+        f"{format_timestamp(b.stopped_at) if b.stopped_at else '-'} |"
+        for b in backups.cnpg_backups
+    ]
+    header = "| Namespace | Backup | Phase | Finished |"
+    return "\n".join([header, "|---|---|---|---|", *rows])
