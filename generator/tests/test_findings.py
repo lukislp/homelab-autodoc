@@ -484,3 +484,12 @@ def test_daemonsets_are_exempt_from_the_pdb_rule():
     app = _clean_app(kind="DaemonSet", replicas=2, pod_disruption_budgets=[])
 
     assert "missing-pdb" not in _rules(app)
+
+
+def test_cnpg_default_monitoring_is_never_an_orphan():
+    # CloudNativePG consumes it through the Cluster CRD's monitoring spec - a
+    # resource kind this inventory doesn't collect, so "no collected workload
+    # references it" is structurally true and forever noise.
+    findings = evaluate_namespace(_ns([_clean_app()], configmap_names=["cnpg-default-monitoring"]))
+
+    assert findings == []

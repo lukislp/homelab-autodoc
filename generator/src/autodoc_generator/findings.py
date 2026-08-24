@@ -200,9 +200,13 @@ def _config_reference_findings(app: App, namespace: NamespaceInventory) -> list[
     ]
 
 
-# Present in every namespace since Kubernetes 1.21, mounted implicitly for
-# API-server trust - never referenced by a workload spec, never an orphan.
-_WELL_KNOWN_CONFIGMAPS = frozenset({"kube-root-ca.crt"})
+# ConfigMaps that exist by platform design without any workload referencing
+# them - never orphans. kube-root-ca.crt: in every namespace since
+# Kubernetes 1.21, mounted implicitly for API-server trust.
+# cnpg-default-monitoring: CloudNativePG's operator places it in its own and
+# every Cluster's namespace and consumes it through the Cluster CRD's
+# monitoring spec - a resource kind this inventory doesn't collect.
+_WELL_KNOWN_CONFIGMAPS = frozenset({"kube-root-ca.crt", "cnpg-default-monitoring"})
 
 
 def evaluate_namespace(namespace: NamespaceInventory) -> list[Finding]:
