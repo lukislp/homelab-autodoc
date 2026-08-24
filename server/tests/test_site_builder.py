@@ -523,17 +523,14 @@ def test_deleted_app_is_pruned_from_the_prose_cache(tmp_path):
     assert set(storage.load_prose_cache("homelab")["apps"]) == {"demo/web"}
 
 
-def test_cluster_topology_is_a_grid_of_namespace_tiles(tmp_path, sample_inventory):
-    # One monolithic Mermaid graph stacked disconnected namespace subgraphs
-    # into a vertical spine - the grid packs per-namespace diagrams sideways
-    # where the window has room, each tile linking to the full namespace view.
+def test_cluster_topology_is_one_diagram_again(tmp_path, sample_inventory):
+    # The tile-grid variant was rejected: the plan is ONE graph in ONE
+    # pan/zoom box, spreading sideways via the diagram source itself.
     storage = Storage(data_dir=tmp_path / "data", docs_dir=tmp_path / "docs_src")
     storage.save_inventory("homelab", sample_inventory)
 
     site_builder.regenerate_cluster_docs(storage, "homelab", llm=None)
 
     page = (storage.docs_dir / "homelab" / "topology.md").read_text(encoding="utf-8")
-    assert '<div class="topology-grid" markdown>' in page
-    assert '<div class="topology-cell" markdown>' in page
-    assert "**[demo](demo/topology.md)**" in page
-    assert "```mermaid" in page
+    assert "topology-grid" not in page
+    assert page.count("```mermaid") == 1

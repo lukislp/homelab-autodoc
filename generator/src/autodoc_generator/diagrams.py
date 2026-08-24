@@ -63,13 +63,28 @@ def build_namespace_diagram(namespace: NamespaceInventory) -> str:
     return "\n".join(lines)
 
 
+# How many namespace subgraphs share one visual row of the cluster diagram.
+# Mermaid stacks DISCONNECTED subgraphs into a single vertical spine no matter
+# the declared direction - the invisible ~~~ links below chain each group of
+# this many into a horizontal row (flowchart LR lays a chain out left-to-
+# right), and the separate chains stack as rows. One diagram, one pan/zoom
+# box, but a wide-screen-friendly aspect ratio instead of a tower.
+_NAMESPACES_PER_ROW = 4
+
+
 def build_cluster_diagram(inventory: ClusterInventory) -> str:
     lines = ["flowchart LR"]
+    ns_ids = []
     for namespace in sorted(inventory.namespaces, key=lambda n: n.name):
         ns_id = _node_id("ns", namespace.name)
+        ns_ids.append(ns_id)
         lines.append(f'  subgraph {ns_id} ["{namespace.name}"]')
         for app in sorted(namespace.apps, key=lambda a: a.name):
             app_id = _node_id(f"{ns_id}_app", f"{app.kind}_{app.name}")
             lines.extend(_app_nodes_and_edges(app, app_id, node_prefix=f"{ns_id}_"))
         lines.append("  end")
+    for start in range(0, len(ns_ids), _NAMESPACES_PER_ROW):
+        row = ns_ids[start : start + _NAMESPACES_PER_ROW]
+        for left, right in zip(row, row[1:], strict=False):
+            lines.append(f"  {left} ~~~ {right}")
     return "\n".join(lines)

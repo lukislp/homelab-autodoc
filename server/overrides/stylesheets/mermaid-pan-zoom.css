@@ -53,29 +53,6 @@
   height: calc(100vh - 22.5rem);
 }
 
-/* Cluster topology: a responsive grid of per-namespace diagram tiles
-   (site_builder's _write_cluster_diagram). auto-fit packs as many >=25rem
-   tiles as the window fits - four on an ultrawide, two to three on a
-   laptop, one column on phones. Tiles get a compact fixed height instead
-   of the viewport-budget height above: fourteen viewport-tall boxes would
-   be absurd, and each tile's pan/zoom (plus the link to the namespace's
-   full topology page) makes the small window sufficient. */
-.topology-grid {
-  display: grid;
-  gap: 0.8rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
-  align-items: start;
-}
-
-.topology-grid .topology-cell {
-  min-width: 0;
-}
-
-.topology-grid .mermaid-zoom-viewport {
-  height: 18rem;
-  min-height: 260px;
-}
-
 /* Width is set inline by the JS to the diagram's measured natural width -
    NOT width: fit-content: Mermaid's SVG is "width: 100%", and a percentage
    width inside a shrink-to-fit box resolves to the 300px replaced-element
