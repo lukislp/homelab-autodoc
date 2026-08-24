@@ -1,3 +1,11 @@
+## [1.48.3](https://github.com/lukislp/homelab-autodoc/compare/v1.48.2...v1.48.3) (2026-08-24)
+
+
+### Bug Fixes
+
+* **site:** hub card grids use four columns on desktop widths ([d4ce43c](https://github.com/lukislp/homelab-autodoc/commit/d4ce43c22d580cd5276dfd3866075e42e3f2e4ff))
+* **site:** make the four-column card grid computed, not hardcoded ([56c01fc](https://github.com/lukislp/homelab-autodoc/commit/56c01fcb26e58435a0485ed78dccef4727c281cd))
+
 ## [1.48.2](https://github.com/lukislp/homelab-autodoc/compare/v1.48.1...v1.48.2) (2026-08-24)
 
 
