@@ -418,10 +418,10 @@ def _write_cluster_connections_page(
     diagram = connections.build_cluster_connections_diagram(inventory)
     body = "\n\n".join(
         [
-            "The CROSS-namespace application connections - the edges no single namespace "
-            "page can show, from each app's own plain-text configuration. Connections "
-            "within a namespace live on that namespace's Connections page; Secret-held "
-            "connection strings are invisible by design.",
+            "Every declared application connection cluster-wide, grouped per namespace - "
+            "the complete who-uses-whom picture from each app's own plain-text "
+            "configuration, cross-namespace edges included. Only apps with at least one "
+            "connection appear; Secret-held connection strings are invisible by design.",
             f"```mermaid\n{diagram}\n```"
             if diagram
             else "No cross-namespace connections found in any collected configuration.",

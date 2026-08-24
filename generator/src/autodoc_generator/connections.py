@@ -95,26 +95,38 @@ def build_namespace_connections_diagram(
 
 
 def build_cluster_connections_diagram(inventory: ClusterInventory) -> str:
-    """Only the CROSS-namespace connections, app-level, grouped into one
-    subgraph per involved namespace - the edges no single namespace page can
-    show. Connections within a namespace live on that namespace's own
-    Connections page.
+    """The FULL who-uses-whom graph: every declared connection cluster-wide,
+    app-level, grouped into one subgraph per involved namespace - INCLUDING
+    the connections within a namespace, so the cluster view is the complete
+    picture rather than only the cross-namespace edges. It stays readable
+    because only apps with at least one edge appear at all; apps that declare
+    nothing (most of a cluster) never clutter it.
     """
-    edges: list[tuple[str, str, str, str, str]] = []  # (src_ns, src_app, dst_ns, dst_app, ports)
+    # (src_ns, src_app, dst_ns|None, dst_app_or_label, ports) - dst_ns None
+    # marks an unresolvable target rendered as a generic node.
+    edges: list[tuple[str, str, str | None, str, str]] = []
     for namespace in inventory.namespaces:
         for app in namespace.apps:
             for ref in app.service_references:
                 owner = _service_owner(inventory, namespace, ref.namespace, ref.service)
-                if owner is None or owner[0] == namespace.name:
-                    continue
-                edges.append((namespace.name, app.name, owner[0], owner[1], _edge_label(ref.port)))
+                if owner == (namespace.name, app.name):
+                    continue  # its own public URL - noise
+                if owner is None:
+                    scope = ref.namespace or namespace.name
+                    label = f"service {ref.service} ({scope})"
+                    edges.append((namespace.name, app.name, None, label, _edge_label(ref.port)))
+                else:
+                    edges.append(
+                        (namespace.name, app.name, owner[0], owner[1], _edge_label(ref.port))
+                    )
     if not edges:
         return ""
 
     involved: dict[str, set[str]] = {}
     for src_ns, src_app, dst_ns, dst_app, _ in edges:
         involved.setdefault(src_ns, set()).add(src_app)
-        involved.setdefault(dst_ns, set()).add(dst_app)
+        if dst_ns is not None:
+            involved.setdefault(dst_ns, set()).add(dst_app)
 
     lines = ["flowchart LR"]
     for ns_name in sorted(involved):
@@ -122,6 +134,8 @@ def build_cluster_connections_diagram(inventory: ClusterInventory) -> str:
         for app_name in sorted(involved[ns_name]):
             lines.append(f'    {_node_id("app", f"{ns_name}/{app_name}")}[["{app_name}"]]')
         lines.append("  end")
+    external_ids: dict[str, str] = {}
+    rendered: list[str] = []
     seen: set[tuple] = set()
     for src_ns, src_app, dst_ns, dst_app, ports in sorted(edges):
         key = (src_ns, src_app, dst_ns, dst_app, ports)
@@ -129,7 +143,13 @@ def build_cluster_connections_diagram(inventory: ClusterInventory) -> str:
             continue
         seen.add(key)
         src = _node_id("app", f"{src_ns}/{src_app}")
-        dst = _node_id("app", f"{dst_ns}/{dst_app}")
+        if dst_ns is None:
+            if dst_app not in external_ids:
+                external_ids[dst_app] = _node_id("ext", dst_app)
+                lines.append(f'  {external_ids[dst_app]}(["{dst_app}"])')
+            dst = external_ids[dst_app]
+        else:
+            dst = _node_id("app", f"{dst_ns}/{dst_app}")
         arrow = f'-->|"{ports}"|' if ports else "-->"
-        lines.append(f"  {src} {arrow} {dst}")
-    return "\n".join(lines)
+        rendered.append(f"  {src} {arrow} {dst}")
+    return "\n".join(lines + rendered)
