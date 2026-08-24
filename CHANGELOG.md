@@ -1,3 +1,10 @@
+## [1.48.2](https://github.com/lukislp/homelab-autodoc/compare/v1.48.1...v1.48.2) (2026-08-24)
+
+
+### Bug Fixes
+
+* **connections:** cluster diagram crashed on mixed target kinds ([6da7a31](https://github.com/lukislp/homelab-autodoc/commit/6da7a31bccd8894ef6a5c704a4819861706d62af))
+
 ## [1.48.1](https://github.com/lukislp/homelab-autodoc/compare/v1.48.0...v1.48.1) (2026-08-24)
 
 
