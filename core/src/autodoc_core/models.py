@@ -177,6 +177,10 @@ class App:
     ingresses: list[IngressInfo] = field(default_factory=list)
     labels: dict[str, str] = field(default_factory=dict)
     annotations: dict[str, str] = field(default_factory=dict)
+    # The pod TEMPLATE's labels - what NetworkPolicy/Service selectors actually
+    # match against (workload-object labels can differ). Feeds the network-flow
+    # diagrams' peer resolution.
+    pod_labels: dict[str, str] = field(default_factory=dict)
     created_at: str | None = None
     owners: list[str] = field(default_factory=list)  # ["Kind/Name", ...]
     config_refs: list[ConfigReference] = field(default_factory=list)

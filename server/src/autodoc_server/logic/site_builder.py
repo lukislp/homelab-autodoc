@@ -9,7 +9,7 @@ from pathlib import Path
 from autodoc_core.diff import Change
 from autodoc_core.models import App, ClusterInventory, NamespaceInventory
 from autodoc_generator import changelog as changelog_render
-from autodoc_generator import diagrams, facts, findings, navigation, render
+from autodoc_generator import diagrams, facts, findings, navigation, network, render
 from autodoc_generator.llm import LLMClient
 from autodoc_generator.prose import (
     build_drift_prompt,
@@ -81,11 +81,13 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
                 render.render_app_page(app, namespace, cluster_name, summary), encoding="utf-8"
             )
         _write_namespace_diagram(storage, cluster_name, namespace)
+        _write_namespace_network_page(storage, cluster_name, namespace, inventory)
         _write_namespace_dependencies_page(storage, cluster_name, namespace)
         _write_namespace_resource_governance_page(storage, cluster_name, namespace)
 
     _write_cluster_index(storage, cluster_name, inventory, _drift_count(last_changes))
     _write_cluster_diagram(storage, cluster_name, inventory)
+    _write_cluster_network_page(storage, cluster_name, inventory)
     _write_findings_page(storage, cluster_name, inventory)
     _write_images_page(storage, cluster_name, inventory)
     _write_storage_classes_page(storage, cluster_name, inventory)
@@ -314,6 +316,48 @@ def _write_cluster_diagram(
         show_heading=False,
     )
     (storage.docs_dir / cluster_name / "topology.md").write_text(page, encoding="utf-8")
+
+
+def _write_namespace_network_page(
+    storage: Storage, cluster_name: str, namespace: NamespaceInventory, inventory: ClusterInventory
+) -> None:
+    """The namespace's allowed-traffic view - deliberately its own page next
+    to (not inside) Topology: topology shows what exists, this shows what may
+    talk to what, resolved from the collected NetworkPolicies.
+    """
+    diagram = network.build_namespace_network_diagram(namespace, inventory)
+    body = "\n\n".join(
+        [
+            "Every allowed ingress flow into this namespace's apps, resolved from the "
+            "collected NetworkPolicies. Solid edges are explicit policy allowances "
+            "(labeled with their ports, unlabeled = all ports); dashed edges mark apps "
+            "no policy selects - unrestricted by Kubernetes default.",
+            f"```mermaid\n{diagram}\n```",
+        ]
+    )
+    page = _namespace_content_page(
+        cluster_name, namespace, "network", f"{namespace.name} - Network", body
+    )
+    (storage.docs_dir / cluster_name / namespace.name / "network.md").write_text(
+        page, encoding="utf-8"
+    )
+
+
+def _write_cluster_network_page(
+    storage: Storage, cluster_name: str, inventory: ClusterInventory
+) -> None:
+    diagram = network.build_cluster_network_diagram(inventory)
+    body = "\n\n".join(
+        [
+            "Which namespaces (and generic actors) may reach into which - every edge "
+            "aggregates the allowed ingress flows between two namespaces, labeled with "
+            "how many app-level flows it summarizes. Flows WITHIN a namespace live on "
+            "that namespace's own Network page.",
+            f"```mermaid\n{diagram}\n```",
+        ]
+    )
+    page = _cluster_content_page(cluster_name, "network", f"{cluster_name} - Network", body)
+    (storage.docs_dir / cluster_name / "network.md").write_text(page, encoding="utf-8")
 
 
 def _write_findings_page(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:

@@ -198,6 +198,7 @@ def _app_from_dict(d: dict) -> App:
         ingresses=[_ingress_from_dict(i) for i in d.get("ingresses", [])],
         labels=dict(d.get("labels", {})),
         annotations=dict(d.get("annotations", {})),
+        pod_labels=dict(d.get("pod_labels", {})),
         created_at=d.get("created_at"),
         owners=list(d.get("owners", [])),
         config_refs=[_config_reference_from_dict(c) for c in d.get("config_refs", [])],
