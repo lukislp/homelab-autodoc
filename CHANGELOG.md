@@ -1,3 +1,10 @@
+## [1.42.2](https://github.com/lukislp/homelab-autodoc/compare/v1.42.1...v1.42.2) (2026-08-24)
+
+
+### Bug Fixes
+
+* run server and collector as non-root ([a3c1756](https://github.com/lukislp/homelab-autodoc/commit/a3c1756090ab0d1dcb99278e3586731a53514085))
+
 ## [1.42.1](https://github.com/lukislp/homelab-autodoc/compare/v1.42.0...v1.42.1) (2026-08-24)
 
 
