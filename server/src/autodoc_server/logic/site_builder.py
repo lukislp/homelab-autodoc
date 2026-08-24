@@ -89,6 +89,7 @@ def regenerate_cluster_docs(storage: Storage, cluster_name: str, llm: LLMClient 
     _write_cluster_diagram(storage, cluster_name, inventory)
     _write_cluster_network_page(storage, cluster_name, inventory)
     _write_findings_page(storage, cluster_name, inventory)
+    _write_backups_page(storage, cluster_name, inventory)
     _write_images_page(storage, cluster_name, inventory)
     _write_storage_classes_page(storage, cluster_name, inventory)
     _write_nodes_page(storage, cluster_name, inventory)
@@ -380,6 +381,37 @@ def _write_findings_page(storage: Storage, cluster_name: str, inventory: Cluster
     body = "\n\n".join(parts)
     page = _cluster_content_page(cluster_name, "findings", f"{cluster_name} - Findings", body)
     (storage.docs_dir / cluster_name / "findings.md").write_text(page, encoding="utf-8")
+
+
+def _write_backups_page(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:
+    """Offsite backup posture straight from the collected Velero/CNPG custom
+    resources. `backups is None` means this run could not gather it (older
+    collector, denied RBAC) - rendered as exactly that, never as "no backups".
+    """
+    backups = inventory.backups
+    if backups is None:
+        body = (
+            "Backup posture was not collected on the last run - an older collector, or its "
+            "RBAC does not grant reading the Velero/CNPG custom resources. Unknown renders "
+            "as unknown, never as an empty backup story."
+        )
+    else:
+        sections = [
+            "Offsite backup posture as collected from the Velero and CNPG custom resources - "
+            "status facts only (schedules, phases, timestamps); the data itself lives in "
+            "object storage.",
+            "## Velero Schedules",
+            facts.velero_schedules_table(backups) or "No Velero Schedules exist in this cluster.",
+            "## Recent Velero Backups",
+            facts.velero_backups_table(backups) or "No Velero backups recorded yet.",
+            "## CNPG Scheduled Backups",
+            facts.cnpg_scheduled_backups_table(backups) or "No CNPG ScheduledBackups exist.",
+            "## Recent CNPG Backups",
+            facts.cnpg_backups_table(backups) or "No CNPG backups recorded yet.",
+        ]
+        body = "\n\n".join(sections)
+    page = _cluster_content_page(cluster_name, "backups", f"{cluster_name} - Backups", body)
+    (storage.docs_dir / cluster_name / "backups.md").write_text(page, encoding="utf-8")
 
 
 def _write_images_page(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:

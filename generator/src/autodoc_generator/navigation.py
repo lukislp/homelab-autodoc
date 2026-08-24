@@ -21,6 +21,7 @@ CLUSTER_PAGES = (
     ("topology", "Topology"),
     ("network", "Network"),
     ("findings", "Findings"),
+    ("backups", "Backups"),
     ("images", "Images"),
     ("storage-classes", "Storage Classes"),
     ("nodes", "Nodes"),

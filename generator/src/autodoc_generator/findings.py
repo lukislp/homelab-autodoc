@@ -334,11 +334,11 @@ def evaluate_cluster(inventory: ClusterInventory) -> list[ClusterFinding]:
         for namespace in inventory.namespaces
         for finding in evaluate_namespace(namespace)
     ]
-    return per_app + per_namespace
+    return per_app + per_namespace + _backup_findings(inventory)[0]
 
 
 def evaluate_cluster_accepted(inventory: ClusterInventory) -> list[ClusterAcceptedFinding]:
-    return [
+    per_app = [
         ClusterAcceptedFinding(
             namespace=namespace.name, app=app.name, finding=af.finding, reason=af.reason
         )
@@ -346,6 +346,7 @@ def evaluate_cluster_accepted(inventory: ClusterInventory) -> list[ClusterAccept
         for app in namespace.apps
         for af in evaluate_app_accepted(app, namespace)
     ]
+    return per_app + _backup_findings(inventory)[1]
 
 
 def findings_table(findings: list[Finding]) -> str:
@@ -401,3 +402,65 @@ def cluster_accepted_findings_table(inventory: ClusterInventory) -> str:
     ]
     header = "| Namespace | App | Rule | Subject | Finding | Accepted because |"
     return "\n".join([header, "|---|---|---|---|---|---|", *rows])
+
+
+def _backup_findings(
+    inventory: ClusterInventory,
+) -> tuple[list[ClusterFinding], list[ClusterAcceptedFinding]]:
+    """Cluster-scoped backup-coverage rules. They need the Velero schedules,
+    which only exist at inventory level, so they live here instead of
+    evaluate_app - and stay silent when backup posture wasn't collected
+    (None): unknown never becomes a finding.
+
+    no-backup: a PVC-backed workload without the file-system-backup opt-in.
+    backup-not-scheduled: the opt-in annotation is present but NO Velero
+    Schedule includes the workload's namespace - the exact silent failure
+    mode found in production: the annotation does nothing, with no error
+    anywhere.
+    """
+    if inventory.backups is None:
+        return [], []
+    covered = {
+        ns for schedule in inventory.backups.velero_schedules for ns in schedule.included_namespaces
+    }
+    open_findings: list[ClusterFinding] = []
+    accepted: list[ClusterAcceptedFinding] = []
+    for namespace in inventory.namespaces:
+        for app in namespace.apps:
+            finding = None
+            if app.volumes and not app.backup_volumes:
+                finding = Finding(
+                    rule="no-backup",
+                    subject=_WORKLOAD_SUBJECT,
+                    message=(
+                        f"{len(app.volumes)} persistent volume(s) but no "
+                        "backup.velero.io/backup-volumes opt-in - not part of any "
+                        "file-system backup"
+                    ),
+                )
+            elif app.backup_volumes and namespace.name not in covered:
+                finding = Finding(
+                    rule="backup-not-scheduled",
+                    subject=_WORKLOAD_SUBJECT,
+                    message=(
+                        "volumes are opted into Velero but no Schedule includes this "
+                        "namespace - the annotation silently does nothing"
+                    ),
+                )
+            if finding is None:
+                continue
+            reasons = accepted_rules(app)
+            if finding.rule in reasons:
+                accepted.append(
+                    ClusterAcceptedFinding(
+                        namespace=namespace.name,
+                        app=app.name,
+                        finding=finding,
+                        reason=reasons[finding.rule],
+                    )
+                )
+            else:
+                open_findings.append(
+                    ClusterFinding(namespace=namespace.name, app=app.name, finding=finding)
+                )
+    return open_findings, accepted

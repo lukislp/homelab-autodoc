@@ -173,6 +173,11 @@ class App:
     ready_replicas: int
     containers: list[Container] = field(default_factory=list)
     volumes: list[Volume] = field(default_factory=list)
+    # Volume names the pod template's backup.velero.io/backup-volumes annotation
+    # opts into Velero's file-system backup - the raw opt-in fact, empty when
+    # the annotation is absent. Names are pod-spec VOLUME names, not PVC claim
+    # names.
+    backup_volumes: list[str] = field(default_factory=list)
     services: list[ServiceInfo] = field(default_factory=list)
     ingresses: list[IngressInfo] = field(default_factory=list)
     labels: dict[str, str] = field(default_factory=dict)
@@ -278,9 +283,62 @@ class NodeInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class VeleroScheduleInfo:
+    name: str
+    schedule: str  # cron expression
+    ttl: str | None = None
+    included_namespaces: list[str] = field(default_factory=list)
+    # ISO 8601 of the schedule's last started backup (status.lastBackup);
+    # None if it never ran or the field was absent.
+    last_backup: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class VeleroBackupInfo:
+    name: str
+    phase: str  # "Completed" | "PartiallyFailed" | "Failed" | "InProgress" | ...
+    schedule: str | None = None  # owning Schedule's name, None for manual backups
+    started: str | None = None
+    expiration: str | None = None
+    errors: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class CNPGScheduledBackupInfo:
+    namespace: str
+    name: str
+    schedule: str
+    cluster: str  # the CNPG Cluster it backs up
+    last_schedule_time: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CNPGBackupInfo:
+    namespace: str
+    name: str
+    phase: str
+    stopped_at: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ClusterBackupInfo:
+    """Backup posture as collected from the Velero and CNPG CRs. The whole
+    struct is None on ClusterInventory when this run couldn't gather it (older
+    collector, RBAC denied, CRDs absent) - unknown never renders as "no
+    backups".
+    """
+
+    velero_schedules: list[VeleroScheduleInfo] = field(default_factory=list)
+    velero_backups: list[VeleroBackupInfo] = field(default_factory=list)  # newest first, capped
+    cnpg_scheduled_backups: list[CNPGScheduledBackupInfo] = field(default_factory=list)
+    cnpg_backups: list[CNPGBackupInfo] = field(default_factory=list)  # newest first, capped
+
+
+@dataclass(frozen=True, slots=True)
 class ClusterInventory:
     cluster_name: str
     collected_at: str
     namespaces: list[NamespaceInventory] = field(default_factory=list)
     storage_classes: list[StorageClassInfo] = field(default_factory=list)
     nodes: list[NodeInfo] = field(default_factory=list)
+    backups: ClusterBackupInfo | None = None

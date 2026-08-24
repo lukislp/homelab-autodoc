@@ -69,6 +69,16 @@ rules:
   - apiGroups: ["policy"]
     resources: ["poddisruptionbudgets"]
     verbs: ["get", "list", "watch"]
+  # Backup posture for the Backups page and the no-backup findings - status
+  # facts only (phases, timestamps, schedules), never volume contents. Same
+  # inert-when-absent property as the Gateway API rule above for clusters
+  # without Velero or CNPG.
+  - apiGroups: ["velero.io"]
+    resources: ["backups", "schedules"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["backups", "scheduledbackups"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

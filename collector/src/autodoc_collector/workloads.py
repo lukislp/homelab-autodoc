@@ -33,6 +33,9 @@ class NormalizedWorkload:
     claim_names: frozenset[str] = frozenset()
     labels: dict[str, str] = field(default_factory=dict)
     annotations: dict[str, str] = field(default_factory=dict)
+    # Pod TEMPLATE annotations - where per-pod opt-ins like
+    # backup.velero.io/backup-volumes live (object annotations differ).
+    template_annotations: dict[str, str] = field(default_factory=dict)
     created_at: str | None = None
     owners: list[str] = field(default_factory=list)
     config_refs: frozenset[ConfigReference] = frozenset()
@@ -337,6 +340,7 @@ class DeploymentCollector:
             replicas=deployment.spec.replicas or 0,
             ready_replicas=((deployment.status.ready_replicas or 0) if deployment.status else 0),
             pod_labels=deployment.spec.template.metadata.labels or {},
+            template_annotations=dict(deployment.spec.template.metadata.annotations or {}),
             containers=_containers_from_pod_spec(pod_spec),
             claim_names=_claim_names_from_pod_spec(pod_spec),
             labels=dict(meta.labels or {}),
@@ -371,6 +375,7 @@ class StatefulSetCollector:
                 (stateful_set.status.ready_replicas or 0) if stateful_set.status else 0
             ),
             pod_labels=stateful_set.spec.template.metadata.labels or {},
+            template_annotations=dict(stateful_set.spec.template.metadata.annotations or {}),
             containers=_containers_from_pod_spec(pod_spec),
             claim_names=_claim_names_from_pod_spec(pod_spec),
             labels=dict(meta.labels or {}),
@@ -405,6 +410,7 @@ class DaemonSetCollector:
             replicas=(status.desired_number_scheduled or 0) if status else 0,
             ready_replicas=(status.number_ready or 0) if status else 0,
             pod_labels=daemon_set.spec.template.metadata.labels or {},
+            template_annotations=dict(daemon_set.spec.template.metadata.annotations or {}),
             containers=_containers_from_pod_spec(pod_spec),
             claim_names=_claim_names_from_pod_spec(pod_spec),
             labels=dict(meta.labels or {}),
@@ -442,6 +448,9 @@ class CronJobCollector:
             replicas=1,
             ready_replicas=1 if status and status.active else 0,
             pod_labels=cron_job.spec.job_template.spec.template.metadata.labels or {},
+            template_annotations=dict(
+                cron_job.spec.job_template.spec.template.metadata.annotations or {}
+            ),
             containers=_containers_from_pod_spec(pod_spec),
             claim_names=_claim_names_from_pod_spec(pod_spec),
             labels=dict(meta.labels or {}),

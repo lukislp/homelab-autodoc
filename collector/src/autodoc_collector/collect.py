@@ -34,6 +34,7 @@ from autodoc_core.models import (
 from kubernetes import client
 from kubernetes.client.exceptions import ApiException
 
+from .backups import collect_backup_info
 from .k8s_apis import K8sApis
 from .workloads import DEFAULT_WORKLOAD_COLLECTORS, NormalizedWorkload, WorkloadCollector
 
@@ -234,6 +235,14 @@ def _build_network_policy(raw: client.V1NetworkPolicy) -> NetworkPolicyInfo:
         ingress=[_build_network_policy_rule(r._from, r.ports) for r in (raw.spec.ingress or [])],
         egress=[_build_network_policy_rule(r.to, r.ports) for r in (raw.spec.egress or [])],
     )
+
+
+def _backup_volumes(template_annotations: dict[str, str]) -> list[str]:
+    """The pod template's Velero file-system-backup opt-in, split into the
+    volume names it lists - the raw fact the no-backup findings reason over.
+    """
+    raw = template_annotations.get("backup.velero.io/backup-volumes", "")
+    return [part.strip() for part in raw.split(",") if part.strip()]
 
 
 def _network_policy_matches_workload(
@@ -449,6 +458,7 @@ def build_app(
         ready_replicas=workload.ready_replicas,
         containers=workload.containers,
         volumes=[_build_volume(pvc) for pvc in matched_pvcs],
+        backup_volumes=_backup_volumes(workload.template_annotations),
         services=[_build_service(svc) for svc in matched_services],
         ingresses=[_build_ingress(ing) for ing in matched_ingresses]
         + [_build_httproute(route) for route in matched_httproutes],
@@ -659,4 +669,5 @@ def collect_cluster_inventory(
         namespaces=namespace_inventories,
         storage_classes=storage_classes,
         nodes=nodes,
+        backups=collect_backup_info(apis),
     )

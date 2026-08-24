@@ -24,6 +24,14 @@ kind: CronJob
 metadata:
   name: autodoc-collector
   namespace: homelab-autodoc
+  annotations:
+    # The token PVC can't join the Velero file-system backup: FSB needs a
+    # running pod and this job lives for about a minute a night. Losing the
+    # token costs one device-grant approval click - accepted.
+    autodoc.homelab/accept-no-backup: >-
+      file-system backup needs a running pod and the collector job lives
+      about a minute a night; losing the cached token costs one device-grant
+      approval click
 spec:
   schedule: "0 2 * * *" # nightly at 02:00
   concurrencyPolicy: Forbid
