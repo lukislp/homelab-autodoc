@@ -18,8 +18,10 @@ router = APIRouter()
 
 
 @router.get("/api/admin/clusters", dependencies=[Depends(require_admin_session)])
-def list_clusters(storage: Storage = Depends(get_storage)) -> list[str]:
-    return storage.list_clusters()
+def list_clusters(storage: Storage = Depends(get_storage)) -> list[dict]:
+    # Includes approved clusters that haven't pushed yet (has_inventory False)
+    # - approving one must be visible immediately, not after its first push.
+    return storage.list_registered_clusters()
 
 
 @router.delete("/api/admin/clusters/{cluster_name}", dependencies=[Depends(require_admin_session)])

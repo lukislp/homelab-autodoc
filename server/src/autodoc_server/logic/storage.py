@@ -100,3 +100,21 @@ class Storage:
         cluster_dir = self.data_dir / cluster_name
         cluster_dir.mkdir(parents=True, exist_ok=True)
         cluster_dir.joinpath("prose_cache.json").write_text(json.dumps(cache), encoding="utf-8")
+
+    def list_registered_clusters(self) -> list[dict]:
+        """Every cluster the server knows about, including approved-but-
+        never-pushed ones (push_token exists, no inventory yet) - so the
+        admin UI can show a just-approved cluster immediately instead of it
+        staying invisible until its first push, which for a CronJob-based
+        collector can be a day away.
+        """
+        if not self.data_dir.exists():
+            return []
+        entries = []
+        for p in sorted(self.data_dir.iterdir()):
+            if not p.is_dir():
+                continue
+            has_inventory = (p / "inventory.json").exists()
+            if has_inventory or (p / "push_token").exists():
+                entries.append({"name": p.name, "has_inventory": has_inventory})
+        return entries

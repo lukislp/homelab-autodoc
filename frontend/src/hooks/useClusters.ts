@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { deleteCluster, listClusters } from "../api/clusters";
+import { type ClusterEntry, deleteCluster, listClusters } from "../api/clusters";
 import { POLL_INTERVAL_MS } from "./usePendingDevices";
 
 export interface UseClustersResult {
-  clusters: string[];
+  clusters: ClusterEntry[];
   loading: boolean;
   error: string | null;
   remove: (clusterName: string) => Promise<void>;
 }
 
 export function useClusters(): UseClustersResult {
-  const [clusters, setClusters] = useState<string[]>([]);
+  const [clusters, setClusters] = useState<ClusterEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadedOnce = useRef(false);

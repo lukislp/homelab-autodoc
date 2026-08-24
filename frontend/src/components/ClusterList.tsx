@@ -1,5 +1,7 @@
+import type { ClusterEntry } from "../api/clusters";
+
 interface ClusterListProps {
-  clusters: string[];
+  clusters: ClusterEntry[];
   onDelete: (clusterName: string) => void;
 }
 
@@ -18,11 +20,14 @@ export function ClusterList({ clusters, onDelete }: ClusterListProps) {
       {clusters.length === 0 ? (
         <p className="empty">No clusters registered yet.</p>
       ) : (
-        clusters.map((clusterName) => (
-          <div className="device-row" key={clusterName}>
-            <strong>{clusterName}</strong>
+        clusters.map((cluster) => (
+          <div className="device-row" key={cluster.name}>
+            <strong>{cluster.name}</strong>
+            {!cluster.has_inventory && (
+              <span className="awaiting-badge">awaiting first push</span>
+            )}
             <div className="actions">
-              <button type="button" className="danger" onClick={() => handleDelete(clusterName)}>
+              <button type="button" className="danger" onClick={() => handleDelete(cluster.name)}>
                 Delete
               </button>
             </div>
