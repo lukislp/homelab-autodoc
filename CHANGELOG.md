@@ -1,3 +1,10 @@
+## [1.42.4](https://github.com/lukislp/homelab-autodoc/compare/v1.42.3...v1.42.4) (2026-08-24)
+
+
+### Bug Fixes
+
+* **generator:** cnpg-default-monitoring is never an orphaned ConfigMap ([31a1dd2](https://github.com/lukislp/homelab-autodoc/commit/31a1dd2e3db64e89bb39fa49cfe9f80fbf6c1803))
+
 ## [1.42.3](https://github.com/lukislp/homelab-autodoc/compare/v1.42.2...v1.42.3) (2026-08-24)
 
 
