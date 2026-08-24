@@ -1,3 +1,10 @@
+## [1.49.3](https://github.com/lukislp/homelab-autodoc/compare/v1.49.2...v1.49.3) (2026-08-24)
+
+
+### Bug Fixes
+
+* **release:** ship the architecture cleanup ([3106bf8](https://github.com/lukislp/homelab-autodoc/commit/3106bf89fc47b5f7c08f901c1236eab68e857219))
+
 ## [1.49.2](https://github.com/lukislp/homelab-autodoc/compare/v1.49.1...v1.49.2) (2026-08-24)
 
 
