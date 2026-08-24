@@ -51,6 +51,12 @@ spec:
   template:
     metadata:
       labels: {app: autodoc-server}
+      annotations:
+        # Opt-in to homelab-infra's nightly Velero PVC backup (cluster/10-velero-values.yaml
+        # there): /data holds the changelog + drift history nothing can reconstruct, /config
+        # the admin/auth setup. Both files are written atomically or append-only, so the
+        # file-system backup needs no pre-hook here.
+        backup.velero.io/backup-volumes: data,config
     spec:
       serviceAccountName: default
       initContainers:
