@@ -424,13 +424,18 @@ def _stat_row_html(chips: list[tuple[str, str, bool]]) -> str:
     return '<div class="stat-row">' + "".join(cells) + "</div>"
 
 
-def cluster_stat_chips(inventory: ClusterInventory, drift_count: int, findings_count: int) -> str:
+def cluster_stat_chips(
+    inventory: ClusterInventory, drift_count: int, findings_count: int, accepted_count: int = 0
+) -> str:
+    # Only open findings warn - accepted ones are reviewed decisions, so
+    # their chip stays neutral no matter the count.
     return _stat_row_html(
         [
             (str(len(inventory.namespaces)), "Namespaces", False),
             (str(len(inventory.nodes)), "Nodes", False),
             (str(len(inventory.storage_classes)), "Storage Classes", False),
             (str(findings_count), "Findings", findings_count > 0),
+            (str(accepted_count), "Accepted", False),
             (str(drift_count), "Drift, Last Run", drift_count > 0),
         ]
     )
@@ -522,13 +527,17 @@ def _plural(count: int, noun: str) -> str:
     return f"{count} {noun}{'' if count == 1 else 's'}"
 
 
-def cluster_card_facts(inventory: ClusterInventory, drift_count: int, findings_count: int) -> str:
+def cluster_card_facts(
+    inventory: ClusterInventory, drift_count: int, findings_count: int, accepted_count: int = 0
+) -> str:
     """The root-index card's two compact fact lines - scale on the first
     (namespaces/apps/nodes plus the kubelet version, or versions when the
     nodes disagree, which is itself worth noticing), health signals on the
     second. Drift gets the warn tint when non-zero, matching the stat chips;
     findings stay neutral - a homelab almost always has some, and a
     permanently red number on every card would train the eye to ignore it.
+    Accepted findings only appear when there are any - they are reviewed
+    decisions, worth a mention but never an alarm.
     """
     app_count = sum(len(namespace.apps) for namespace in inventory.namespaces)
     scale = [
@@ -540,10 +549,13 @@ def cluster_card_facts(inventory: ClusterInventory, drift_count: int, findings_c
     if versions:
         scale.append(" / ".join(versions))
     drift_class = "card-facts card-facts--warn" if drift_count > 0 else "card-facts"
+    health = [_plural(findings_count, "finding")]
+    if accepted_count:
+        health.append(f"{accepted_count} accepted")
+    health.append(f"{drift_count} drift last run")
     return (
         f'<span class="card-facts">{" · ".join(scale)}</span><br>'
-        f'<span class="{drift_class}">{_plural(findings_count, "finding")} · '
-        f"{drift_count} drift last run</span>"
+        f'<span class="{drift_class}">{" · ".join(health)}</span>'
     )
 
 

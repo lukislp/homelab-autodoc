@@ -35,6 +35,48 @@ class ClusterFinding:
     finding: Finding
 
 
+@dataclass(frozen=True, slots=True)
+class AcceptedFinding:
+    """A finding the workload's own manifest acknowledges as a deliberate
+    decision, plus the mandatory human reason from the annotation value.
+    """
+
+    finding: Finding
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class ClusterAcceptedFinding:
+    namespace: str
+    app: str
+    finding: Finding
+    reason: str
+
+
+# One workload-object annotation acknowledges one rule:
+#   autodoc.homelab/accept-<rule>: "<why this is deliberate>"
+# The value is the mandatory reason - an empty one is ignored rather than
+# silently accepting. Acceptance lives in the workload's own manifest, so it
+# is reviewed and versioned next to the decision it excuses and disappears
+# with the workload, instead of surviving it in a central list. Only
+# app-scoped rules can be accepted this way: namespace-scoped findings have
+# no workload object to carry the annotation.
+_ACCEPT_ANNOTATION_PREFIX = "autodoc.homelab/accept-"
+
+
+def accepted_rules(app: App) -> dict[str, str]:
+    """Rule name -> reason, from the workload's accept annotations."""
+    accepted = {}
+    for key, value in app.annotations.items():
+        if not key.startswith(_ACCEPT_ANNOTATION_PREFIX):
+            continue
+        rule = key.removeprefix(_ACCEPT_ANNOTATION_PREFIX)
+        reason = value.strip()
+        if rule and reason:
+            accepted[rule] = reason
+    return accepted
+
+
 _WORKLOAD_SUBJECT = "workload"
 
 
@@ -245,7 +287,7 @@ def evaluate_namespace(namespace: NamespaceInventory) -> list[Finding]:
     ]
 
 
-def evaluate_app(app: App, namespace: NamespaceInventory) -> list[Finding]:
+def _all_app_findings(app: App, namespace: NamespaceInventory) -> list[Finding]:
     return [
         *_image_tag_findings(app),
         *_probe_findings(app),
@@ -254,6 +296,29 @@ def evaluate_app(app: App, namespace: NamespaceInventory) -> list[Finding]:
         *_network_policy_findings(app),
         *_pdb_findings(app),
         *_config_reference_findings(app, namespace),
+    ]
+
+
+def evaluate_app(app: App, namespace: NamespaceInventory) -> list[Finding]:
+    """Open findings only. Rules the workload's accept annotations
+    acknowledge are excluded here and surface via evaluate_app_accepted
+    instead - so every existing table and count stays an honest "needs a
+    look" without each caller having to know about acceptance.
+    """
+    accepted = accepted_rules(app)
+    return [f for f in _all_app_findings(app, namespace) if f.rule not in accepted]
+
+
+def evaluate_app_accepted(app: App, namespace: NamespaceInventory) -> list[AcceptedFinding]:
+    """The findings evaluate_app suppressed, each with its annotation's
+    reason. An accepted rule that no longer fires produces nothing - a stale
+    annotation is inert, not an error.
+    """
+    accepted = accepted_rules(app)
+    return [
+        AcceptedFinding(finding=f, reason=accepted[f.rule])
+        for f in _all_app_findings(app, namespace)
+        if f.rule in accepted
     ]
 
 
@@ -270,6 +335,17 @@ def evaluate_cluster(inventory: ClusterInventory) -> list[ClusterFinding]:
         for finding in evaluate_namespace(namespace)
     ]
     return per_app + per_namespace
+
+
+def evaluate_cluster_accepted(inventory: ClusterInventory) -> list[ClusterAcceptedFinding]:
+    return [
+        ClusterAcceptedFinding(
+            namespace=namespace.name, app=app.name, finding=af.finding, reason=af.reason
+        )
+        for namespace in inventory.namespaces
+        for app in namespace.apps
+        for af in evaluate_app_accepted(app, namespace)
+    ]
 
 
 def findings_table(findings: list[Finding]) -> str:
@@ -297,3 +373,31 @@ def cluster_findings_table(inventory: ClusterInventory) -> str:
     ]
     header = "| Namespace | App | Rule | Subject | Finding |"
     return "\n".join([header, "|---|---|---|---|---|", *rows])
+
+
+def accepted_findings_table(accepted: list[AcceptedFinding]) -> str:
+    if not accepted:
+        return ""
+    rows = [
+        f"| `{af.finding.rule}` | {af.finding.subject} | {af.finding.message} | {af.reason} |"
+        for af in sorted(accepted, key=lambda af: (af.finding.subject, af.finding.rule))
+    ]
+    header = "| Rule | Subject | Finding | Accepted because |"
+    return "\n".join([header, "|---|---|---|---|", *rows])
+
+
+def cluster_accepted_findings_table(inventory: ClusterInventory) -> str:
+    accepted = evaluate_cluster_accepted(inventory)
+    if not accepted:
+        return ""
+    rows = [
+        f"| [{caf.namespace}]({caf.namespace}/index.md) | "
+        f"[{caf.app}]({caf.namespace}/{caf.app}.md) | "
+        f"`{caf.finding.rule}` | {caf.finding.subject} | {caf.finding.message} | {caf.reason} |"
+        for caf in sorted(
+            accepted,
+            key=lambda caf: (caf.namespace, caf.app, caf.finding.subject, caf.finding.rule),
+        )
+    ]
+    header = "| Namespace | App | Rule | Subject | Finding | Accepted because |"
+    return "\n".join([header, "|---|---|---|---|---|---|", *rows])
