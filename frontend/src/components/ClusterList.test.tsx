@@ -3,7 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ClusterList } from "./ClusterList";
 
-const CLUSTERS = ["homelab", "media-cluster"];
+const CLUSTERS = [
+  { name: "homelab", has_inventory: true },
+  { name: "media-cluster", has_inventory: false },
+];
 
 describe("ClusterList", () => {
   afterEach(() => {
@@ -21,6 +24,12 @@ describe("ClusterList", () => {
 
     expect(screen.getByText("homelab")).toBeInTheDocument();
     expect(screen.getByText("media-cluster")).toBeInTheDocument();
+  });
+
+  it("marks clusters that have not pushed an inventory yet", () => {
+    render(<ClusterList clusters={CLUSTERS} onDelete={vi.fn()} />);
+
+    expect(screen.getAllByText(/awaiting first push/i)).toHaveLength(1);
   });
 
   it("calls onDelete with the right cluster name after the user confirms", async () => {

@@ -43,7 +43,26 @@ def test_admin_can_list_registered_clusters(admin_client, sample_inventory):
     response = test_client.get("/api/admin/clusters")
 
     assert response.status_code == 200
-    assert response.json() == ["cluster-a", "cluster-b"]
+    assert response.json() == [
+        {"name": "cluster-a", "has_inventory": True},
+        {"name": "cluster-b", "has_inventory": True},
+    ]
+
+
+def test_approved_but_never_pushed_cluster_is_listed_as_awaiting(admin_client, sample_inventory):
+    # Approving a registration mints a push token; the cluster must be visible
+    # in the admin list IMMEDIATELY, not only after its first inventory push
+    # (a CronJob-based collector may take until the next night for that).
+    test_client, storage = admin_client
+    storage.save_inventory("cluster-a", sample_inventory)
+    storage.save_push_token("fresh-cluster", "token")
+
+    response = test_client.get("/api/admin/clusters")
+
+    assert response.json() == [
+        {"name": "cluster-a", "has_inventory": True},
+        {"name": "fresh-cluster", "has_inventory": False},
+    ]
 
 
 def test_admin_can_delete_a_cluster(admin_client, sample_inventory):

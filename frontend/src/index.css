@@ -227,6 +227,16 @@ button.danger {
   font-size: 0.85rem;
 }
 
+/* Registered-clusters list: approved but no inventory pushed yet. */
+.awaiting-badge {
+  color: var(--muted);
+  font-size: 0.8rem;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  white-space: nowrap;
+}
+
 .empty {
   color: var(--muted);
   text-align: center;
