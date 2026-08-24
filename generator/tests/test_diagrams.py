@@ -96,3 +96,21 @@ def test_cluster_diagram_output_is_deterministic():
     )
 
     assert build_cluster_diagram(inventory) == build_cluster_diagram(inventory)
+
+
+def test_cluster_diagram_chains_namespaces_into_rows():
+    # Mermaid stacks disconnected subgraphs vertically - the invisible ~~~
+    # links are what make the cluster graph spread sideways. Five namespaces
+    # at four per row: one full chain of three links, one one-element row
+    # with no link.
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-25T00:00:00+00:00",
+        namespaces=[NamespaceInventory(name=f"ns-{i}") for i in range(5)],
+    )
+
+    diagram = build_cluster_diagram(inventory)
+
+    assert "  ns_ns_0 ~~~ ns_ns_1" in diagram
+    assert "  ns_ns_2 ~~~ ns_ns_3" in diagram
+    assert diagram.count("~~~") == 3

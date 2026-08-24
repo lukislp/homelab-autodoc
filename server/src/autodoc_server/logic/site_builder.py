@@ -310,29 +310,18 @@ def _write_namespace_resource_governance_page(
 def _write_cluster_diagram(
     storage: Storage, cluster_name: str, inventory: ClusterInventory
 ) -> None:
-    """One tile per namespace instead of one monolithic Mermaid graph:
-    Mermaid stacks disconnected subgraphs into a single vertical spine no
-    matter the declared direction, which wasted the whole width of a desktop
-    window. A CSS grid of the per-namespace diagrams (mermaid-pan-zoom.css,
-    .topology-grid) packs them sideways where there is room and falls back
-    to one column on phones - each tile keeps its own pan/zoom and links to
-    the namespace's full topology page.
+    """One diagram in one pan/zoom box - the wide-screen layout happens
+    INSIDE the Mermaid source (build_cluster_diagram chains namespace
+    subgraphs into rows with invisible links), not by splitting the page
+    into tiles: a tile grid was tried and rejected, the plan is one graph
+    that spreads sideways.
     """
-    cells = []
-    for namespace in sorted(inventory.namespaces, key=lambda n: n.name):
-        diagram = diagrams.build_namespace_diagram(namespace)
-        cells.append(
-            '<div class="topology-cell" markdown>\n\n'
-            f"**[{namespace.name}]({namespace.name}/topology.md)**\n\n"
-            f"```mermaid\n{diagram}\n```\n\n"
-            "</div>"
-        )
-    body = '<div class="topology-grid" markdown>\n\n' + "\n".join(cells) + "\n\n</div>"
+    diagram = diagrams.build_cluster_diagram(inventory)
     page = _cluster_content_page(
         cluster_name,
         "topology",
         f"{cluster_name} - Topology",
-        body,
+        f"```mermaid\n{diagram}\n```",
         show_heading=False,
     )
     (storage.docs_dir / cluster_name / "topology.md").write_text(page, encoding="utf-8")
