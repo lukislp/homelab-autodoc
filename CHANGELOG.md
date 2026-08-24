@@ -1,3 +1,10 @@
+## [1.42.3](https://github.com/lukislp/homelab-autodoc/compare/v1.42.2...v1.42.3) (2026-08-24)
+
+
+### Bug Fixes
+
+* **k8s:** bump the collector image to the non-root 1.42.2 ([67d74dc](https://github.com/lukislp/homelab-autodoc/commit/67d74dca79d1cad7b71b5b20f7e33708884a7679))
+
 ## [1.42.2](https://github.com/lukislp/homelab-autodoc/compare/v1.42.1...v1.42.2) (2026-08-24)
 
 
