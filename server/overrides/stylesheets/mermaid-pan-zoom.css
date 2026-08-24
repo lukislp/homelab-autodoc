@@ -90,3 +90,20 @@
 .mermaid-zoom-controls button:hover {
   background: var(--md-code-bg-color);
 }
+
+/* Responsive topology variants (site_builder's _responsive_diagram): the
+   same diagram is rendered twice - spread sideways for desktops, the
+   classic vertical stack for phones - and the breakpoint picks one. The
+   inactive variant is display: none; Material renders Mermaid string-based,
+   so that is safe, and the pan-zoom script skips hosts without layout. */
+@media screen and (min-width: 60em) {
+  .topology-variant--stacked {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 59.9375em) {
+  .topology-variant--wide {
+    display: none;
+  }
+}

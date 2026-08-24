@@ -253,16 +253,36 @@ def _write_cluster_index(
     (storage.docs_dir / cluster_name / "index.md").write_text("\n".join(lines), encoding="utf-8")
 
 
+def _responsive_diagram(wide: str, stacked: str) -> str:
+    """Two pre-rendered variants of the same diagram, toggled purely by CSS
+    breakpoint (mermaid-pan-zoom.css): desktops get the sideways-spread
+    layout, phones keep the classic vertical stack. Both are in the DOM -
+    Material renders Mermaid string-based, so the hidden one renders fine,
+    and the pan-zoom script already skips hosts without layout.
+    """
+    return (
+        '<div class="topology-variant topology-variant--wide" markdown>\n\n'
+        f"```mermaid\n{wide}\n```\n\n"
+        "</div>\n"
+        '<div class="topology-variant topology-variant--stacked" markdown>\n\n'
+        f"```mermaid\n{stacked}\n```\n\n"
+        "</div>"
+    )
+
+
 def _write_namespace_diagram(
     storage: Storage, cluster_name: str, namespace: NamespaceInventory
 ) -> None:
-    diagram = diagrams.build_namespace_diagram(namespace)
+    body = _responsive_diagram(
+        wide=diagrams.build_namespace_diagram(namespace, spread=True),
+        stacked=diagrams.build_namespace_diagram(namespace, spread=False),
+    )
     page = _namespace_content_page(
         cluster_name,
         namespace,
         "topology",
         f"{namespace.name} - Topology",
-        f"```mermaid\n{diagram}\n```",
+        body,
     )
     (storage.docs_dir / cluster_name / namespace.name / "topology.md").write_text(
         page, encoding="utf-8"
@@ -316,12 +336,15 @@ def _write_cluster_diagram(
     into tiles: a tile grid was tried and rejected, the plan is one graph
     that spreads sideways.
     """
-    diagram = diagrams.build_cluster_diagram(inventory)
+    body = _responsive_diagram(
+        wide=diagrams.build_cluster_diagram(inventory, spread=True),
+        stacked=diagrams.build_cluster_diagram(inventory, spread=False),
+    )
     page = _cluster_content_page(
         cluster_name,
         "topology",
         f"{cluster_name} - Topology",
-        f"```mermaid\n{diagram}\n```",
+        body,
         show_heading=False,
     )
     (storage.docs_dir / cluster_name / "topology.md").write_text(page, encoding="utf-8")
