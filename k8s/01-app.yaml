@@ -53,9 +53,31 @@ spec:
       labels: {app: autodoc-server}
     spec:
       serviceAccountName: default
+      initContainers:
+        # The PVCs' existing files were written by the image's root era;
+        # chown on every start (idempotent, and this data is tiny) so the
+        # non-root server below can keep rewriting them. The only root in
+        # the pod - the server container itself never gets it.
+        - name: fix-volume-ownership
+          image: busybox:1.36.1
+          command: ["chown", "-R", "10001:10001", "/data", "/config"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /config
       containers:
         - name: server
           image: ghcr.io/lukislp/homelab-autodoc-server:1.42.1 # {"$imagepolicy": "flux-system:homelab-autodoc-server"}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
           ports:
             - containerPort: 8000
           env:

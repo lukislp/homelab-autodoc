@@ -16,6 +16,14 @@ COPY server ./server
 RUN pip install --no-cache-dir ./core ./generator ./server
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
+# Non-root runtime user. Only the two generated trees are writable by it -
+# docs_src and site are rebuilt from /data on every push/startup - while the
+# code and everything else under /app stay root-owned and read-only. HOME
+# points at /tmp so any library cache writes land somewhere writable.
+RUN useradd --uid 10001 --user-group --no-create-home autodoc     && rm -rf /app/server/docs_src /app/server/site     && mkdir -p /app/server/docs_src /app/server/site     && chown -R autodoc:autodoc /app/server/docs_src /app/server/site
+ENV HOME=/tmp
+USER 10001
+
 # Absolute paths so behavior doesn't depend on the container's working
 # directory. /data and /config are the two things worth persisting on a
 # volume; docs_src/site are fully regenerated from /data on every push.
