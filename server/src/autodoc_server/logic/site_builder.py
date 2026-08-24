@@ -167,7 +167,10 @@ def _write_cluster_index(
         f"# {cluster_name}",
         "",
         facts.cluster_stat_chips(
-            inventory, drift_count, findings_count=len(findings.evaluate_cluster(inventory))
+            inventory,
+            drift_count,
+            findings_count=len(findings.evaluate_cluster(inventory)),
+            accepted_count=len(findings.evaluate_cluster_accepted(inventory)),
         ),
         "",
         facts.collection_freshness(inventory.collected_at),
@@ -268,13 +271,22 @@ def _write_cluster_diagram(
 
 def _write_findings_page(storage: Storage, cluster_name: str, inventory: ClusterInventory) -> None:
     table = findings.cluster_findings_table(inventory)
-    body = "\n\n".join(
-        [
-            "Deterministic best-practice checks over the collected inventory - "
-            "review hints, not failures. Every finding links back to the app it fired on.",
-            table if table else "No findings - every collected fact passed all checks.",
+    parts = [
+        "Deterministic best-practice checks over the collected inventory - "
+        "review hints, not failures. Every finding links back to the app it fired on.",
+        table if table else "No open findings - every collected fact passed all checks.",
+    ]
+    accepted_table = findings.cluster_accepted_findings_table(inventory)
+    if accepted_table:
+        parts += [
+            "## Accepted Findings",
+            "Acknowledged in the workload's own manifest via "
+            "`autodoc.homelab/accept-<rule>` annotations - deliberate, reviewed decisions "
+            "with a documented reason, listed here so they stay visible without counting "
+            "as open items.",
+            accepted_table,
         ]
-    )
+    body = "\n\n".join(parts)
     page = _cluster_content_page(cluster_name, "findings", f"{cluster_name} - Findings", body)
     (storage.docs_dir / cluster_name / "findings.md").write_text(page, encoding="utf-8")
 
@@ -387,12 +399,16 @@ def _write_root_index(storage: Storage) -> None:
         inventory = storage.load_inventory(cluster_name)
         drift_count = len(_last_run_changes(storage, cluster_name))
         findings_count = len(findings.evaluate_cluster(inventory))
+        accepted_count = len(findings.evaluate_cluster_accepted(inventory))
+        card_facts = facts.cluster_card_facts(
+            inventory, drift_count, findings_count, accepted_count
+        )
         lines += [
             f"-   __{cluster_name}__",
             "",
             "    ---",
             "",
-            f"    {facts.cluster_card_facts(inventory, drift_count, findings_count)}",
+            f"    {card_facts}",
             "",
             f"    {facts.collection_freshness(inventory.collected_at)}",
             "",

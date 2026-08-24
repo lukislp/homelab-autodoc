@@ -31,6 +31,14 @@ Deterministic best-practice checks over the collected facts - review hints, not 
 {{ findings_table }}
 
 {% endif %}
+{% if accepted_findings_table %}
+## Accepted Findings
+
+Acknowledged in this workload's manifest via `autodoc.homelab/accept-<rule>` annotations - deliberate decisions with a documented reason, not open items.
+
+{{ accepted_findings_table }}
+
+{% endif %}
 ## Facts
 
 {% if containers_table %}

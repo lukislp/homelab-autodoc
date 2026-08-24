@@ -823,3 +823,22 @@ def test_managed_by_is_none_without_any_marker():
     # No marker means unknown, never a guessed "manual" - other tooling could
     # own the manifest without labeling it.
     assert managed_by(_app_with_markers()) is None
+
+
+def test_cluster_stat_chips_show_accepted_findings_neutrally():
+    inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-24T00:00:00+00:00")
+
+    chips = cluster_stat_chips(inventory, drift_count=0, findings_count=0, accepted_count=5)
+
+    assert '<span class="stat-num">5</span><span class="stat-label">Accepted</span>' in chips
+
+
+def test_cluster_card_facts_mentions_accepted_findings_only_when_present():
+    inventory = ClusterInventory(cluster_name="homelab", collected_at="2026-08-24T00:00:00+00:00")
+
+    with_accepted = cluster_card_facts(inventory, drift_count=0, findings_count=0, accepted_count=5)
+    without = cluster_card_facts(inventory, drift_count=0, findings_count=0, accepted_count=0)
+
+    assert "0 findings · 5 accepted · 0 drift last run" in with_accepted
+    assert "0 findings · 0 drift last run" in without
+    assert "accepted" not in without

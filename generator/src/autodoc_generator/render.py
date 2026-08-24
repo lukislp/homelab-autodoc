@@ -35,6 +35,9 @@ def render_app_page(
         summary=summary,
         managed_by=facts.managed_by(app),
         findings_table=findings.findings_table(findings.evaluate_app(app, namespace)),
+        accepted_findings_table=findings.accepted_findings_table(
+            findings.evaluate_app_accepted(app, namespace)
+        ),
         diagram=diagrams.build_app_diagram(app),
         containers_table=facts.containers_table(app),
         probes_table=facts.probes_table(app),
