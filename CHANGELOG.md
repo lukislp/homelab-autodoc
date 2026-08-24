@@ -1,3 +1,10 @@
+## [1.48.1](https://github.com/lukislp/homelab-autodoc/compare/v1.48.0...v1.48.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **connections:** cluster page shows the full graph, not only cross-namespace ([e55ef3f](https://github.com/lukislp/homelab-autodoc/commit/e55ef3fb24022025b3679cbc5f423ddfc31595c6))
+
 # [1.48.0](https://github.com/lukislp/homelab-autodoc/compare/v1.47.1...v1.48.0) (2026-08-24)
 
 
