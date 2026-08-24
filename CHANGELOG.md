@@ -1,3 +1,10 @@
+# [1.46.0](https://github.com/lukislp/homelab-autodoc/compare/v1.45.1...v1.46.0) (2026-08-24)
+
+
+### Features
+
+* **generator:** network pages - allowed-traffic diagrams per namespace and cluster ([4fb18f7](https://github.com/lukislp/homelab-autodoc/commit/4fb18f7caef50a4bbac8a1f854fa4807e017d9d1))
+
 ## [1.45.1](https://github.com/lukislp/homelab-autodoc/compare/v1.45.0...v1.45.1) (2026-08-24)
 
 
