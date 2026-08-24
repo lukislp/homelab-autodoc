@@ -120,6 +120,30 @@
   }
 }
 
+/* Hub card grids (root clusters, cluster namespaces, namespace apps):
+   Material's auto-fit default ballooned into two huge cards per row on wide
+   screens. This stays computed rather than a hard 4-split: each track's
+   minimum is "a quarter of the row (minus its share of the 0.4rem gaps), but
+   never below 11rem" - so wide screens get exactly four per row, and when
+   four would fall under a readable card width, auto-fit wraps to three or
+   two instead of squeezing or overflowing. */
+@media screen and (min-width: 60em) {
+  .md-typeset .grid.cards > ul,
+  .md-typeset .grid.cards > ol {
+    grid-template-columns: repeat(auto-fit, minmax(max(11rem, calc(25% - 0.3rem)), 1fr));
+  }
+}
+
+/* Grid tracks never shrink below their content's min-content width (the
+   same implicit min-width trap the facts tables hit) - a single unbreakable
+   name like "unifiprotectdashboard" would widen its column past the
+   computed quarter. Let cards shrink and wrap long tokens instead. */
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid.cards > ol > li {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 /* Hub-page dashboard widgets: the stat-chip summary row (cluster/namespace
    index), section labels above each card grid, the small ready/not-ready
    dot on namespace and app cards, and the pill-style links for cluster- and
