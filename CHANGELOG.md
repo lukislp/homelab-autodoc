@@ -1,3 +1,10 @@
+# [1.50.0](https://github.com/lukislp/homelab-autodoc/compare/v1.49.3...v1.50.0) (2026-08-25)
+
+
+### Features
+
+* move all 3 PVCs to Longhorn for cross-node replication ([2f23fcc](https://github.com/lukislp/homelab-autodoc/commit/2f23fcce82b3fbd09bebaf5dfd19f2c517503665))
+
 ## [1.49.3](https://github.com/lukislp/homelab-autodoc/compare/v1.49.2...v1.49.3) (2026-08-24)
 
 
