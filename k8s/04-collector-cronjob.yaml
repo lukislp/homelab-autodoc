@@ -12,9 +12,13 @@ metadata:
   namespace: homelab-autodoc
 spec:
   accessModes: ["ReadWriteOnce"]
-  # Intentionally tiny - this holds one token, nothing else. Uses the
-  # cluster's default StorageClass (no storageClassName set) so this stays
-  # portable across k3s installs instead of hardcoding e.g. local-path.
+  # Intentionally tiny - this holds one token, nothing else. Pinned to Longhorn (cross-node-
+  # replicated, see homelab-infra/cluster/11-longhorn-values.yaml) rather than the cluster
+  # default - trades away the "portable across any k3s install" property this had with no
+  # storageClassName set, in exchange for surviving a node dying without re-approving the
+  # device grant. No RWX needed here (unlike autodoc-server-data/-config) - this is a
+  # sequential CronJob (concurrencyPolicy: Forbid), never two pods at once.
+  storageClassName: longhorn
   resources:
     requests:
       storage: 10Mi
