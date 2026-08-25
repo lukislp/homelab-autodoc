@@ -9,7 +9,14 @@ metadata:
   name: autodoc-server-data
   namespace: homelab-autodoc
 spec:
-  accessModes: ["ReadWriteOnce"]
+  # ReadWriteMany + Longhorn (NFS-backed share-manager, cross-node-replicated, see
+  # homelab-infra/cluster/11-longhorn-values.yaml) instead of local-path's RWO. local-path's
+  # RWO was only node-scoped (enforced via the PV's own nodeAffinity, not pod-exclusive),
+  # which is what let the surge pod mount concurrently with the outgoing one during a
+  # RollingUpdate. Longhorn's RWO enforces true single-pod-exclusive, which would break that
+  # overlap - RWX replicates the same concurrent-mount behavior properly (even across nodes).
+  accessModes: ["ReadWriteMany"]
+  storageClassName: longhorn
   resources:
     requests:
       storage: 1Gi
@@ -20,7 +27,9 @@ metadata:
   name: autodoc-server-config
   namespace: homelab-autodoc
 spec:
-  accessModes: ["ReadWriteOnce"]
+  # Same RWX reasoning as autodoc-server-data above - same Deployment, same RollingUpdate.
+  accessModes: ["ReadWriteMany"]
+  storageClassName: longhorn
   resources:
     requests:
       storage: 10Mi
