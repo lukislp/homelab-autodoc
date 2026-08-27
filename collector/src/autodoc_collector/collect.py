@@ -439,6 +439,42 @@ def _list_configmaps(apis: K8sApis, namespace: str) -> list[client.V1ConfigMap] 
         raise
 
 
+# Kept in sync with the generator's _ACCEPT_ANNOTATION_PREFIX (findings.py):
+# the collector strips the prefix so the inventory carries plain rule names.
+_ACCEPT_ANNOTATION_PREFIX = "autodoc.homelab/accept-"
+
+
+def _list_namespace_objects(apis: K8sApis) -> list[client.V1Namespace] | None:
+    """Same None-on-403 semantics as _list_configmaps: a collector run with
+    an explicit namespace list may lack the cluster-wide namespaces grant,
+    and "unknown" must stay distinguishable from "no annotations".
+    """
+    try:
+        return apis.core_v1.list_namespace().items
+    except ApiException as e:
+        if e.status == 403:
+            return None
+        raise
+
+
+def _accept_annotations(annotations: dict[str, str] | None) -> dict[str, str]:
+    """Rule name -> reason from a Namespace object's accept annotations.
+    Only the accept-prefixed keys are kept - the namespace's other
+    annotations never enter the inventory. Empty reasons are dropped here
+    the same way the generator drops them for workloads: an annotation
+    without a stated reason must not silently accept anything.
+    """
+    accepted = {}
+    for key, value in (annotations or {}).items():
+        if not key.startswith(_ACCEPT_ANNOTATION_PREFIX):
+            continue
+        rule = key.removeprefix(_ACCEPT_ANNOTATION_PREFIX)
+        reason = value.strip()
+        if rule and reason:
+            accepted[rule] = reason
+    return accepted
+
+
 # Candidate host[:port] tokens inside config values. Lowercase DNS-1123 shapes
 # only, hard-bounded so URLs/connection strings tokenize cleanly.
 _HOST_CANDIDATE = re.compile(
@@ -597,6 +633,7 @@ def build_namespace_inventory(
     configmap_names: list[str] | None = None,
     warning_events: list[WarningEventInfo] | None = None,
     configmap_data: dict[str, dict[str, str]] | None = None,
+    accepted_rules: dict[str, str] | None = None,
 ) -> NamespaceInventory:
     apps = [
         build_app(
@@ -623,6 +660,7 @@ def build_namespace_inventory(
         # above - see the model's own comment on the distinction.
         configmap_names=configmap_names,
         warning_events=warning_events,
+        accepted_rules=accepted_rules,
     )
 
 
@@ -695,12 +733,27 @@ def collect_cluster_inventory(
     """I/O step: fetch live objects from the cluster and shape them into an inventory."""
     apis = K8sApis.build()
 
+    # One namespace list serves both the default namespace discovery and the
+    # namespace-level accept annotations (autodoc.homelab/accept-<rule> on
+    # the Namespace object) - None on 403 keeps the "unknown, not empty"
+    # semantics for accepted_rules when the ClusterRole predates the grant.
+    namespace_objects = _list_namespace_objects(apis)
+
     if namespaces is None:
+        if namespace_objects is None:
+            raise RuntimeError(
+                "cannot list namespaces (RBAC) and no explicit namespace list was given"
+            )
         namespaces = [
             ns.metadata.name
-            for ns in apis.core_v1.list_namespace().items
+            for ns in namespace_objects
             if include_system or ns.metadata.name not in DEFAULT_SYSTEM_NAMESPACES
         ]
+    namespace_accepts = (
+        {ns.metadata.name: _accept_annotations(ns.metadata.annotations) for ns in namespace_objects}
+        if namespace_objects is not None
+        else None
+    )
 
     # Cluster-scoped, so fetched once for the whole run rather than re-fetched
     # identically for every namespace - a ClusterRoleBinding's subjects can
@@ -758,6 +811,9 @@ def collect_cluster_inventory(
                 configmap_names,
                 warning_events,
                 configmap_data,
+                # dict (possibly empty) when namespaces were listable, None
+                # ("unknown") when RBAC denied the list.
+                namespace_accepts.get(namespace, {}) if namespace_accepts is not None else None,
             )
         )
 

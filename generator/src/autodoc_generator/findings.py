@@ -58,9 +58,16 @@ class ClusterAcceptedFinding:
 # The value is the mandatory reason - an empty one is ignored rather than
 # silently accepting. Acceptance lives in the workload's own manifest, so it
 # is reviewed and versioned next to the decision it excuses and disappears
-# with the workload, instead of surviving it in a central list. Only
-# app-scoped rules can be accepted this way: namespace-scoped findings have
-# no workload object to carry the annotation.
+# with the workload, instead of surviving it in a central list.
+#
+# The same annotations on the Namespace OBJECT accept a rule for every
+# workload in that namespace (and for the namespace-scoped rules, which have
+# no workload object to carry them). That scope exists for hand-installed
+# system stacks - a storage engine's twenty upstream Helm workloads all
+# violate the same rules for the same reason, and per-workload annotations
+# there would be unmaintainable. A workload-level annotation wins over the
+# namespace-level one for the same rule: the more specific reason is the
+# better documentation.
 _ACCEPT_ANNOTATION_PREFIX = "autodoc.homelab/accept-"
 
 
@@ -75,6 +82,21 @@ def accepted_rules(app: App) -> dict[str, str]:
         if rule and reason:
             accepted[rule] = reason
     return accepted
+
+
+def namespace_accepted_rules(namespace: NamespaceInventory) -> dict[str, str]:
+    """Rule name -> reason from the Namespace object's accept annotations.
+    The collector already stripped the prefix and dropped empty reasons;
+    None ("not collected" - an older collector) reads as no acceptance.
+    """
+    return dict(namespace.accepted_rules or {})
+
+
+def _effective_accepted_rules(app: App, namespace: NamespaceInventory) -> dict[str, str]:
+    """Namespace-wide accepts overlaid with the workload's own - the
+    workload-level reason wins on the same rule.
+    """
+    return namespace_accepted_rules(namespace) | accepted_rules(app)
 
 
 _WORKLOAD_SUBJECT = "workload"
@@ -269,7 +291,7 @@ _WELL_KNOWN_CONFIGMAPS = frozenset(
 )
 
 
-def evaluate_namespace(namespace: NamespaceInventory) -> list[Finding]:
+def _all_namespace_findings(namespace: NamespaceInventory) -> list[Finding]:
     """Namespace-scoped rules (not attributable to a single workload):
     currently just orphaned ConfigMaps. Worded as "no collected workload
     references it" deliberately - a ConfigMap may serve something outside
@@ -292,6 +314,24 @@ def evaluate_namespace(namespace: NamespaceInventory) -> list[Finding]:
     ]
 
 
+def evaluate_namespace(namespace: NamespaceInventory) -> list[Finding]:
+    """Open namespace-scoped findings only - rules the Namespace object's
+    accept annotations acknowledge surface via evaluate_namespace_accepted,
+    mirroring the evaluate_app / evaluate_app_accepted split.
+    """
+    accepted = namespace_accepted_rules(namespace)
+    return [f for f in _all_namespace_findings(namespace) if f.rule not in accepted]
+
+
+def evaluate_namespace_accepted(namespace: NamespaceInventory) -> list[AcceptedFinding]:
+    accepted = namespace_accepted_rules(namespace)
+    return [
+        AcceptedFinding(finding=f, reason=accepted[f.rule])
+        for f in _all_namespace_findings(namespace)
+        if f.rule in accepted
+    ]
+
+
 def _all_app_findings(app: App, namespace: NamespaceInventory) -> list[Finding]:
     return [
         *_image_tag_findings(app),
@@ -305,12 +345,13 @@ def _all_app_findings(app: App, namespace: NamespaceInventory) -> list[Finding]:
 
 
 def evaluate_app(app: App, namespace: NamespaceInventory) -> list[Finding]:
-    """Open findings only. Rules the workload's accept annotations
-    acknowledge are excluded here and surface via evaluate_app_accepted
-    instead - so every existing table and count stays an honest "needs a
-    look" without each caller having to know about acceptance.
+    """Open findings only. Rules the workload's (or its namespace's) accept
+    annotations acknowledge are excluded here and surface via
+    evaluate_app_accepted instead - so every existing table and count stays
+    an honest "needs a look" without each caller having to know about
+    acceptance.
     """
-    accepted = accepted_rules(app)
+    accepted = _effective_accepted_rules(app, namespace)
     return [f for f in _all_app_findings(app, namespace) if f.rule not in accepted]
 
 
@@ -319,7 +360,7 @@ def evaluate_app_accepted(app: App, namespace: NamespaceInventory) -> list[Accep
     reason. An accepted rule that no longer fires produces nothing - a stale
     annotation is inert, not an error.
     """
-    accepted = accepted_rules(app)
+    accepted = _effective_accepted_rules(app, namespace)
     return [
         AcceptedFinding(finding=f, reason=accepted[f.rule])
         for f in _all_app_findings(app, namespace)
@@ -351,7 +392,14 @@ def evaluate_cluster_accepted(inventory: ClusterInventory) -> list[ClusterAccept
         for app in namespace.apps
         for af in evaluate_app_accepted(app, namespace)
     ]
-    return per_app + _backup_findings(inventory)[1]
+    per_namespace = [
+        ClusterAcceptedFinding(
+            namespace=namespace.name, app="", finding=af.finding, reason=af.reason
+        )
+        for namespace in inventory.namespaces
+        for af in evaluate_namespace_accepted(namespace)
+    ]
+    return per_app + per_namespace + _backup_findings(inventory)[1]
 
 
 def findings_table(findings: list[Finding]) -> str:
@@ -398,8 +446,8 @@ def cluster_accepted_findings_table(inventory: ClusterInventory) -> str:
         return ""
     rows = [
         f"| [{caf.namespace}]({caf.namespace}/index.md) | "
-        f"[{caf.app}]({caf.namespace}/{caf.app}.md) | "
-        f"`{caf.finding.rule}` | {caf.finding.subject} | {caf.finding.message} | {caf.reason} |"
+        + (f"[{caf.app}]({caf.namespace}/{caf.app}.md) | " if caf.app else "- | ")
+        + f"`{caf.finding.rule}` | {caf.finding.subject} | {caf.finding.message} | {caf.reason} |"
         for caf in sorted(
             accepted,
             key=lambda caf: (caf.namespace, caf.app, caf.finding.subject, caf.finding.rule),
@@ -454,7 +502,7 @@ def _backup_findings(
                 )
             if finding is None:
                 continue
-            reasons = accepted_rules(app)
+            reasons = _effective_accepted_rules(app, namespace)
             if finding.rule in reasons:
                 accepted.append(
                     ClusterAcceptedFinding(

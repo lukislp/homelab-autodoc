@@ -1298,3 +1298,17 @@ def test_bare_token_only_counts_when_it_matches_a_local_service():
     app = build_app(workload, [_service("postgres", {"app": "pg"})], [], [])
 
     assert _refs(app) == {("postgres", None, None, "env DB_HOST")}
+
+
+def test_accept_annotations_filters_strips_and_requires_a_reason():
+    from autodoc_collector.collect import _accept_annotations
+
+    assert _accept_annotations(
+        {
+            "autodoc.homelab/accept-run-as-root-allowed": " storage engine needs host access ",
+            "autodoc.homelab/accept-missing-probes": "   ",
+            "autodoc.homelab/accept-": "prefix without a rule",
+            "kubernetes.io/change-cause": "unrelated",
+        }
+    ) == {"run-as-root-allowed": "storage engine needs host access"}
+    assert _accept_annotations(None) == {}
