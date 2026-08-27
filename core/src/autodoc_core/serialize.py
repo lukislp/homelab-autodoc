@@ -284,6 +284,7 @@ def _namespace_from_dict(d: dict) -> NamespaceInventory:
     # field it must NOT be defaulted to [] here.
     configmap_names = d.get("configmap_names")
     warning_events = d.get("warning_events")
+    accepted_rules = d.get("accepted_rules")
     return NamespaceInventory(
         name=d["name"],
         apps=[_app_from_dict(a) for a in d.get("apps", [])],
@@ -293,6 +294,7 @@ def _namespace_from_dict(d: dict) -> NamespaceInventory:
         warning_events=[_warning_event_from_dict(e) for e in warning_events]
         if warning_events is not None
         else None,
+        accepted_rules=dict(accepted_rules) if accepted_rules is not None else None,
     )
 
 

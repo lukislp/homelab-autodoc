@@ -293,6 +293,15 @@ class NamespaceInventory:
     # Recent Warning-type events, newest first, capped by the collector.
     # Same None-vs-empty semantics as configmap_names.
     warning_events: list[WarningEventInfo] | None = None
+    # Rule name -> reason from autodoc.homelab/accept-<rule> annotations on
+    # the Namespace OBJECT itself, accepting that rule for every workload in
+    # the namespace (workload-level annotations win on the same rule). Meant
+    # for hand-installed system stacks (storage/CSI drivers and the like)
+    # whose upstream manifests can't practically carry per-workload
+    # annotations. Only the accept-prefixed annotations are collected -
+    # never the namespace's full annotation set. Same None-vs-empty
+    # semantics as configmap_names.
+    accepted_rules: dict[str, str] | None = None
 
 
 @dataclass(frozen=True, slots=True)

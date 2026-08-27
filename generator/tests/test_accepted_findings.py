@@ -143,3 +143,73 @@ def test_cluster_accepted_findings_table_links_namespace_and_app():
         )
         == ""
     )
+
+
+def test_namespace_level_accept_hides_the_finding_for_every_app_in_it():
+    ns = NamespaceInventory(
+        name="storage",
+        apps=[_root_app()],
+        accepted_rules={"run-as-root-allowed": "storage engine needs host access"},
+    )
+
+    open_rules = {f.rule for f in evaluate_app(ns.apps[0], ns)}
+    accepted = evaluate_app_accepted(ns.apps[0], ns)
+
+    assert "run-as-root-allowed" not in open_rules
+    assert "privilege-escalation-allowed" in open_rules  # only the accepted rule moves
+    assert [(af.finding.rule, af.reason) for af in accepted] == [
+        ("run-as-root-allowed", "storage engine needs host access")
+    ]
+
+
+def test_workload_accept_reason_wins_over_the_namespace_one():
+    app = _root_app(
+        annotations={"autodoc.homelab/accept-run-as-root-allowed": "this one reads host logs"}
+    )
+    ns = NamespaceInventory(
+        name="storage",
+        apps=[app],
+        accepted_rules={"run-as-root-allowed": "blanket namespace reason"},
+    )
+
+    accepted = evaluate_app_accepted(app, ns)
+
+    assert [(af.finding.rule, af.reason) for af in accepted] == [
+        ("run-as-root-allowed", "this one reads host logs")
+    ]
+
+
+def test_namespace_accept_covers_namespace_scoped_findings_too():
+    from autodoc_generator.findings import evaluate_namespace, evaluate_namespace_accepted
+
+    ns = NamespaceInventory(
+        name="storage",
+        apps=[_root_app()],
+        configmap_names=["unused"],
+        accepted_rules={"orphaned-configmap": "upstream chart ships extra configmaps"},
+    )
+
+    assert evaluate_namespace(ns) == []
+    accepted = evaluate_namespace_accepted(ns)
+    assert [(af.finding.rule, af.reason) for af in accepted] == [
+        ("orphaned-configmap", "upstream chart ships extra configmaps")
+    ]
+
+    inventory = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-24T00:00:00+00:00",
+        namespaces=[ns],
+    )
+    assert "orphaned-configmap" not in {cf.finding.rule for cf in evaluate_cluster(inventory)}
+    table = cluster_accepted_findings_table(inventory)
+    assert "| [storage](storage/index.md) | - | `orphaned-configmap` |" in table
+    assert "| upstream chart ships extra configmaps |" in table
+
+
+def test_none_accepted_rules_reads_as_no_acceptance():
+    # An inventory from an older collector (accepted_rules=None) behaves
+    # exactly as before the field existed.
+    ns = NamespaceInventory(name="demo", apps=[_root_app()], accepted_rules=None)
+
+    assert "run-as-root-allowed" in {f.rule for f in evaluate_app(ns.apps[0], ns)}
+    assert evaluate_app_accepted(ns.apps[0], ns) == []

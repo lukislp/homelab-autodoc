@@ -514,3 +514,26 @@ def test_namespace_payload_predating_warning_events_loads_as_none():
     reconstructed = from_text(json.dumps(data), fmt="json")
 
     assert reconstructed.namespaces[0].warning_events is None
+
+
+def test_namespace_accepted_rules_round_trip_preserves_none_vs_empty():
+    from autodoc_core.models import ClusterInventory, NamespaceInventory
+
+    with_rules = ClusterInventory(
+        cluster_name="homelab",
+        collected_at="2026-08-25T00:00:00+00:00",
+        namespaces=[
+            NamespaceInventory(
+                name="storage",
+                accepted_rules={"run-as-root-allowed": "storage engine needs host access"},
+            ),
+            NamespaceInventory(name="unknown", accepted_rules=None),
+            NamespaceInventory(name="empty", accepted_rules={}),
+        ],
+    )
+
+    reconstructed = from_text(to_text(with_rules, fmt="json"), fmt="json")
+
+    assert reconstructed == with_rules
+    assert reconstructed.namespaces[1].accepted_rules is None
+    assert reconstructed.namespaces[2].accepted_rules == {}
