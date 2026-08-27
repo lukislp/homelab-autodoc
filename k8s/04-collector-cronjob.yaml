@@ -46,18 +46,14 @@ spec:
         spec:
           serviceAccountName: autodoc-collector
           restartPolicy: Never
-          initContainers:
-            # The cached push token was written by the image's root era;
-            # chown on every run (idempotent, one tiny file) so the
-            # non-root collector below can keep rewriting it.
-            - name: fix-token-ownership
-              image: busybox:1.36.1
-              command: ["chown", "-R", "10001:10001", "/var/run/autodoc"]
-              securityContext:
-                runAsUser: 0
-              volumeMounts:
-                - name: token
-                  mountPath: /var/run/autodoc
+          # fsGroup replaces the former root chown init container: the kubelet
+          # sets group ownership + group rw on the token volume at mount time
+          # (OnRootMismatch: only when it actually differs, e.g. the file the
+          # image's root era left behind), so the whole pod satisfies the
+          # restricted PodSecurity profile - no container needs root anymore.
+          securityContext:
+            fsGroup: 10001
+            fsGroupChangePolicy: OnRootMismatch
           containers:
             - name: collector
               image: ghcr.io/lukislp/homelab-autodoc-collector:1.51.0 # {"$imagepolicy": "flux-system:homelab-autodoc-collector"}
