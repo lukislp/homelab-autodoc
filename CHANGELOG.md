@@ -1,3 +1,10 @@
+## [1.51.1](https://github.com/lukislp/homelab-autodoc/compare/v1.51.0...v1.51.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **k8s:** satisfy restricted PodSecurity for the collector job via fsGroup ([30b07a4](https://github.com/lukislp/homelab-autodoc/commit/30b07a4bb4c7e09a25542f9a63280c280bf95ccf))
+
 # [1.51.0](https://github.com/lukislp/homelab-autodoc/compare/v1.50.0...v1.51.0) (2026-08-27)
 
 
