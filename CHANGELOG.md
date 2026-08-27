@@ -1,3 +1,10 @@
+# [1.51.0](https://github.com/lukislp/homelab-autodoc/compare/v1.50.0...v1.51.0) (2026-08-27)
+
+
+### Features
+
+* namespace-level accept annotations for findings ([30a3657](https://github.com/lukislp/homelab-autodoc/commit/30a3657db5354528dc706bd424ce9374c546288d))
+
 # [1.50.0](https://github.com/lukislp/homelab-autodoc/compare/v1.49.3...v1.50.0) (2026-08-25)
 
 
