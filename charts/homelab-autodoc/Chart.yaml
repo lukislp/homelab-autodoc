@@ -2,8 +2,8 @@ apiVersion: v2
 name: homelab-autodoc
 description: Living documentation for Kubernetes homelabs — a deterministic inventory turned into fact tables, topology diagrams, best-practice findings and a drift changelog.
 type: application
-version: 0.1.0
-appVersion: "1.51.0"
+version: 1.52.0
+appVersion: "1.52.0"
 home: https://github.com/lukislp/homelab-autodoc
 sources:
   - https://github.com/lukislp/homelab-autodoc

@@ -1,3 +1,10 @@
+# [1.52.0](https://github.com/lukislp/homelab-autodoc/compare/v1.51.1...v1.52.0) (2026-08-28)
+
+
+### Features
+
+* add generic Helm chart for third-party installs ([e23d013](https://github.com/lukislp/homelab-autodoc/commit/e23d013602d2247a76dfe5e61e9d4660a19648d1))
+
 ## [1.51.1](https://github.com/lukislp/homelab-autodoc/compare/v1.51.0...v1.51.1) (2026-08-27)
 
 
