@@ -1,0 +1,26 @@
+{{- if and .Values.server.enabled .Values.server.gatewayApi.enabled }}
+{{- if not .Values.server.gatewayApi.parentRef.name }}
+{{- fail "server.gatewayApi.parentRef.name is required when server.gatewayApi.enabled=true — this chart does not create a Gateway." }}
+{{- end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "homelab-autodoc.server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "homelab-autodoc.server.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ .Values.server.gatewayApi.parentRef.name }}
+      {{- if .Values.server.gatewayApi.parentRef.namespace }}
+      namespace: {{ .Values.server.gatewayApi.parentRef.namespace }}
+      {{- end }}
+  {{- with .Values.server.gatewayApi.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - backendRefs:
+        - name: {{ include "homelab-autodoc.server.fullname" . }}
+          port: {{ .Values.server.service.port }}
+{{- end }}
