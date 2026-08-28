@@ -1,0 +1,24 @@
+{{- if .Values.server.enabled }}
+autodoc-server is deploying to {{ .Release.Namespace }}.
+
+Its startup rebuild (LLM prose for every registered cluster) can take up to a minute — the
+Deployment won't report Ready before that finishes:
+  kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "homelab-autodoc.server.fullname" . }}
+
+Reach it without ingress/Gateway API configured:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "homelab-autodoc.server.fullname" . }} 8000:{{ .Values.server.service.port }}
+
+Then open http://localhost:8000/admin and run the setup wizard (GitHub or OIDC login).
+{{- end }}
+{{- if .Values.collector.enabled }}
+
+autodoc-collector is scheduled ({{ .Values.collector.schedule }}). Its first run registers this
+cluster and waits (up to the device-grant's 10-minute expiry) for the admin login above to
+approve it from /admin — expected, not a hang. Every run after that reuses its cached token and
+pushes immediately.
+{{- if not .Values.server.enabled }}
+
+server.enabled=false: this collector pushes to {{ include "homelab-autodoc.server.pushUrl" . }} —
+confirm that URL is reachable from this cluster's egress before the first scheduled run.
+{{- end }}
+{{- end }}

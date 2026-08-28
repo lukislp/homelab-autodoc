@@ -1,0 +1,35 @@
+{{- if .Values.server.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "homelab-autodoc.server.fullname" . }}-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "homelab-autodoc.server.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.server.storage.data.accessModes | nindent 4 }}
+  {{- if .Values.server.storage.data.storageClassName }}
+  storageClassName: {{ .Values.server.storage.data.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.server.storage.data.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "homelab-autodoc.server.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "homelab-autodoc.server.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.server.storage.config.accessModes | nindent 4 }}
+  {{- if .Values.server.storage.config.storageClassName }}
+  storageClassName: {{ .Values.server.storage.config.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.server.storage.config.size }}
+{{- end }}

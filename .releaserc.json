@@ -7,7 +7,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "python3 scripts/sync_pyproject_version.py ${nextRelease.version} core/pyproject.toml collector/pyproject.toml generator/pyproject.toml server/pyproject.toml"
+        "prepareCmd": "python3 scripts/sync_pyproject_version.py ${nextRelease.version} core/pyproject.toml collector/pyproject.toml generator/pyproject.toml server/pyproject.toml charts/homelab-autodoc/Chart.yaml"
       }
     ],
     "@semantic-release/github",
@@ -24,7 +24,8 @@
           "core/pyproject.toml",
           "collector/pyproject.toml",
           "generator/pyproject.toml",
-          "server/pyproject.toml"
+          "server/pyproject.toml",
+          "charts/homelab-autodoc/Chart.yaml"
         ],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }

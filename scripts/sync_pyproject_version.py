@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Bump the `version = "..."` line in one or more pyproject.toml files in place.
+"""Bump the version line(s) in pyproject.toml and Chart.yaml files in place.
 
-A regex substitution on just that line, not a full TOML load/dump round-trip -
-the latter reformats the whole file and produces noisy unrelated diffs on
-every release. All packages in this monorepo release under one shared
-version, so every pyproject.toml is passed in on each run.
+A regex substitution on just those lines, not a full TOML/YAML load/dump
+round-trip - the latter reformats the whole file and produces noisy unrelated
+diffs on every release. All packages in this monorepo (including the Helm
+chart) release under one shared version, so every file is passed in on each
+run.
 """
 
 import re
@@ -13,6 +14,9 @@ from pathlib import Path
 
 
 def sync_one(path: Path, new_version: str) -> bool:
+    if path.name == "Chart.yaml":
+        return _sync_chart_yaml(path, new_version)
+
     text = path.read_text(encoding="utf-8")
     updated, count = re.subn(
         r'(?m)^version = "[^"]+"$', f'version = "{new_version}"', text, count=1
@@ -22,6 +26,25 @@ def sync_one(path: Path, new_version: str) -> bool:
         return False
 
     path.write_text(updated, encoding="utf-8")
+    return True
+
+
+def _sync_chart_yaml(path: Path, new_version: str) -> bool:
+    # The chart's own `version` tracks the app's semantic-release version directly (this
+    # monorepo has one shared version across every package) - `appVersion` is the app version
+    # it deploys, which is the same thing here.
+    text = path.read_text(encoding="utf-8")
+    text, version_count = re.subn(
+        r"(?m)^version: .+$", f"version: {new_version}", text, count=1
+    )
+    text, app_version_count = re.subn(
+        r'(?m)^appVersion: ".+"$', f'appVersion: "{new_version}"', text, count=1
+    )
+    if version_count != 1 or app_version_count != 1:
+        print(f"::error::no version/appVersion line found in {path}", file=sys.stderr)
+        return False
+
+    path.write_text(text, encoding="utf-8")
     return True
 
 

@@ -1,0 +1,17 @@
+{{- if .Values.collector.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "homelab-autodoc.collector.fullname" . }}-token
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "homelab-autodoc.collector.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.collector.token.storageClassName }}
+  storageClassName: {{ .Values.collector.token.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.collector.token.size }}
+{{- end }}

@@ -81,6 +81,40 @@ jobs:
       - run: npm run build
         working-directory: frontend
 
+  test-helm-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - run: helm lint charts/homelab-autodoc
+      - name: Template every combination of optional features
+        run: |
+          set -e
+          helm template t charts/homelab-autodoc -n homelab-autodoc \
+            --set server.existingSecret=x > /dev/null
+          helm template t charts/homelab-autodoc -n homelab-autodoc \
+            --set server.existingSecret=x \
+            --set server.ingress.enabled=true \
+            --set server.networkPolicy.enabled=true \
+            --set collector.networkPolicy.enabled=true \
+            --set server.updateStrategy=RollingUpdate \
+            --set server.storage.data.accessModes[0]=ReadWriteMany > /dev/null
+          helm template t charts/homelab-autodoc -n homelab-autodoc \
+            --set server.existingSecret=x \
+            --set server.gatewayApi.enabled=true \
+            --set server.gatewayApi.parentRef.name=my-gw \
+            --set server.gatewayApi.parentRef.namespace=gw-ns > /dev/null
+          helm template t charts/homelab-autodoc -n homelab-autodoc \
+            --set server.enabled=false \
+            --set collector.pushUrl=http://autodoc-server.other.svc:8000 > /dev/null
+      - name: Fail-fast guards raise a clear error
+        run: |
+          set -e
+          out=$(helm template t charts/homelab-autodoc -n homelab-autodoc 2>&1) && { echo "expected server.existingSecret guard did not fire"; exit 1; }
+          echo "$out" | grep -q "server.existingSecret is required"
+          out=$(helm template t charts/homelab-autodoc -n homelab-autodoc --set server.existingSecret=x --set server.enabled=false 2>&1) && { echo "expected collector.pushUrl guard did not fire"; exit 1; }
+          echo "$out" | grep -q "collector.pushUrl is required"
+
   test-frontend-unit:
     runs-on: ubuntu-latest
     steps:
@@ -118,7 +152,7 @@ jobs:
   # Version / docker / release — push to master only
   # ---------------------------------------------------------------------
   get-version:
-    needs: [test-lint, test-unit, test-frontend-lint, test-frontend-unit]
+    needs: [test-lint, test-unit, test-frontend-lint, test-frontend-unit, test-helm-lint]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     # @semantic-release/github's verifyConditions checks repo push access even during a dry

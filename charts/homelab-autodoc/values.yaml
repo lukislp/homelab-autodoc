@@ -1,0 +1,150 @@
+# Default values for homelab-autodoc.
+# This chart is deliberately generic (Ingress instead of a pre-existing Gateway, RWO storage by
+# default, no NGINX-Gateway-Fabric-specific CRDs). The project's own production deployment is
+# more specialized and lives in ../../k8s/ — that one is not derived from this chart.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# No namespace.create here on purpose: a chart-templated Namespace resource is a known Helm
+# anti-pattern, confirmed the hard way in this chart's own testing — server.existingSecret has to
+# exist in the target namespace *before* install, which means the namespace has to exist first
+# too, which means the chart trying to "own" and template that same already-existing Namespace
+# object fails with an ownership-adoption error (missing meta.helm.sh/* annotations). Create the
+# namespace yourself first — plain `kubectl create namespace` or `helm install --create-namespace`
+# both work fine, since neither goes through this chart's own template rendering. See the chart
+# README for the restricted PodSecurity labels one-liner.
+
+# -----------------------------------------------------------------------------------------------
+# autodoc-server: the always-on Deployment that stores inventory + drift history and serves the
+# generated site + admin app.
+# -----------------------------------------------------------------------------------------------
+server:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/lukislp/homelab-autodoc-server
+    tag: "" # defaults to .Chart.AppVersion
+    pullPolicy: IfNotPresent
+
+  # /data and /config are ReadWriteOnce by default (safe on any StorageClass) with a single
+  # replica, so rollouts use Recreate — a short outage while the new pod starts (its rebuild
+  # takes up to ~1 min with LLM prose; see startupProbe below). If your StorageClass supports
+  # ReadWriteMany (e.g. Longhorn, NFS), set storage.*.accessModes to ["ReadWriteMany"] and
+  # switch this to RollingUpdate for zero-downtime rollouts.
+  updateStrategy: Recreate # Recreate | RollingUpdate
+
+  storage:
+    data:
+      size: 1Gi
+      storageClassName: "" # "" = cluster default StorageClass
+      accessModes: ["ReadWriteOnce"]
+    config:
+      size: 10Mi
+      storageClassName: ""
+      accessModes: ["ReadWriteOnce"]
+
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 768Mi }
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  # Bring your own Secret — this chart never writes secret material into values.yaml or Helm
+  # release history. Create it first:
+  #   kubectl -n <namespace> create secret generic autodoc-server-secrets \
+  #     --from-literal=session-secret="$(openssl rand -base64 32)" \
+  #     --from-literal=llm-api-key="<your LLM provider API key>"
+  existingSecret: ""
+  secretKeys:
+    sessionSecret: session-secret
+    llmApiKey: llm-api-key
+
+  # See https://docs.litellm.ai/docs/providers for model name formats (provider/model).
+  llm:
+    model: "openai/gpt-4o-mini"
+    reasoningEffort: "" # only set for reasoning models that require an explicit value
+
+  # Extra env vars appended verbatim (list of corev1.EnvVar).
+  extraEnv: []
+
+  # Fresh PVCs start empty, so — unlike the project's own production Deployment, which chowns
+  # legacy root-written files — no root init container is needed here: fsGroup 10001 matches the
+  # non-root UID both images run as (see server/Dockerfile, collector/Dockerfile) and satisfies
+  # the restricted PodSecurity profile directly. Reused as-is for the collector CronJob pod
+  # below (same UID, same profile) rather than duplicated under collector.*.
+  fsGroup: 10001
+  securityContext:
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    capabilities: { drop: ["ALL"] }
+    seccompProfile: { type: RuntimeDefault }
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    host: autodoc.example.com
+    tls: []
+    # - secretName: autodoc-tls
+    #   hosts: [autodoc.example.com]
+
+  # Alternative to ingress above, for clusters using Gateway API. Requires an existing Gateway —
+  # this chart does not create one.
+  gatewayApi:
+    enabled: false
+    parentRef:
+      name: ""
+      namespace: ""
+    hostnames: []
+
+  # Off by default: a restrictive NetworkPolicy is safe on most CNIs but can surprise a first
+  # install (e.g. Calico/Cilium in a non-default mode). Turn on once ingress access is confirmed.
+  networkPolicy:
+    enabled: false
+    # Peers allowed to reach the server on service.port, e.g. an ingress controller namespace:
+    #   - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: ingress-nginx}}
+    allowIngressFrom: []
+
+# -----------------------------------------------------------------------------------------------
+# autodoc-collector: the nightly CronJob that inventories this cluster (read-only, no Secrets
+# access) and pushes to the server above. Deploy this chart with server.enabled=false and
+# collector.pushUrl set to point additional clusters at one shared, centrally-installed server.
+# -----------------------------------------------------------------------------------------------
+collector:
+  enabled: true
+  clusterName: homelab
+  schedule: "0 2 * * *"
+
+  image:
+    repository: ghcr.io/lukislp/homelab-autodoc-collector
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 256Mi }
+
+  # The ClusterRole/ClusterRoleBinding grant cluster-wide read-only get/list/watch on exactly the
+  # resource kinds the collector reads — never Secrets. Turn off if your cluster provisions this
+  # RBAC out-of-band (e.g. a central GitOps reconciler with its own least-privilege gate).
+  rbac:
+    create: true
+
+  # Persists the device-grant push token across runs on a small PVC, so only the very first run
+  # needs an admin to approve it from /admin (the collector's ServiceAccount is read-only and
+  # can't write a Secret for itself).
+  token:
+    storageClassName: ""
+    size: 10Mi
+
+  # Defaults to this release's own server Service. Override for a collector-only install
+  # (server.enabled=false) pointing at a shared server elsewhere, e.g.:
+  #   http://autodoc-server.other-namespace.svc.cluster.local:8000
+  pushUrl: ""
+
+  networkPolicy:
+    enabled: false

@@ -1,0 +1,78 @@
+{{- if and .Values.collector.enabled .Values.collector.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "homelab-autodoc.collector.fullname" . }}-{{ .Release.Namespace }}
+  labels:
+    {{- include "homelab-autodoc.collector.labels" . | nindent 4 }}
+rules:
+  # "configmaps" feeds the dangling-reference check (names only end up in the inventory, never
+  # contents). "secrets" is deliberately ABSENT — listing secrets returns their full values at
+  # the API level, and this collector's no-secret-access guarantee is worth more than flagging a
+  # dangling Secret reference. "events" feeds the per-namespace Recent Warnings table.
+  - apiGroups: [""]
+    resources:
+      [
+        "namespaces",
+        "services",
+        "persistentvolumeclaims",
+        "pods",
+        "nodes",
+        "resourcequotas",
+        "limitranges",
+        "configmaps",
+        "events",
+      ]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["cronjobs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list", "watch"]
+  # Gateway API — safe to grant even on a cluster that doesn't have this CRD installed at all:
+  # RBAC rules for a resource type the API server doesn't know about are simply inert, never an
+  # error (the collector's own 404 handling is what actually makes it cluster-invariant).
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["rolebindings", "clusterrolebindings"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list", "watch"]
+  # Backup posture for the Backups page and the no-backup findings — status facts only (phases,
+  # timestamps, schedules), never volume contents. Same inert-when-absent property as the
+  # Gateway API rule above for clusters without Velero or CNPG.
+  - apiGroups: ["velero.io"]
+    resources: ["backups", "schedules"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["backups", "scheduledbackups"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "homelab-autodoc.collector.fullname" . }}-{{ .Release.Namespace }}
+  labels:
+    {{- include "homelab-autodoc.collector.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "homelab-autodoc.collector.fullname" . }}-{{ .Release.Namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "homelab-autodoc.collector.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -1,0 +1,87 @@
+{{- if .Values.server.enabled }}
+{{- if not .Values.server.existingSecret }}
+{{- fail "server.existingSecret is required — create a Secret with keys server.secretKeys.sessionSecret (and .llmApiKey) first, see values.yaml for the kubectl command." }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "homelab-autodoc.server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "homelab-autodoc.server.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.server.replicaCount }}
+  strategy:
+    type: {{ .Values.server.updateStrategy }}
+    {{- if eq .Values.server.updateStrategy "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    {{- end }}
+  selector:
+    matchLabels:
+      {{- include "homelab-autodoc.server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "homelab-autodoc.server.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "homelab-autodoc.server.fullname" . }}
+      securityContext:
+        fsGroup: {{ .Values.server.fsGroup }}
+      containers:
+        - name: server
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.server.securityContext | nindent 12 }}
+          ports:
+            - containerPort: {{ .Values.server.service.port }}
+          env:
+            - name: AUTODOC_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.server.existingSecret }}
+                  key: {{ .Values.server.secretKeys.sessionSecret }}
+            - name: AUTODOC_LLM_MODEL
+              value: {{ .Values.server.llm.model | quote }}
+            {{- if .Values.server.llm.reasoningEffort }}
+            - name: AUTODOC_LLM_REASONING_EFFORT
+              value: {{ .Values.server.llm.reasoningEffort | quote }}
+            {{- end }}
+            - name: AUTODOC_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.server.existingSecret }}
+                  key: {{ .Values.server.secretKeys.llmApiKey }}
+            {{- with .Values.server.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.server.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /config
+          # The server only starts listening after its startup rebuild (LLM prose for every
+          # cluster — roughly a minute, growing with cluster count). Give that up to 5 minutes
+          # before liveness takes over.
+          startupProbe:
+            httpGet: { path: /healthz, port: {{ .Values.server.service.port }} }
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /healthz, port: {{ .Values.server.service.port }} }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: {{ .Values.server.service.port }} }
+            periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "homelab-autodoc.server.fullname" . }}-data
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "homelab-autodoc.server.fullname" . }}-config
+{{- end }}

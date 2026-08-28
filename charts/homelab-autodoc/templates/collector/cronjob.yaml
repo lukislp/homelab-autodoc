@@ -1,0 +1,56 @@
+{{- if .Values.collector.enabled }}
+{{- if and (not .Values.server.enabled) (not .Values.collector.pushUrl) }}
+{{- fail "collector.pushUrl is required when server.enabled=false — point it at the shared server this collector should push to." }}
+{{- end }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "homelab-autodoc.collector.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "homelab-autodoc.collector.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.collector.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "homelab-autodoc.collector.selectorLabels" . | nindent 12 }}
+        spec:
+          serviceAccountName: {{ include "homelab-autodoc.collector.fullname" . }}
+          restartPolicy: Never
+          # fsGroup: the kubelet sets group ownership + group rw on the token volume at mount
+          # time, so the pod satisfies the restricted PodSecurity profile without any container
+          # needing root.
+          securityContext:
+            fsGroup: {{ .Values.server.fsGroup }}
+            fsGroupChangePolicy: OnRootMismatch
+          containers:
+            - name: collector
+              image: "{{ .Values.collector.image.repository }}:{{ .Values.collector.image.tag | default $.Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.collector.image.pullPolicy }}
+              securityContext:
+                {{- toYaml .Values.server.securityContext | nindent 16 }}
+              args:
+                - --push
+                - {{ include "homelab-autodoc.server.pushUrl" . }}
+                - --token-file
+                - /var/run/autodoc/token
+              env:
+                - name: CLUSTER_NAME
+                  value: {{ .Values.collector.clusterName | quote }}
+              resources:
+                {{- toYaml .Values.collector.resources | nindent 16 }}
+              volumeMounts:
+                - name: token
+                  mountPath: /var/run/autodoc
+          volumes:
+            - name: token
+              persistentVolumeClaim:
+                claimName: {{ include "homelab-autodoc.collector.fullname" . }}-token
+{{- end }}

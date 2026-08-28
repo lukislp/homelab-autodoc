@@ -1,0 +1,22 @@
+{{- if and .Values.collector.enabled .Values.collector.networkPolicy.enabled }}
+# The collector's own pods never receive inbound traffic — they only make outbound calls to the
+# k8s API server and to autodoc-server — so this only needs to exist if server.networkPolicy's
+# default-deny-ingress in this same namespace would otherwise also block egress. It doesn't
+# (default-deny-ingress only sets policyTypes: ["Ingress"]), so this policy is a no-op safety net
+# for clusters where ingress default-deny is combined with egress default-deny by some other
+# policy already in the namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "homelab-autodoc.collector.fullname" . }}-allow-egress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "homelab-autodoc.collector.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "homelab-autodoc.collector.selectorLabels" . | nindent 6 }}
+  policyTypes: ["Egress"]
+  egress:
+    - {}
+{{- end }}
