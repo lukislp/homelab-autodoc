@@ -1,7 +1,7 @@
 # Build context is the repo root - autodoc-server depends on the sibling
 # autodoc-core/autodoc-generator packages, and this also bakes in the built
 # React admin app (frontend/).
-FROM node:22-slim AS frontend-build
+FROM node:26-slim AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
