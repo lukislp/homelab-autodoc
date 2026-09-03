@@ -1,3 +1,10 @@
+## [1.52.1](https://github.com/lukislp/homelab-autodoc/compare/v1.52.0...v1.52.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **ci:** add Dependabot for github-actions, npm, pip, docker ([c68fa95](https://github.com/lukislp/homelab-autodoc/commit/c68fa95b741da0a905e02d9b91ee15fad9243d34))
+
 # [1.52.0](https://github.com/lukislp/homelab-autodoc/compare/v1.51.1...v1.52.0) (2026-08-28)
 
 
