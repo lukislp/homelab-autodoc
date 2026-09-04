@@ -1,3 +1,10 @@
+## [1.52.3](https://github.com/lukislp/homelab-autodoc/compare/v1.52.2...v1.52.3) (2026-09-04)
+
+
+### Bug Fixes
+
+* **ci:** ignore base image major bumps in Dependabot ([b81af11](https://github.com/lukislp/homelab-autodoc/commit/b81af112de55244d98baeb06f467c728651c815d))
+
 ## [1.52.2](https://github.com/lukislp/homelab-autodoc/compare/v1.52.1...v1.52.2) (2026-09-04)
 
 
