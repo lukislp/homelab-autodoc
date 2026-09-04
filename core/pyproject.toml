@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "autodoc-core"
-version = "1.52.1"
+version = "1.52.2"
 description = "Shared inventory model for homelab-autodoc"
 readme = "README.md"
 requires-python = ">=3.11"

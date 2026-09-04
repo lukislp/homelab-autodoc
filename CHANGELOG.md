@@ -1,3 +1,13 @@
+## [1.52.2](https://github.com/lukislp/homelab-autodoc/compare/v1.52.1...v1.52.2) (2026-09-04)
+
+
+### Bug Fixes
+
+* **ci:** bump actions/setup-node from 5 to 7 ([a6e29f4](https://github.com/lukislp/homelab-autodoc/commit/a6e29f4358b7aef63d1cae86701f738476c189eb))
+* **ci:** bump aquasecurity/trivy-action ([7629dea](https://github.com/lukislp/homelab-autodoc/commit/7629dea66a40b2ef70d492b90c079362446bf4cf))
+* **ci:** bump docker/setup-buildx-action from 4.2.0 to 4.3.0 ([1ccfd60](https://github.com/lukislp/homelab-autodoc/commit/1ccfd60d49a876231ea536177836b6fc7d8b20ae))
+* **deps:** bump the dev group in /frontend with 7 updates ([fe1090f](https://github.com/lukislp/homelab-autodoc/commit/fe1090f1256bf90941625812989f81180cdeeaee))
+
 ## [1.52.1](https://github.com/lukislp/homelab-autodoc/compare/v1.52.0...v1.52.1) (2026-09-03)
 
 
