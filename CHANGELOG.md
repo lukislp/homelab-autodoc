@@ -1,3 +1,10 @@
+## [1.52.4](https://github.com/lukislp/homelab-autodoc/compare/v1.52.3...v1.52.4) (2026-09-04)
+
+
+### Bug Fixes
+
+* **deps:** bump the dev group in /frontend with 2 updates ([48001c6](https://github.com/lukislp/homelab-autodoc/commit/48001c666f6d7f9006fb864117190fc06be54021))
+
 ## [1.52.3](https://github.com/lukislp/homelab-autodoc/compare/v1.52.2...v1.52.3) (2026-09-04)
 
 
