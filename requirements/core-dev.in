@@ -1,0 +1,5 @@
+# CI tooling for core: runtime lock as constraint plus the [dev] extra of core/pyproject.toml.
+-c core.txt
+pytest>=8.0.0
+pytest-cov>=5.0.0
+ruff>=0.6.0

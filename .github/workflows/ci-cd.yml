@@ -28,7 +28,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - run: pip install ruff
+      - run: pip install --require-hashes -r requirements/lint.txt
       - run: ruff check .
         working-directory: ${{ matrix.package }}
       - run: ruff format --check .
@@ -45,11 +45,15 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+          cache-dependency-path: requirements/${{ matrix.package }}*.txt
+      # Third-party dependencies from the hash-locked requirements/ files (runtime lock +
+      # the package's [dev] extra), then the local packages themselves without resolution.
+      - run: pip install --require-hashes -r requirements/${{ matrix.package }}.txt -r requirements/${{ matrix.package }}-dev.txt
       - if: matrix.package != 'core'
-        run: pip install -e core
+        run: pip install --no-deps -e core
       - if: matrix.package == 'server'
-        run: pip install -e generator
-      - run: pip install -e "${{ matrix.package }}[dev]"
+        run: pip install --no-deps -e generator
+      - run: pip install --no-deps -e "${{ matrix.package }}"
       - run: >
           python -m pytest --cov=autodoc_${{ matrix.package }}
           --cov-report=json:coverage.json

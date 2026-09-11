@@ -4,9 +4,13 @@
 FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea
 
 WORKDIR /app
+# Third-party dependencies come from the hash-locked requirements/collector.txt (pip-compile
+# --generate-hashes); the local packages are then installed without resolving anything else.
+COPY requirements/collector.txt ./requirements/collector.txt
+RUN pip install --no-cache-dir --require-hashes -r requirements/collector.txt
 COPY core ./core
 COPY collector ./collector
-RUN pip install --no-cache-dir ./core ./collector
+RUN pip install --no-cache-dir --no-deps ./core ./collector
 
 # Non-root runtime user (numeric so runAsNonRoot can be verified). The only
 # thing the collector ever writes is its push token, which lives on a

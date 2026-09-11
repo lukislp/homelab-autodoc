@@ -22,6 +22,8 @@ updates:
       - /core
       - /generator
       - /server
+      # pip-compile outputs (hash-locked); Dependabot rewrites hashes along with versions.
+      - /requirements
     schedule:
       interval: weekly
     commit-message:

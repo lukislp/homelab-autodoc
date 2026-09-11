@@ -1,0 +1,2 @@
+# ruff for the lint job (same range as the packages' [dev] extra).
+ruff>=0.6.0

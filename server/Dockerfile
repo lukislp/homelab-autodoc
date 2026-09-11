@@ -10,10 +10,14 @@ RUN npm run build
 
 FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea
 WORKDIR /app
+# Third-party dependencies come from the hash-locked requirements/server.txt (pip-compile
+# --generate-hashes); the local packages are then installed without resolving anything else.
+COPY requirements/server.txt ./requirements/server.txt
+RUN pip install --no-cache-dir --require-hashes -r requirements/server.txt
 COPY core ./core
 COPY generator ./generator
 COPY server ./server
-RUN pip install --no-cache-dir ./core ./generator ./server
+RUN pip install --no-cache-dir --no-deps ./core ./generator ./server
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
 # Non-root runtime user. Only the two generated trees are writable by it -

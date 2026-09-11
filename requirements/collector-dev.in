@@ -1,0 +1,5 @@
+# CI tooling for collector: runtime lock as constraint plus the [dev] extra of collector/pyproject.toml.
+-c collector.txt
+pytest>=8.0.0
+pytest-cov>=5.0.0
+ruff>=0.6.0
