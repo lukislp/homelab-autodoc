@@ -1,0 +1,7 @@
+# Third-party dependencies of generator, mirrored from generator/pyproject.toml (keep both in sync).
+# requirements/generator.txt is generated from this file with hashes - never edit the lock by hand:
+#   pip-compile --generate-hashes --strip-extras --allow-unsafe requirements/generator.in
+
+-r core.in
+Jinja2>=3.1.0
+litellm>=1.40.0
