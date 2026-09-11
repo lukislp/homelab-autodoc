@@ -1,3 +1,10 @@
+## [1.52.6](https://github.com/lukislp/homelab-autodoc/compare/v1.52.5...v1.52.6) (2026-09-11)
+
+
+### Bug Fixes
+
+* **ci:** read-only GITHUB_TOKEN in the Dependabot auto-merge workflow ([200b1bf](https://github.com/lukislp/homelab-autodoc/commit/200b1bf1d7139b19596d3d768f851b9c20f93297))
+
 ## [1.52.5](https://github.com/lukislp/homelab-autodoc/compare/v1.52.4...v1.52.5) (2026-09-11)
 
 
