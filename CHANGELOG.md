@@ -1,3 +1,10 @@
+## [1.52.5](https://github.com/lukislp/homelab-autodoc/compare/v1.52.4...v1.52.5) (2026-09-11)
+
+
+### Bug Fixes
+
+* **ci:** push release commits as a deploy key so the default branch can be ruleset-protected ([2b12db1](https://github.com/lukislp/homelab-autodoc/commit/2b12db166e084ab4a70413edb946297d7971dafe))
+
 ## [1.52.4](https://github.com/lukislp/homelab-autodoc/compare/v1.52.3...v1.52.4) (2026-09-04)
 
 
