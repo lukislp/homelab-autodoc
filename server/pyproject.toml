@@ -43,4 +43,6 @@ select = ["E", "F", "I", "UP", "B"]
 ignore = ["B008"]
 
 [tool.pytest.ini_options]
+# starlette/testclient.py still imports the deprecated anyio.abc.BlockingPortal alias - upstream.
+filterwarnings = ["ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning"]
 testpaths = ["tests"]

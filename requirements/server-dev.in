@@ -3,3 +3,6 @@
 pytest>=8.0.0
 pytest-cov>=5.0.0
 ruff>=0.6.0
+# Starlette 1.6 deprecates its TestClient over httpx and warns on every test run until httpx2
+# is installed.
+httpx2>=2.12
