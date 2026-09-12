@@ -13,4 +13,5 @@ for f in core collector generator server; do
   pip-compile -q --generate-hashes --strip-extras --allow-unsafe --no-emit-index-url "$f-dev.in"
 done
 pip-compile -q --generate-hashes --strip-extras --allow-unsafe --no-emit-index-url lint.in
+pip-compile -q --generate-hashes --strip-extras --allow-unsafe --no-emit-index-url core-fuzz.in
 for f in *.txt; do echo "$f: $(grep -cE '^[a-zA-Z0-9]' "$f") packages"; done

@@ -68,6 +68,19 @@ jobs:
           path: ${{ matrix.package }}/coverage-badge.json
           retention-days: 7
 
+  # Coverage-guided fuzzing of core's inventory (de)serialization and diff (core/fuzz/): a
+  # short fixed budget per run, enough to catch a crash on the next code change.
+  fuzz-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install --require-hashes -r requirements/core.txt -r requirements/core-fuzz.txt
+      - run: pip install --no-deps -e core
+      - run: python core/fuzz/fuzz_serialize.py -max_total_time=30 -rss_limit_mb=1024
+
   test-frontend-lint:
     runs-on: ubuntu-latest
     steps:
