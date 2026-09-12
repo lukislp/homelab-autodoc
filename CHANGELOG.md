@@ -1,3 +1,17 @@
+## [1.52.8](https://github.com/lukislp/homelab-autodoc/compare/v1.52.7...v1.52.8) (2026-09-12)
+
+
+### Bug Fixes
+
+* **ci:** bump the deployment image tag from the pipeline instead of Flux ([#130](https://github.com/lukislp/homelab-autodoc/issues/130)) ([0a8a810](https://github.com/lukislp/homelab-autodoc/commit/0a8a810b5dee2414753dc2f5e5fbbcd972b1ff93))
+
+## [1.52.7](https://github.com/lukislp/homelab-autodoc/compare/v1.52.6...v1.52.7) (2026-09-11)
+
+
+### Bug Fixes
+
+* **deps:** install third-party dependencies from hash-locked requirements ([#124](https://github.com/lukislp/homelab-autodoc/issues/124)) ([52cda3c](https://github.com/lukislp/homelab-autodoc/commit/52cda3c91a39aea19c74ba1809e9ffe490bf7a38))
+
 ## [1.52.6](https://github.com/lukislp/homelab-autodoc/compare/v1.52.5...v1.52.6) (2026-09-11)
 
 
