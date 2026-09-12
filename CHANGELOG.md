@@ -1,3 +1,12 @@
+## [1.52.9](https://github.com/lukislp/homelab-autodoc/compare/v1.52.8...v1.52.9) (2026-09-12)
+
+
+### Bug Fixes
+
+* **ci:** bump dependabot/fetch-metadata from 2.5.0 to 3.1.0 ([1ec8752](https://github.com/lukislp/homelab-autodoc/commit/1ec8752eb0d824130032551ef0e2dde6d8bed22b))
+* **ci:** bump github/codeql-action/upload-sarif from 3.38.0 to 4.38.0 ([b213546](https://github.com/lukislp/homelab-autodoc/commit/b2135462a1a2034ff69dbac234811b5df997d0be))
+* **deps:** bump the dev group across 1 directory with 6 updates ([7532166](https://github.com/lukislp/homelab-autodoc/commit/7532166a97323aaf5bd582c786c76a21edd05cea))
+
 ## [1.52.8](https://github.com/lukislp/homelab-autodoc/compare/v1.52.7...v1.52.8) (2026-09-12)
 
 
