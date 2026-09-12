@@ -6,6 +6,8 @@
 [![Coverage: generator](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-generator.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
 [![Coverage: server](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-server.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
 [![Coverage: frontend](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/lukislp/homelab-autodoc/master/.github/badges/coverage-frontend.json)](https://github.com/lukislp/homelab-autodoc/actions/workflows/ci-cd.yml)
+[![Release](https://img.shields.io/github/v/release/lukislp/homelab-autodoc)](https://github.com/lukislp/homelab-autodoc/releases)
+[![License: MIT](https://img.shields.io/github/license/lukislp/homelab-autodoc)](LICENSE)
 [![License](https://img.shields.io/github/license/lukislp/homelab-autodoc)](LICENSE)
 
 Living documentation for Kubernetes homelabs. A lightweight, read-only collector inspects the real state of one or more k3s clusters and pushes a structured inventory to a central server, which turns it into a searchable, wiki-style documentation site — fact tables, topology diagrams, best-practice findings, and a changelog of what actually changed.
