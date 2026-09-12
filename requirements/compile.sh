@@ -4,7 +4,8 @@
 #   docker run --rm -v "$PWD:/w" -w /w python:3.12-slim sh requirements/compile.sh
 set -eu
 cd "$(dirname "$0")"
-pip install -q pip-tools
+# pip-tools itself comes from its own hash-locked file (regenerate it the same way when bumping).
+pip install -q --require-hashes -r pip-tools.txt
 for f in core collector generator server; do
   pip-compile -q --generate-hashes --strip-extras --allow-unsafe --no-emit-index-url "$f.in"
 done
