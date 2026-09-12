@@ -29,3 +29,8 @@ server/docs_src/
 Thumbs.db
 .vscode/
 .idea/
+
+# libFuzzer crash artifacts written by the fuzz harnesses
+crash-*
+leak-*
+timeout-*
