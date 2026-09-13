@@ -1,3 +1,10 @@
+## [1.52.14](https://github.com/lukislp/homelab-autodoc/compare/v1.52.13...v1.52.14) (2026-09-13)
+
+
+### Bug Fixes
+
+* **k8s:** give probes a 5s timeout so load spikes stop killing pods ([#145](https://github.com/lukislp/homelab-autodoc/issues/145)) ([f3a0002](https://github.com/lukislp/homelab-autodoc/commit/f3a000240b2b3f9827ad72949bfb87e5a9ebf89f))
+
 ## [1.52.13](https://github.com/lukislp/homelab-autodoc/compare/v1.52.12...v1.52.13) (2026-09-13)
 
 
