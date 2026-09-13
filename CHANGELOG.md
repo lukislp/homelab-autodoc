@@ -1,3 +1,10 @@
+## [1.52.13](https://github.com/lukislp/homelab-autodoc/compare/v1.52.12...v1.52.13) (2026-09-13)
+
+
+### Bug Fixes
+
+* **docker:** apply Debian security updates at build time ([#144](https://github.com/lukislp/homelab-autodoc/issues/144)) ([089be6b](https://github.com/lukislp/homelab-autodoc/commit/089be6bf9dfc56c41c2cde5f2f4ea5519effba47))
+
 ## [1.52.12](https://github.com/lukislp/homelab-autodoc/compare/v1.52.11...v1.52.12) (2026-09-13)
 
 
