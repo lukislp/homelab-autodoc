@@ -56,7 +56,7 @@ spec:
             fsGroupChangePolicy: OnRootMismatch
           containers:
             - name: collector
-              image: ghcr.io/lukislp/homelab-autodoc-collector:1.52.9 # set by the deploy-bump job (CI) on every release
+              image: ghcr.io/lukislp/homelab-autodoc-collector:1.52.13 # set by the deploy-bump job (CI) on every release
               securityContext:
                 runAsNonRoot: true
                 allowPrivilegeEscalation: false
