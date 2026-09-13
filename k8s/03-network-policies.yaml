@@ -61,3 +61,75 @@ spec:
         - podSelector: {}
       ports:
         - { protocol: TCP, port: 8000 }
+---
+# Explicit egress baseline for the whole namespace, mirroring claude-queue's k8s/07-netpol.yaml:
+# every pod is isolated for egress, so anything not allowed by a policy below is dropped once
+# the catch-all rule in allow-dns is gone.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+  namespace: homelab-autodoc
+spec:
+  podSelector: {}
+  policyTypes: ["Egress"]
+---
+# The server's outbound traffic is all HTTPS to the public internet, and all of it to hosts this
+# file cannot pin to an address:
+#   - the LLM API behind AUTODOC_LLM_MODEL/AUTODOC_LLM_API_BASE (litellm, see web/deps.py), which
+#     rebuild_all_sites calls on every start and on every collector push;
+#   - GitHub for admin sign-in - github.com/login/oauth/{authorize,access_token} and
+#     api.github.com/user (web/routes_auth.py).
+# Both are anycast/CDN-fronted, so the port is the restriction rather than the address - the same
+# trade-off claude-queue's api-egress makes for the Anthropic API.
+# The server needs nothing in-cluster: /data and /config are PVCs, and it never calls the
+# Kubernetes API (only the collector does).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: autodoc-server-egress
+  namespace: homelab-autodoc
+spec:
+  podSelector: { matchLabels: { app: autodoc-server } }
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - ipBlock: { cidr: 0.0.0.0/0 }
+      ports:
+        - { protocol: TCP, port: 443 }
+---
+# The collector CronJob's pods. They are selected by the presence of the Job label rather than by
+# an app label, because a CronJob's pods only ever carry batch.kubernetes.io/job-name, and its
+# value changes with every scheduled run - selecting on "has a job-name" is the stable form, and
+# this namespace runs no other Jobs.
+#
+# It needs exactly two things (collector/src/autodoc_collector/):
+#   - the Kubernetes API, via config.load_incluster_config() - that is the kubernetes Service
+#     10.43.0.1:443, and because the DNAT to the real endpoint happens before the policy is
+#     evaluated, the node-side address 192.168.20.200:6443 has to be allowed as well (the same
+#     pair claude-queue's postgres policy needs for the CNPG instance manager);
+#   - its push target, autodoc-server:8000 in this namespace (the --push argument in
+#     k8s/04-collector-cronjob.yaml).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: autodoc-collector-egress
+  namespace: homelab-autodoc
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: batch.kubernetes.io/job-name, operator: Exists }
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - ipBlock: { cidr: 10.43.0.1/32 }
+      ports:
+        - { protocol: TCP, port: 443 }
+    - to:
+        - ipBlock: { cidr: 192.168.20.0/24 }
+      ports:
+        - { protocol: TCP, port: 6443 }
+    - to:
+        - podSelector: { matchLabels: { app: autodoc-server } }
+      ports:
+        - { protocol: TCP, port: 8000 }
