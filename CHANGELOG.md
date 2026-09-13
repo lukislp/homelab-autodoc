@@ -1,3 +1,10 @@
+## [1.52.10](https://github.com/lukislp/homelab-autodoc/compare/v1.52.9...v1.52.10) (2026-09-13)
+
+
+### Bug Fixes
+
+* **k8s:** read-only root filesystem for autodoc server and collector ([#141](https://github.com/lukislp/homelab-autodoc/issues/141)) ([aff503f](https://github.com/lukislp/homelab-autodoc/commit/aff503fe8f782cb741514769514083a66a7a2756))
+
 ## [1.52.9](https://github.com/lukislp/homelab-autodoc/compare/v1.52.8...v1.52.9) (2026-09-12)
 
 
