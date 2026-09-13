@@ -8,6 +8,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - 00-namespace.yaml
+  - 01-secrets-sealed.yaml
   - 02-httproute.yaml
   - 03-network-policies.yaml
   - 03-collector-rbac.yaml
