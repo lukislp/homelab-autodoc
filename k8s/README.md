@@ -2,31 +2,27 @@
 
 Manifests for running [homelab-autodoc](../README.md) on the real cluster (`pinode01`/`pinode02`, k3s, arm64).
 
-Onboarded into the cluster-wide [homelab-infra](https://github.com/lukislp/homelab-infra) Flux GitOps pattern - this repo owns its own Flux wiring (`k8s/flux/`), rather than a central repo managing it on this repo's behalf. `01-app.yaml` (the server's PVC + Deployment + Service) and `04-collector-cronjob.yaml` (the collector CronJob + its token PVC) are **Flux-managed**: `k8s/flux/` watches GHCR for new server AND collector image tags and auto-bumps the `$imagepolicy`-marked image lines (one release version tags both images, so they stay in lockstep), `k8s/flux-deploy/kustomization.yaml` is the subset Flux actually applies. Everything else (`00-namespace.yaml`, `02-httproute.yaml`, `03-network-policies.yaml`, `03-collector-rbac.yaml`) stays **bootstrap-only** - applied once by hand, never touched by Flux (homelab-infra's `flux/01-reconciler-rbac.yaml` least-privilege ClusterRole doesn't grant those resource kinds; `batch/cronjobs` was added there specifically for the collector).
+Onboarded into the cluster-wide [homelab-infra](https://github.com/lukislp/homelab-infra) Flux GitOps pattern - this repo owns its own Flux wiring (`k8s/flux/`), rather than a central repo managing it on this repo's behalf. `01-app.yaml` (the server's PVC + Deployment + Service) and `04-collector-cronjob.yaml` (the collector CronJob + its token PVC) are **Flux-managed**: `k8s/flux/` watches GHCR for new server AND collector image tags and auto-bumps the `$imagepolicy`-marked image lines (one release version tags both images, so they stay in lockstep), `k8s/flux-deploy/kustomization.yaml` is the subset Flux actually applies. Everything else (`00-namespace.yaml`, `01-secrets-sealed.yaml`, `02-httproute.yaml`, `03-network-policies.yaml`, `03-collector-rbac.yaml`) stays **bootstrap-only** - applied once by hand, never touched by Flux (homelab-infra's `flux/01-reconciler-rbac.yaml` least-privilege ClusterRole doesn't grant those resource kinds; `batch/cronjobs` was added there specifically for the collector).
 
 ## Bootstrap (once)
 
 ```bash
 export KUBECONFIG=$env:USERPROFILE\.kube\studylife-config   # PowerShell
 
-# 1. secrets for the admin app - required before the server will boot. The OpenAI key is the
-#    same one studylife-ai uses (see that repo's k8s/02-secret.yaml) - copy its value, don't
-#    provision a separate one.
-kubectl create namespace homelab-autodoc
-kubectl -n homelab-autodoc create secret generic autodoc-server-secrets \
-  --from-literal=session-secret="$(openssl rand -base64 32)" \
-  --from-literal=openai-api-key="<same key studylife-ai uses>"
-
-# 2. the bootstrap-only resources (namespace, RBAC, HTTPRoute, NetworkPolicies, CronJob)
+# 1. the bootstrap-only resources (namespace, SealedSecret, RBAC, HTTPRoute, NetworkPolicies).
+#    01-secrets-sealed.yaml carries the admin app's session secret and OpenAI key - both
+#    required before the server will boot - encrypted for this cluster's sealed-secrets
+#    controller, so nothing has to be retyped on a rebuild. The OpenAI key is the same one
+#    studylife-ai uses (see that repo's k8s/02-secret.yaml), not a separate one.
 kubectl apply -k k8s/
 
-# 3. wire this repo into Flux - additive, doesn't touch any other app's objects
+# 2. wire this repo into Flux - additive, doesn't touch any other app's objects
 kubectl apply -f k8s/flux/
 flux get sources git homelab-autodoc
 flux get kustomizations homelab-autodoc-deploy
 ```
 
-After step 3, Flux applies `01-app.yaml` on its own (5-minute reconcile interval) - no manual `kubectl apply -f k8s/01-app.yaml` needed, and image-automation-controller commits new server image tags to `master` automatically as they're published.
+After step 2, Flux applies `01-app.yaml` on its own (5-minute reconcile interval) - no manual `kubectl apply -f k8s/01-app.yaml` needed, and image-automation-controller commits new server image tags to `master` automatically as they're published.
 
 ## Exposing it (manual, outside this repo)
 
@@ -58,11 +54,23 @@ kubectl -n homelab-autodoc logs -f -l job-name --selector=batch.kubernetes.io/jo
 flux logs --kind ImageUpdateAutomation --name homelab-autodoc-server -n flux-system
 ```
 
+## Rotating the admin app's secrets
+
+`01-secrets-sealed.yaml` is a SealedSecret: only this cluster's controller can decrypt it,
+which is why it can live in a public repo. To change a value, patch the live Secret and
+re-seal it from the cluster (`kubeseal --fetch-cert` pulls the controller's public cert):
+
+```bash
+kubectl -n homelab-autodoc get secret autodoc-server-secrets -o yaml \
+  | kubeseal --format yaml --cert sealed-secrets-cert.pem > k8s/01-secrets-sealed.yaml
+kubectl apply -f k8s/01-secrets-sealed.yaml   # this one file only, never `apply -k` here
+kubectl -n homelab-autodoc rollout restart deployment/autodoc-server
+```
+
 ## Tear down
 
 ```bash
 kubectl delete -f k8s/flux/       # stop Flux from reconciling/recreating 01-app.yaml first
 kubectl delete -k k8s/
-kubectl -n homelab-autodoc delete secret autodoc-server-secrets
 kubectl delete namespace homelab-autodoc
 ```
