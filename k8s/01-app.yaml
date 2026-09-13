@@ -78,6 +78,7 @@ spec:
           command: ["chown", "-R", "10001:10001", "/data", "/config"]
           securityContext:
             runAsUser: 0
+            readOnlyRootFilesystem: true
           volumeMounts:
             - name: data
               mountPath: /data
@@ -93,6 +94,9 @@ spec:
               drop: ["ALL"]
             seccompProfile:
               type: RuntimeDefault
+            # Nothing in the image layer needs to survive a restart: /data and /config are
+            # PVCs and the three writable paths below are all regenerated on startup.
+            readOnlyRootFilesystem: true
           ports:
             - containerPort: 8000
           env:
@@ -130,6 +134,18 @@ spec:
               mountPath: /data
             - name: config
               mountPath: /config
+            # HOME of the autodoc user (set in server/Dockerfile), so any library cache
+            # write lands here.
+            - name: tmp
+              mountPath: /tmp
+            # AUTODOC_DOCS_DIR and the mkdocs site_dir next to it: rebuild_all_sites
+            # regenerates both from /data on startup and on every push, which is exactly why
+            # the Dockerfile made them the only app-user-writable trees in the image. With a
+            # read-only root they need real volumes; emptyDir keeps them ephemeral, as before.
+            - name: docs-src
+              mountPath: /app/server/docs_src
+            - name: site
+              mountPath: /app/server/site
           # The server only starts listening after its import-time
           # rebuild_all_sites (LLM prose for every cluster - roughly a minute
           # today, growing with cluster count). The startupProbe gives that up
@@ -150,6 +166,14 @@ spec:
           persistentVolumeClaim: {claimName: autodoc-server-data}
         - name: config
           persistentVolumeClaim: {claimName: autodoc-server-config}
+        - name: tmp
+          emptyDir: {sizeLimit: 64Mi}
+        - name: docs-src
+          emptyDir: {sizeLimit: 128Mi}
+        # The generated site is the big one - mkdocs-material's assets alone put the current
+        # build at ~20Mi, so leave clear headroom for more clusters.
+        - name: site
+          emptyDir: {sizeLimit: 512Mi}
 ---
 apiVersion: v1
 kind: Service
