@@ -1,3 +1,10 @@
+## [1.52.11](https://github.com/lukislp/homelab-autodoc/compare/v1.52.10...v1.52.11) (2026-09-13)
+
+
+### Bug Fixes
+
+* **k8s:** add explicit egress policies for server and collector ([#142](https://github.com/lukislp/homelab-autodoc/issues/142)) ([5a24bc3](https://github.com/lukislp/homelab-autodoc/commit/5a24bc32761232f43317ef13badb73c8ca0e6022))
+
 ## [1.52.10](https://github.com/lukislp/homelab-autodoc/compare/v1.52.9...v1.52.10) (2026-09-13)
 
 
