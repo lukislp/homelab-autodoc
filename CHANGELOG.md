@@ -1,3 +1,10 @@
+## [1.52.12](https://github.com/lukislp/homelab-autodoc/compare/v1.52.11...v1.52.12) (2026-09-13)
+
+
+### Bug Fixes
+
+* **k8s:** drop the catch-all egress rule from allow-dns ([#143](https://github.com/lukislp/homelab-autodoc/issues/143)) ([17f89d2](https://github.com/lukislp/homelab-autodoc/commit/17f89d2b83345b4534b3998dc28150859f900195))
+
 ## [1.52.11](https://github.com/lukislp/homelab-autodoc/compare/v1.52.10...v1.52.11) (2026-09-13)
 
 
