@@ -64,6 +64,10 @@ spec:
                   drop: ["ALL"]
                 seccompProfile:
                   type: RuntimeDefault
+                # The only thing this job writes is the token on the PVC below, so the image
+                # layer can stay read-only; /tmp is mounted because it is the user's HOME
+                # (collector/Dockerfile) and stdlib/library temp files go there.
+                readOnlyRootFilesystem: true
               args:
                 - --push
                 - http://autodoc-server.homelab-autodoc.svc.cluster.local:8000
@@ -80,7 +84,11 @@ spec:
               volumeMounts:
                 - name: token
                   mountPath: /var/run/autodoc
+                - name: tmp
+                  mountPath: /tmp
           volumes:
             - name: token
               persistentVolumeClaim:
                 claimName: autodoc-collector-token
+            - name: tmp
+              emptyDir: {sizeLimit: 64Mi}
