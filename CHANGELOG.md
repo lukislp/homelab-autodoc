@@ -1,3 +1,10 @@
+## [1.52.15](https://github.com/lukislp/homelab-autodoc/compare/v1.52.14...v1.52.15) (2026-09-13)
+
+
+### Bug Fixes
+
+* **k8s:** seal autodoc-server-secrets so it survives a cluster rebuild ([#146](https://github.com/lukislp/homelab-autodoc/issues/146)) ([7a89fd0](https://github.com/lukislp/homelab-autodoc/commit/7a89fd0c298ec412f6b531228ca0af9a5afb736d))
+
 ## [1.52.14](https://github.com/lukislp/homelab-autodoc/compare/v1.52.13...v1.52.14) (2026-09-13)
 
 
