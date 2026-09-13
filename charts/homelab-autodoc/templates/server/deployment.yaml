@@ -65,18 +65,28 @@ spec:
             - name: config
               mountPath: /config
           # The server only starts listening after its startup rebuild (LLM prose for every
-          # cluster — roughly a minute, growing with cluster count). Give that up to 5 minutes
-          # before liveness takes over.
+          # cluster — roughly a minute, growing with cluster count). Give that up to
+          # 7.5 minutes before liveness takes over.
+          #
+          # Every probe sets timeoutSeconds explicitly. The Kubernetes default of 1s is too
+          # tight on small/arm64 nodes: under an ordinary load spike /healthz needs more than
+          # a second, the liveness probe fails failureThreshold times in a row and kubelet
+          # restarts a container that was merely busy.
           startupProbe:
             httpGet: { path: /healthz, port: {{ .Values.server.service.port }} }
-            periodSeconds: 5
-            failureThreshold: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 45
           readinessProbe:
             httpGet: { path: /healthz, port: {{ .Values.server.service.port }} }
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet: { path: /healthz, port: {{ .Values.server.service.port }} }
             periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
       volumes:
         - name: data
           persistentVolumeClaim:

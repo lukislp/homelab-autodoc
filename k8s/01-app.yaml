@@ -149,18 +149,30 @@ spec:
           # The server only starts listening after its import-time
           # rebuild_all_sites (LLM prose for every cluster - roughly a minute
           # today, growing with cluster count). The startupProbe gives that up
-          # to 5 minutes before liveness takes over; without it, liveness
+          # to 7.5 minutes before liveness takes over; without it, liveness
           # (3 failures x 30s) can kill a slow-starting container mid-rebuild.
+          #
+          # Every probe sets timeoutSeconds explicitly. The Kubernetes default of 1s is too
+          # tight for the arm64 Raspberry Pi nodes this runs on: the weakest node sits close
+          # to its memory limit, so an ordinary load spike pushes /healthz past one second,
+          # the liveness probe fails failureThreshold times in a row and kubelet restarts the
+          # container. A 5s budget tells a busy pod apart from a dead one. The startup probe
+          # keeps a period longer than that timeout, and its total budget only grew.
           startupProbe:
             httpGet: {path: /healthz, port: 8000}
-            periodSeconds: 5
-            failureThreshold: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 45
           readinessProbe:
             httpGet: {path: /healthz, port: 8000}
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet: {path: /healthz, port: 8000}
             periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
       volumes:
         - name: data
           persistentVolumeClaim: {claimName: autodoc-server-data}
