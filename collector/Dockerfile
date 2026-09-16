@@ -16,11 +16,14 @@ RUN sed -i 's#http://deb.debian.org#https://deb.debian.org#' /etc/apt/sources.li
 WORKDIR /app
 # Third-party dependencies come from the hash-locked requirements/collector.txt (pip-compile
 # --generate-hashes); the local packages are then installed without resolving anything else.
+# The local ones go in as editable installs (-e) against the COPYed source trees that stay in
+# the image: that is the form pip documents as safe when dependency resolution is switched off,
+# and unlike a plain path install it leaves no unpinned resolution step in the build.
 COPY requirements/collector.txt ./requirements/collector.txt
 RUN pip install --no-cache-dir --require-hashes -r requirements/collector.txt
 COPY core ./core
 COPY collector ./collector
-RUN pip install --no-cache-dir --no-deps ./core ./collector
+RUN pip install --no-cache-dir --no-deps -e ./core -e ./collector
 
 # Non-root runtime user (numeric so runAsNonRoot can be verified). The only
 # thing the collector ever writes is its push token, which lives on a
