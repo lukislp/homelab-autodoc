@@ -1,3 +1,10 @@
+## [1.52.16](https://github.com/lukislp/homelab-autodoc/compare/v1.52.15...v1.52.16) (2026-09-16)
+
+
+### Bug Fixes
+
+* **docker:** install the local packages in the pinned editable form ([#152](https://github.com/lukislp/homelab-autodoc/issues/152)) ([06cae14](https://github.com/lukislp/homelab-autodoc/commit/06cae144f26fdab7f89857fe4d7c72ce8a0d73b3))
+
 ## [1.52.15](https://github.com/lukislp/homelab-autodoc/compare/v1.52.14...v1.52.15) (2026-09-13)
 
 
