@@ -1,3 +1,12 @@
+## [1.52.18](https://github.com/lukislp/homelab-autodoc/compare/v1.52.17...v1.52.18) (2026-09-17)
+
+
+### Bug Fixes
+
+* **deps:** bump httpx2 from 2.12.0 to 2.13.0 in /requirements ([#156](https://github.com/lukislp/homelab-autodoc/issues/156)) ([e932397](https://github.com/lukislp/homelab-autodoc/commit/e932397b0aa1eb71d9dbf0b91a9adcabe3a3892d))
+* **deps:** bump react-dom and @types/react-dom in /frontend ([#158](https://github.com/lukislp/homelab-autodoc/issues/158)) ([b1efb23](https://github.com/lukislp/homelab-autodoc/commit/b1efb23052009eea9bf00212ff51f4c5c77891ed))
+* **deps:** bump uvicorn from 0.52.4 to 0.53.0 in /requirements ([#159](https://github.com/lukislp/homelab-autodoc/issues/159)) ([90ab944](https://github.com/lukislp/homelab-autodoc/commit/90ab944dfdbca2a6b5913671c34a460ba3ccef6f))
+
 ## [1.52.17](https://github.com/lukislp/homelab-autodoc/compare/v1.52.16...v1.52.17) (2026-09-17)
 
 
