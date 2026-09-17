@@ -1,4 +1,5 @@
-# Weekly Dependabot updates: GitHub Actions, the frontend (dev deps grouped), the four Python packages and both Dockerfiles.
+# Weekly Dependabot updates: GitHub Actions, the frontend (React and dev deps each grouped),
+# the four Python packages and both Dockerfiles.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -12,6 +13,22 @@ updates:
     schedule:
       interval: weekly
     groups:
+      # React and react-dom must move together: React refuses to start when the two resolve to
+      # different versions ("Incompatible React versions ... must have the exact same version"),
+      # so a PR bumping one alone fails its own tests until the other arrives. That is what
+      # happened to #157. The @types packages ride along so the types never describe a version
+      # that is not installed.
+      #
+      # Listed BEFORE "dev" on purpose: a dependency joins the first group it matches, and both
+      # @types packages are devDependencies - "dev" would otherwise claim them and split the set
+      # again. Exact names rather than a react* pattern, because @testing-library/react and
+      # @vitejs/plugin-react are unrelated to that lockstep and should keep updating on their own.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
       dev:
         dependency-type: development
     commit-message:
