@@ -1,7 +1,7 @@
 # Build context is the repo root (not collector/) - autodoc-collector depends
 # on the sibling autodoc-core package, which Docker can't COPY from outside
 # its context otherwise.
-FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea
+FROM python:3.12-slim@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9
 
 # Pull in Debian's security updates on every build: the digest-pinned base image lags behind
 # the security archive (fixed CRITICAL CVEs in the base layer blocked the Trivy gate on
