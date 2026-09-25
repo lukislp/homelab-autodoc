@@ -86,7 +86,7 @@ spec:
               mountPath: /config
       containers:
         - name: server
-          image: ghcr.io/lukislp/homelab-autodoc-server:1.52.23 # set by the deploy-bump job (CI) on every release
+          image: ghcr.io/lukislp/homelab-autodoc-server:1.52.24 # set by the deploy-bump job (CI) on every release
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
