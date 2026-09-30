@@ -68,25 +68,18 @@ spec:
         backup.velero.io/backup-volumes: data,config
     spec:
       serviceAccountName: default
-      initContainers:
-        # The PVCs' existing files were written by the image's root era;
-        # chown on every start (idempotent, and this data is tiny) so the
-        # non-root server below can keep rewriting them. The only root in
-        # the pod - the server container itself never gets it.
-        - name: fix-volume-ownership
-          image: busybox:1.38.0
-          command: ["chown", "-R", "10001:10001", "/data", "/config"]
-          securityContext:
-            runAsUser: 0
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - name: data
-              mountPath: /data
-            - name: config
-              mountPath: /config
+      # fsGroup replaces the former root chown init container (the same pattern the
+      # collector CronJob already uses): the kubelet sets group ownership + group rw on
+      # /data and /config at mount time (OnRootMismatch: only when the volume root actually
+      # differs, so the uid 10001 data the old init container left behind is untouched),
+      # and no container in the pod needs root anymore - which is what lets the namespace
+      # enforce the restricted Pod Security level.
+      securityContext:
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: server
-          image: ghcr.io/lukislp/homelab-autodoc-server:1.52.26 # set by the deploy-bump job (CI) on every release
+          image: ghcr.io/lukislp/homelab-autodoc-server:1.52.28 # set by the deploy-bump job (CI) on every release
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
