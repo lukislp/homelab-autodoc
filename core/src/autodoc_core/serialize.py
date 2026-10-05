@@ -383,5 +383,12 @@ def from_text(text: str, fmt: Format) -> ClusterInventory:
     if fmt == "json":
         return from_dict(json.loads(text))
     if fmt == "yaml":
-        return from_dict(yaml.safe_load(text))
+        try:
+            data = yaml.safe_load(text)
+        except OverflowError as exc:
+            # PyYAML feeds an oversized hex escape in a double-quoted scalar to chr(), which
+            # raises OverflowError instead of a YAMLError; report it as the malformed input
+            # it is.
+            raise ValueError(f"invalid YAML escape sequence: {exc}") from exc
+        return from_dict(data)
     raise ValueError(f"unsupported format: {fmt}")

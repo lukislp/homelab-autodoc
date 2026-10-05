@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from autodoc_core.models import (
     App,
     Autoscaler,
@@ -219,6 +221,12 @@ def test_to_text_yaml_round_trips():
     data = from_text(text, fmt="yaml")
 
     assert data == _sample_inventory()
+
+
+def test_from_text_yaml_oversized_escape_is_a_value_error():
+    # Found by the atheris fuzz harness: PyYAML raised OverflowError here, not YAMLError.
+    with pytest.raises(ValueError, match="invalid YAML escape sequence"):
+        from_text('"\\UFFFFFFFFFFFFFFFF"', fmt="yaml")
 
 
 def test_from_text_json_reconstructs_full_dataclass_tree():
