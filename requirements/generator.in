@@ -4,4 +4,4 @@
 
 -r core.in
 Jinja2>=3.1.0
-litellm>=1.103.2
+litellm>=1.104.0
