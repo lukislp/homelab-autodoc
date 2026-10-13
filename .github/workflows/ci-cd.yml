@@ -64,7 +64,7 @@ jobs:
           python3 ../scripts/generate_coverage_badge.py coverage.json coverage-badge.json
           ${{ matrix.package }}
         working-directory: ${{ matrix.package }}
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-badge-${{ matrix.package }}
           path: ${{ matrix.package }}/coverage-badge.json
@@ -165,7 +165,7 @@ jobs:
         working-directory: frontend
       - run: python3 ../scripts/generate_coverage_badge.py coverage-for-badge.json coverage-badge.json frontend
         working-directory: frontend
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-badge-frontend
           path: frontend/coverage-badge.json
@@ -319,7 +319,7 @@ jobs:
           mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: digests-${{ matrix.image }}-${{ matrix.arch }}
           path: /tmp/digests/*
