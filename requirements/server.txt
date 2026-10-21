@@ -901,15 +901,15 @@ jsonschema-specifications==2025.9.1 \
     --hash=sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe \
     --hash=sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d
     # via jsonschema
-litellm==1.105.1 \
-    --hash=sha256:3253da7d4967e367fb7e4e404b598a26037c45ba6d67a79356a81d3f8b9f9f3a \
-    --hash=sha256:633886584ffb6421485349376f2c1666d4854fecc3ab8b1cdb24537817d4e1cc \
-    --hash=sha256:beb5044645144308b39560049c0f68875ad7de07e681ad0b73e2bc6c3705ba61 \
-    --hash=sha256:d0392f5e773ab4bdb15daf2856d89afce74dc8b7e6d802f52060a23778ef650b \
-    --hash=sha256:d422f4fa44b424c541276bf55355b3650e2db01c08922f250baaf61eeaf788cf \
-    --hash=sha256:e2b46bc884b1aa7299a238158f7ff3f3dad49821a0dcfa4a77a54cf38e78bac2 \
-    --hash=sha256:f1a274db0b2bcc78c34ed34c06df2c1dcd0dc038469193684927f6bb2cab2d97 \
-    --hash=sha256:f3d743c2d274c6537f7341213607c927c486676012a9d94412a8a8ccbe2f51f1
+litellm==1.106.0 \
+    --hash=sha256:5c84cc7d928cdb6ec57c5d87f221e3d27ca755958ebae389d5663f822b6f7a19 \
+    --hash=sha256:791625a05eb1481d14633d593c19dfaa4b91ad69ec9c3e0886a72855cd76c1d1 \
+    --hash=sha256:79bdfc1acb725e8ce75acfdb4913156a350faba835a39091338d320548e78593 \
+    --hash=sha256:8a4ef54208bd36295fefae37004846edc23e20640803e81abddb02e073aa6ab6 \
+    --hash=sha256:a570458fbfd3d760f8e8176bf67e3519c380894324425723ac0e843d94e812f0 \
+    --hash=sha256:bae66b279ad1043471acfe6ed5a31b6b4cebf39eb309fa46a5c0ab6c69a00105 \
+    --hash=sha256:eeb604f06c27ab5373e2e05e4c1f14980fd87de3a09bd9a9dc2ddab7069bd34e \
+    --hash=sha256:f1c5de99aa3c8ce6fa5b0b940a701b219714db47ce406b194fe530712eb7b9aa
     # via -r generator.in
 markdown==3.10.3 \
     --hash=sha256:3589362618f743188b4d955b874402bc814f4f83f544dc207719f4baa7d9c45f \
@@ -1984,6 +1984,7 @@ typing-extensions==4.16.0 \
     #   anyio
     #   fastapi
     #   huggingface-hub
+    #   litellm
     #   openai
     #   opentelemetry-api
     #   pydantic
