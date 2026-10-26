@@ -417,9 +417,9 @@ distro==1.9.0 \
     --hash=sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed \
     --hash=sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2
     # via openai
-fastapi==0.156.1 \
-    --hash=sha256:0422f86554a11df52f0b80c34e5ba2f1d415cd0bca0c0910fdd37df80d4b534a \
-    --hash=sha256:9da53b0b8b2fd79e260da101dab73a0d6ce6b5e539bef515e5fc0e8abecc76e8
+fastapi==0.161.1 \
+    --hash=sha256:4076b88434452e20289379068e976c4a04c65ffc8e6be31510106e150a422f0f \
+    --hash=sha256:a1363080cf9aeedecd99f4e1a23669d7e77542227f6536f4d7bbd59f07ecaa94
     # via -r server.in
 fastuuid==0.14.0 \
     --hash=sha256:05a8dde1f395e0c9b4be515b7a521403d1e8349443e7641761af07c7ad1624b1 \
