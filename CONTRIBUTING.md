@@ -38,7 +38,9 @@ Four Python packages plus a frontend, each with its own `pyproject.toml` and `te
   the merge.
 - **Tests for new functionality.** New features and bug fixes come with tests in the matching
   package's `tests/` directory. A PR that adds behaviour without a test is asked to add one.
-  Coverage per package is reported by CI and is expected not to drop.
+  Coverage per package is reported by CI and is expected not to drop. The coverage badges in the README
+  are committed by the lktec-bot App together with the image bump after each release; do not edit
+  `.github/badges/` by hand.
 - **Lint and formatting.** Each package is linted with `ruff check .` **and** `ruff format --check .`
   from its own directory. Run both before pushing; `ruff check` passing does not mean the
   formatting is clean.
