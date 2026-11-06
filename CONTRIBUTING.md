@@ -38,7 +38,7 @@ Four Python packages plus a frontend, each with its own `pyproject.toml` and `te
   the merge.
 - **Tests for new functionality.** New features and bug fixes come with tests in the matching
   package's `tests/` directory. A PR that adds behaviour without a test is asked to add one.
-  Coverage badges are regenerated per package on every release and are expected not to drop.
+  Coverage per package is reported by CI and is expected not to drop.
 - **Lint and formatting.** Each package is linted with `ruff check .` **and** `ruff format --check .`
   from its own directory. Run both before pushing; `ruff check` passing does not mean the
   formatting is clean.

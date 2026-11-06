@@ -77,7 +77,7 @@ Solid arrows are deterministic and reproducible from the same inventory; dashed 
 
 ## Deployment
 
-CI builds multi-arch (amd64/arm64) Docker images for collector and server on native runners per architecture and publishes them to GHCR on every release (semantic-release).
+CI builds multi-arch (amd64/arm64) Docker images for collector and server on native runners per architecture and publishes them to GHCR on every release (cut by the lktec-bot release module; the rules live in `.github/lktec-bot.yml`).
 
 **Running this on your own cluster?** Use the Helm chart in [charts/homelab-autodoc/](charts/homelab-autodoc/) — standard Ingress or Gateway API, any StorageClass, no dependency on the author's own infrastructure. See [charts/homelab-autodoc/README.md](charts/homelab-autodoc/README.md) for install instructions and the full values reference.
 
