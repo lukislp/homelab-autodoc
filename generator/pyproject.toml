@@ -12,7 +12,7 @@ license = { text = "MIT" }
 dependencies = [
     "autodoc-core>=0.1.0",
     "Jinja2>=3.1.0",
-    "litellm>=1.40.0",
+    "litellm>=1.108.3",
 ]
 
 [project.scripts]
