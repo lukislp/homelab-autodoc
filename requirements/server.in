@@ -4,7 +4,7 @@
 
 -r core.in
 -r generator.in
-fastapi>=0.162.2
+fastapi>=0.162.4
 uvicorn[standard]>=0.54.0
 mkdocs>=1.6.0
 mkdocs-material>=9.8.1
