@@ -16,6 +16,9 @@ modules:
     merge-ready: true
     # Dependency names (exact, case-insensitive) that are never approved or armed.
     exclude: []
+    # Renovate pull requests (renovate[bot], renovate/ branches) are treated like Dependabot
+    # ones: minor, patch and digest updates are armed.
+    renovate: true
 
   # Commits the image tag bump of the deploy manifests and the coverage badges onto the default branch after a release (see
   # docs/modules/sync.md in lukislp/lktec-bot). The App is a bypass actor of the branch ruleset for it.
