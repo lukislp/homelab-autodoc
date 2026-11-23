@@ -533,9 +533,9 @@ idna==3.19 \
     #   httpx
     #   requests
     #   yarl
-kubernetes==37.0.2 \
-    --hash=sha256:6967599ef976d0bb9c663c3621e690db0e26fbab7cf5c5e3ccf7e11b790d2de9 \
-    --hash=sha256:d72683392fc10f59fb78b89bd91cb3be60a05d6ff0bbb2150966a224af6edc03
+kubernetes==37.0.3 \
+    --hash=sha256:862069ade8490916018a0a4e303050700f96f887edb5ec25db325a5212cb3923 \
+    --hash=sha256:99a4d2154a884793e308e994a8808a64e548a17f2f525d52919eed1d9c2c58fe
     # via -r collector.in
 multidict==6.9.1 \
     --hash=sha256:006c4478de0a1876f4834e14255776286f09b9846b505fe63f67f9d173a9487c \
